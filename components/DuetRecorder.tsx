@@ -310,7 +310,7 @@ export default function DuetRecorder({
       const renderResponse =
         await fetch(
 
-          "thriving-alignment-production.up.railway.app/render-duet",
+          "https://thriving-alignment-production.up.railway.app/render-duet",
 
           {
             method:
