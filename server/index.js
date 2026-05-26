@@ -493,8 +493,7 @@ app.post(
 
 // START SERVER
 const PORT =
-  5000;
-
+  process.env.PORT || 5000;
 app.listen(
 
   PORT,
