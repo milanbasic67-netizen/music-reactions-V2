@@ -1,5 +1,4 @@
-import Link
-from "next/link";
+import Link from "next/link";
 
 import { supabase }
 from "@/lib/supabase";
@@ -8,6 +7,7 @@ export default async function SongsPage() {
 
   const {
     data: songs,
+    error,
   } =
     await supabase
       .from(
@@ -23,7 +23,8 @@ export default async function SongsPage() {
       );
 
   return (
-    <main className="min-h-screen pb-28 bg-black text-white">
+
+    <main className="min-h-screen bg-black text-white pb-28">
 
       {/* HEADER */}
       <div className="px-6 pt-16 pb-10">
@@ -42,83 +43,109 @@ export default async function SongsPage() {
 
       </div>
 
-      {/* SONGS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 px-6">
+      {/* ERROR */}
+      {error && (
 
-        {songs?.map(
-          (
-            song
-          ) => (
+        <div className="px-6 text-red-500">
 
-            <div
-              key={
-                song.id
-              }
-              className="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden"
-            >
+          Failed to load songs
 
-              {/* THUMBNAIL */}
-              <img
-                src={
-                  song.thumbnail_url
-                    ? `${song.thumbnail_url}?v=${song.id}`
-                    : song.video_url
+        </div>
+
+      )}
+
+      {/* EMPTY */}
+      {!songs ||
+        songs.length === 0 ? (
+
+        <div className="px-6 text-zinc-500 text-xl">
+
+          No songs uploaded yet.
+
+        </div>
+
+      ) : (
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 px-6">
+
+          {songs.map(
+            (
+              song
+            ) => (
+
+              <div
+                key={
+                  song.id
                 }
-                alt={
-                  song.title
-                }
-                className="w-full h-[420px] object-cover bg-black"
-              />
+                className="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden"
+              >
 
-              {/* INFO */}
-              <div className="p-6">
-
-                <h2 className="text-2xl font-black leading-tight">
-
-                  {
+                {/* THUMB */}
+                <img
+                  src={
+                    song.thumbnail_url
+                      ? song.thumbnail_url
+                      : "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f"
+                  }
+                  alt={
                     song.title
                   }
+                  className="w-full h-[420px] object-cover bg-black"
+                />
 
-                </h2>
+                {/* INFO */}
+                <div className="p-6">
 
-                <p className="text-zinc-400 mt-3 text-lg">
+                  <h2 className="text-2xl font-black leading-tight">
 
-                  {
-                    song.artist
-                  }
+                    {
+                      song.title
+                    }
 
-                </p>
+                  </h2>
 
-                {/* REACT BUTTON */}
-                <Link
-                  href={`/create?video=${encodeURIComponent(
-                    song.video_url
-                  )}&title=${encodeURIComponent(
-                    song.title
-                  )}&artist=${encodeURIComponent(
-                    song.artist
-                  )}`}
-                >
+                  <p className="text-zinc-400 mt-3 text-lg">
 
-                  <button
-                    className="mt-6 w-full bg-red-600 hover:bg-red-500 transition text-white font-black py-4 rounded-2xl"
+                    {
+                      song.artist
+                    }
+
+                  </p>
+
+                  {/* BUTTON */}
+                  <Link
+                    href={`/create?video=${encodeURIComponent(
+                      song.video_url
+                    )}&title=${encodeURIComponent(
+                      song.title
+                    )}&artist=${encodeURIComponent(
+                      song.artist
+                    )}`}
                   >
 
-                    React To This
+                    <button
+                      className="mt-6 w-full bg-red-600 hover:bg-red-500 transition text-white font-black py-4 rounded-2xl"
+                    >
 
-                  </button>
+                      React To This
 
-                </Link>
+                    </button>
+
+                  </Link>
+
+                </div>
 
               </div>
 
-            </div>
+            )
+          )}
 
-          )
-        )}
+        </div>
 
-      </div>
+      )}
 
     </main>
+
   );
+
 }
