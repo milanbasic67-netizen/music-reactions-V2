@@ -16,10 +16,6 @@ const path =
 const fs =
   require("fs");
 
-const youtubedl =
-  require(
-    "yt-dlp-exec"
-  );
 
 require("dotenv")
   .config();
@@ -479,35 +475,6 @@ app.post(
   }
 );
 
-// IMPORT YOUTUBE
-app.post(
-
-  "/import-youtube",
-
-  async (
-    req,
-    res
-  ) => {
-
-    try {
-
-      const {
-        url,
-      } =
-        req.body;
-
-      if (!url) {
-
-        return res
-          .status(400)
-          .json({
-
-            error:
-              "Missing URL",
-
-          });
-
-      }
 
       const timestamp =
         Date.now();
