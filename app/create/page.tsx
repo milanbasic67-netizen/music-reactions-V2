@@ -1,13 +1,17 @@
 "use client";
 
 import {
+  Suspense,
+} from "react";
+
+import {
   useSearchParams,
 } from "next/navigation";
 
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-export default function CreatePage() {
+function CreateContent() {
 
   const searchParams =
     useSearchParams();
@@ -51,6 +55,26 @@ export default function CreatePage() {
         artist || ""
       }
     />
+  );
+
+}
+
+export default function CreatePage() {
+
+  return (
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 bg-black flex items-center justify-center text-white text-2xl font-black">
+
+          Loading...
+
+        </div>
+      }
+    >
+
+      <CreateContent />
+
+    </Suspense>
   );
 
 }
