@@ -16,7 +16,6 @@ const path =
 const fs =
   require("fs");
 
-
 require("dotenv")
   .config();
 
@@ -24,6 +23,10 @@ const {
   createClient,
 } = require(
   "@supabase/supabase-js"
+);
+
+console.log(
+  "SERVER STARTING"
 );
 
 const app =
@@ -48,6 +51,10 @@ app.use(
   express.json()
 );
 
+console.log(
+  "MIDDLEWARE OK"
+);
+
 // SUPABASE
 const supabase =
   createClient(
@@ -58,6 +65,10 @@ const supabase =
     process.env
       .SUPABASE_SERVICE_ROLE_KEY
   );
+
+console.log(
+  "SUPABASE OK"
+);
 
 // FOLDERS
 const uploadsDir =
@@ -75,13 +86,13 @@ const rendersDir =
 const songsDir =
   path.join(
     __dirname,
-    "../public/songs"
+    "songs"
   );
 
 const thumbnailsDir =
   path.join(
     __dirname,
-    "../public/thumbnails"
+    "thumbnails"
   );
 
 // CREATE FOLDERS
@@ -173,19 +184,14 @@ app.get(
     res
   ) => {
 
-    res.json({
-
-      ok: true,
-
-      message:
-        "Server running",
-
-    });
+    res.send(
+      "OK"
+    );
 
   }
 );
 
-// DUET RENDER
+// RENDER
 app.post(
 
   "/render-duet",
@@ -264,7 +270,6 @@ app.post(
 
         .complexFilter([
 
-          // LEFT VIDEO
           {
             filter:
               "scale",
@@ -293,7 +298,6 @@ app.post(
               "left",
           },
 
-          // RIGHT VIDEO
           {
             filter:
               "scale",
@@ -322,7 +326,6 @@ app.post(
               "right",
           },
 
-          // STACK
           {
             filter:
               "hstack",
@@ -342,7 +345,6 @@ app.post(
               "video",
           },
 
-          // AUDIO ORIGINAL
           {
             filter:
               "volume",
@@ -357,7 +359,6 @@ app.post(
               "a0",
           },
 
-          // AUDIO REACTION
           {
             filter:
               "volume",
@@ -372,7 +373,6 @@ app.post(
               "a1",
           },
 
-          // MIX AUDIO
           {
             filter:
               "amix",
@@ -393,27 +393,27 @@ app.post(
 
         .outputOptions([
 
-  "-map [video]",
+          "-map [video]",
 
-  "-map [audio]",
+          "-map [audio]",
 
-  "-c:v libx264",
+          "-c:v libx264",
 
-  "-preset veryfast",
+          "-preset veryfast",
 
-  "-crf 32",
+          "-crf 32",
 
-  "-pix_fmt yuv420p",
+          "-pix_fmt yuv420p",
 
-  "-c:a aac",
+          "-c:a aac",
 
-  "-b:a 96k",
+          "-b:a 96k",
 
-  "-movflags +faststart",
+          "-movflags +faststart",
 
-  "-shortest",
+          "-shortest",
 
-])
+        ])
 
         .save(
           outputPath
@@ -434,7 +434,7 @@ app.post(
                 true,
 
               videoUrl:
-  `${req.protocol}://${req.get("host")}/renders/${outputName}`,
+                `${req.protocol}://${req.get("host")}/renders/${outputName}`,
 
             });
 
@@ -487,9 +487,6 @@ app.post(
 
   }
 );
-
-
-      
 
 // START SERVER
 const PORT =
