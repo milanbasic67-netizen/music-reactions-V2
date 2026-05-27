@@ -223,6 +223,16 @@ app.post(
     {
 
       name:
+        "original",
+
+      maxCount:
+        1,
+
+    },
+
+    {
+
+      name:
         "reaction",
 
       maxCount:
@@ -243,8 +253,10 @@ app.post(
         "RENDER START"
       );
 
-      const originalUrl =
-        req.body.originalUrl;
+      const original =
+        req.files[
+          "original"
+        ]?.[0];
 
       const reaction =
         req.files[
@@ -252,7 +264,7 @@ app.post(
         ]?.[0];
 
       if (
-        !originalUrl ||
+        !original ||
         !reaction
       ) {
 
@@ -268,8 +280,8 @@ app.post(
       }
 
       console.log(
-        "ORIGINAL URL:",
-        originalUrl
+        "ORIGINAL:",
+        original.path
       );
 
       console.log(
@@ -294,7 +306,7 @@ app.post(
       ffmpeg()
 
         .input(
-          originalUrl
+          original.path
         )
 
         .input(
@@ -365,6 +377,10 @@ app.post(
 
             // CLEANUP
             try {
+
+              fs.unlinkSync(
+                original.path
+              );
 
               fs.unlinkSync(
                 reaction.path
