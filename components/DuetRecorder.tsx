@@ -601,6 +601,7 @@ export default function DuetRecorder({
             src={
               originalVideo
             }
+            autoPlay
             controls
             playsInline
             className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
