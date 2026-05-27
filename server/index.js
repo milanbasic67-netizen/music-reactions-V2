@@ -333,7 +333,9 @@ app.post(
 
           "-c:a aac",
 
-          "-preset veryfast",
+          "-preset ultrafast",
+
+          "-crf 30",
 
           "-movflags +faststart",
 
