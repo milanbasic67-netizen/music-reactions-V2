@@ -10,14 +10,14 @@ import { supabase }
 from "@/lib/supabase";
 
 type Props = {
-  originalVideo: string;
+  originalUrlVideo: string;
   title?: string;
   artist?: string;
 };
 
 export default function DuetRecorder({
 
-  originalVideo,
+  originalUrlVideo,
 
   title,
 
@@ -588,16 +588,16 @@ export default function DuetRecorder({
 
           <div className="text-sm mb-3 text-zinc-500">
 
-            Original
+            OriginalUrl
 
           </div>
 
           <video
             ref={
-              originalVideoRef
+              originalUrlVideoRef
             }
             src={
-              originalVideo
+              originalUrlVideo
             }
             controls
             playsInline
