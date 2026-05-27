@@ -203,7 +203,7 @@ export default function DuetRecorder({
           {
 
             mimeType:
-              "video/webm",
+              "video/mp4",
 
           }
 
