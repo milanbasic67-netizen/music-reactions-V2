@@ -48,21 +48,12 @@ app.use(
 
   cors({
 
-    origin: [
-
-      "http://localhost:3000",
-
-      "https://mreact.vercel.app",
-
-    ],
+    origin: "*",
 
     methods: [
       "GET",
       "POST",
     ],
-
-    credentials:
-      true,
 
   })
 
@@ -204,7 +195,7 @@ const upload =
     storage,
   });
 
-// HEALTH CHECK
+// HEALTH
 app.get(
 
   "/",
@@ -231,12 +222,6 @@ app.post(
 
     {
 
-
-
-    },
-
-    {
-
       name:
         "reaction",
 
@@ -258,10 +243,8 @@ app.post(
         "RENDER START"
       );
 
-      const original =
-        req.files[
-          "original"
-        ]?.[0];
+      const originalUrl =
+        req.body.originalUrl;
 
       const reaction =
         req.files[
@@ -269,7 +252,7 @@ app.post(
         ]?.[0];
 
       if (
-        !original ||
+        !originalUrl ||
         !reaction
       ) {
 
@@ -285,8 +268,8 @@ app.post(
       }
 
       console.log(
-        "ORIGINAL:",
-        original.path
+        "ORIGINAL URL:",
+        originalUrl
       );
 
       console.log(
@@ -382,10 +365,6 @@ app.post(
 
             // CLEANUP
             try {
-
-              fs.unlinkSync(
-                original.path
-              );
 
               fs.unlinkSync(
                 reaction.path
