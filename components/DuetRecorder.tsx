@@ -370,7 +370,7 @@ export default function DuetRecorder({
       const response =
         await fetch(
 
-          "https://mreact.vercel.app/render-duet",
+          "https://music-reactions-v2-production.up.railway.app//render-duet",
 
           {
 
