@@ -375,7 +375,7 @@ export default function DuetRecorder({
       const response =
         await fetch(
 
-          "https://music-reactions-v2-production.up.railway.app/render-duet",
+          "https://your-render-service.onrender.com//render-duet",
 
           {
 
