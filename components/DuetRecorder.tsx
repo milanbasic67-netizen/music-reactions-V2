@@ -10,14 +10,14 @@ import { supabase }
 from "@/lib/supabase";
 
 type Props = {
-  originalUrlVideo: string;
+  originalVideo: string;
   title?: string;
   artist?: string;
 };
 
 export default function DuetRecorder({
 
-  originalUrlVideo,
+  originalVideo,
 
   title,
 
@@ -25,6 +25,7 @@ export default function DuetRecorder({
 
 }: Props) {
 
+  // VIDEO REFS
   const originalVideoRef =
     useRef<HTMLVideoElement>(
       null
@@ -35,6 +36,7 @@ export default function DuetRecorder({
       null
     );
 
+  // MEDIA
   const mediaRecorderRef =
     useRef<MediaRecorder | null>(
       null
@@ -48,6 +50,7 @@ export default function DuetRecorder({
   const chunksRef =
     useRef<Blob[]>([]);
 
+  // STATE
   const [cameraReady,
     setCameraReady] =
     useState(false);
@@ -75,31 +78,21 @@ export default function DuetRecorder({
           "REQUEST CAMERA"
         );
 
-        // FORCE CAMERA ACCESS
         const stream =
           await navigator
             .mediaDevices
             .getUserMedia({
 
-              video: {
-
-                width: 1280,
-
-                height: 720,
-
-              },
+              video: true,
 
               audio: false,
 
             });
 
-        console.log(
-          "CAMERA OK"
-        );
-
         streamRef.current =
           stream;
 
+        // ATTACH STREAM
         if (
           reactionVideoRef.current
         ) {
@@ -116,7 +109,11 @@ export default function DuetRecorder({
           reactionVideoRef.current.playsInline =
             true;
 
-          await reactionVideoRef.current.play();
+          reactionVideoRef.current
+            .play()
+            .catch(
+              console.log
+            );
 
         }
 
@@ -124,15 +121,15 @@ export default function DuetRecorder({
           true
         );
 
+        console.log(
+          "CAMERA READY"
+        );
+
       } catch (err) {
 
         console.log(
           "CAMERA ERROR",
           err
-        );
-
-        alert(
-          "Camera access denied"
         );
 
       }
@@ -185,7 +182,7 @@ export default function DuetRecorder({
         ""
       );
 
-      // PLAY ORIGINAL
+      // PLAY ORIGINAL VIDEO
       if (
         originalVideoRef.current
       ) {
@@ -294,7 +291,7 @@ export default function DuetRecorder({
 
   }
 
-  // STOP RECORDING
+  // STOP
   function stopRecording() {
 
     try {
@@ -341,7 +338,7 @@ export default function DuetRecorder({
         true
       );
 
-      // FETCH ORIGINAL
+      // FETCH ORIGINAL VIDEO
       const originalResponse =
         await fetch(
           originalVideo
@@ -350,7 +347,7 @@ export default function DuetRecorder({
       const originalBlob =
         await originalResponse.blob();
 
-      // FORM DATA
+      // FORM
       const formData =
         new FormData();
 
@@ -374,11 +371,11 @@ export default function DuetRecorder({
 
       );
 
-      // RENDER API
+      // BACKEND
       const response =
         await fetch(
 
-          "https://music-reactions-v2-production.up.railway.app:8080/render-duet",
+          "https://music-reactions-v2-production.up.railway.app/render-duet",
 
           {
 
@@ -392,12 +389,17 @@ export default function DuetRecorder({
 
         );
 
-      const data =
-        await response.json();
+      const text =
+        await response.text();
 
       console.log(
-        data
+        text
       );
+
+      const data =
+        JSON.parse(
+          text
+        );
 
       if (
         !data.videoUrl
@@ -415,7 +417,7 @@ export default function DuetRecorder({
 
       }
 
-      // DOWNLOAD VIDEO
+      // DOWNLOAD
       const renderedResponse =
         await fetch(
           data.videoUrl
@@ -424,7 +426,7 @@ export default function DuetRecorder({
       const renderedBlob =
         await renderedResponse.blob();
 
-      // FILE
+      // FILE NAME
       const fileName =
         `${Date.now()}.mp4`;
 
@@ -588,16 +590,16 @@ export default function DuetRecorder({
 
           <div className="text-sm mb-3 text-zinc-500">
 
-            OriginalUrl
+            Original
 
           </div>
 
           <video
             ref={
-              originalUrlVideoRef
+              originalVideoRef
             }
             src={
-              originalUrlVideo
+              originalVideo
             }
             controls
             playsInline
@@ -629,7 +631,7 @@ export default function DuetRecorder({
 
       </div>
 
-      {/* BUTTONS */}
+      {/* BUTTON */}
       <div className="mt-8">
 
         {!recording ? (
