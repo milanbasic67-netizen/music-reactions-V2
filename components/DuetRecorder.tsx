@@ -342,13 +342,7 @@ export default function DuetRecorder({
       );
 
       // FETCH ORIGINAL
-      const originalResponse =
-        await fetch(
-          originalVideo
-        );
-
-      const originalBlob =
-        await originalResponse.blob();
+      
 
       // FORM DATA
       const formData =
@@ -356,11 +350,9 @@ export default function DuetRecorder({
 
       formData.append(
 
-        "original",
+        "originalUrl",
 
-        originalBlob,
-
-        "original.mp4"
+        originalVideo
 
       );
 

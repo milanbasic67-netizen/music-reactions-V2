@@ -231,11 +231,7 @@ app.post(
 
     {
 
-      name:
-        "original",
 
-      maxCount:
-        1,
 
     },
 
@@ -315,7 +311,7 @@ app.post(
       ffmpeg()
 
         .input(
-          original.path
+          originalUrl
         )
 
         .input(
