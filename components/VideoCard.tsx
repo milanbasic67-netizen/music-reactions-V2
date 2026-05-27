@@ -188,7 +188,7 @@ export default function VideoCard({
 
       setLikesCount(
         (
-          prev
+          prev: number
         ) =>
           prev - 1
       );
@@ -216,7 +216,7 @@ export default function VideoCard({
 
       setLikesCount(
         (
-          prev
+          prev: number
         ) =>
           prev + 1
       );
