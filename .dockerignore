@@ -1,0 +1,23 @@
+# Ignore everything by default, then allow only what the Dockerfile needs
+*
+
+# Allow the server source
+!server/
+!server/**
+
+# But exclude stray binaries / symlinks that ended up in server/
+server/node
+server/npm
+server/server@1.0.0
+server/bin/
+
+# Exclude server node_modules if they exist locally
+server/node_modules/
+
+# Exclude other top-level directories (Next.js frontend, etc.)
+app/
+components/
+lib/
+public/
+.next/
+node_modules/

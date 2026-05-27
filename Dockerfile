@@ -7,10 +7,12 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy server source and install dependencies
+# Copy package manifests from the server/ subdirectory and install dependencies.
+# Build context is the repo root; .dockerignore ensures only server/ source is sent.
 COPY server/package*.json ./
 RUN npm ci --omit=dev
 
+# Copy the rest of the server source (node_modules is excluded via .dockerignore)
 COPY server/ ./
 
 EXPOSE 8080
