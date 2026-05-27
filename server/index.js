@@ -25,6 +25,9 @@ const {
   "@supabase/supabase-js"
 );
 
+const ws =
+  require("ws");
+
 console.log(
   "SERVER STARTING"
 );
@@ -32,16 +35,34 @@ console.log(
 const app =
   express();
 
+// ENV
+const PORT =
+  process.env.PORT || 5000;
+
+const APP_URL =
+  process.env.APP_URL ||
+  `http://localhost:${PORT}`;
+
+// CORS
 app.use(
 
   cors({
 
-    origin: "*",
+    origin: [
+
+      "http://localhost:3000",
+
+      "https://mreact.vercel.app",
+
+    ],
 
     methods: [
       "GET",
       "POST",
     ],
+
+    credentials:
+      true,
 
   })
 
@@ -63,7 +84,19 @@ const supabase =
       .SUPABASE_URL,
 
     process.env
-      .SUPABASE_SERVICE_ROLE_KEY
+      .SUPABASE_SERVICE_ROLE_KEY,
+
+    {
+
+      realtime: {
+
+        transport:
+          ws,
+
+      },
+
+    }
+
   );
 
 console.log(
@@ -83,25 +116,12 @@ const rendersDir =
     "renders"
   );
 
-const songsDir =
-  path.join(
-    __dirname,
-    "songs"
-  );
-
-const thumbnailsDir =
-  path.join(
-    __dirname,
-    "thumbnails"
-  );
-
 // CREATE FOLDERS
 [
   uploadsDir,
   rendersDir,
-  songsDir,
-  thumbnailsDir,
 ].forEach(
+
   (
     dir
   ) => {
@@ -113,25 +133,33 @@ const thumbnailsDir =
     ) {
 
       fs.mkdirSync(
+
         dir,
+
         {
+
           recursive:
             true,
+
         }
+
       );
 
     }
 
   }
+
 );
 
 // STATIC
 app.use(
+
   "/renders",
 
   express.static(
     rendersDir
   )
+
 );
 
 // MULTER
@@ -164,6 +192,7 @@ const storage =
           null,
 
           `${Date.now()}-${file.originalname}`
+
         );
 
       },
@@ -175,8 +204,9 @@ const upload =
     storage,
   });
 
-// HEALTH
+// HEALTH CHECK
 app.get(
+
   "/",
 
   (
@@ -189,25 +219,36 @@ app.get(
     );
 
   }
+
 );
 
-// RENDER
+// RENDER DUET
 app.post(
 
   "/render-duet",
 
   upload.fields([
+
     {
+
       name:
         "original",
-      maxCount: 1,
+
+      maxCount:
+        1,
+
     },
 
     {
+
       name:
         "reaction",
-      maxCount: 1,
+
+      maxCount:
+        1,
+
     },
+
   ]),
 
   async (
@@ -217,15 +258,19 @@ app.post(
 
     try {
 
+      console.log(
+        "RENDER START"
+      );
+
       const original =
         req.files[
           "original"
-        ][0];
+        ]?.[0];
 
       const reaction =
         req.files[
           "reaction"
-        ][0];
+        ]?.[0];
 
       if (
         !original ||
@@ -243,6 +288,17 @@ app.post(
 
       }
 
+      console.log(
+        "ORIGINAL:",
+        original.path
+      );
+
+      console.log(
+        "REACTION:",
+        reaction.path
+      );
+
+      // OUTPUT
       const outputName =
         `duet-${Date.now()}.mp4`;
 
@@ -252,12 +308,10 @@ app.post(
           rendersDir,
 
           outputName
+
         );
 
-      console.log(
-        "FFMPEG START"
-      );
-
+      // FFMPEG
       ffmpeg()
 
         .input(
@@ -270,144 +324,25 @@ app.post(
 
         .complexFilter([
 
-          {
-            filter:
-              "scale",
+          "[0:v]scale=540:960[left]",
 
-            options:
-              "540:1920:force_original_aspect_ratio=increase",
+          "[1:v]scale=540:960[right]",
 
-            inputs:
-              "0:v",
-
-            outputs:
-              "leftScaled",
-          },
-
-          {
-            filter:
-              "crop",
-
-            options:
-              "540:1920",
-
-            inputs:
-              "leftScaled",
-
-            outputs:
-              "left",
-          },
-
-          {
-            filter:
-              "scale",
-
-            options:
-              "540:1920:force_original_aspect_ratio=increase",
-
-            inputs:
-              "1:v",
-
-            outputs:
-              "rightScaled",
-          },
-
-          {
-            filter:
-              "crop",
-
-            options:
-              "540:1920",
-
-            inputs:
-              "rightScaled",
-
-            outputs:
-              "right",
-          },
-
-          {
-            filter:
-              "hstack",
-
-            options:
-              {
-                inputs:
-                  2,
-              },
-
-            inputs: [
-              "left",
-              "right",
-            ],
-
-            outputs:
-              "video",
-          },
-
-          {
-            filter:
-              "volume",
-
-            options:
-              "0.7",
-
-            inputs:
-              "0:a",
-
-            outputs:
-              "a0",
-          },
-
-          {
-            filter:
-              "volume",
-
-            options:
-              "1.2",
-
-            inputs:
-              "1:a",
-
-            outputs:
-              "a1",
-          },
-
-          {
-            filter:
-              "amix",
-
-            options:
-              "inputs=2:duration=shortest",
-
-            inputs: [
-              "a0",
-              "a1",
-            ],
-
-            outputs:
-              "audio",
-          },
+          "[left][right]hstack=inputs=2[v]"
 
         ])
 
         .outputOptions([
 
-          "-map [video]",
+          "-map [v]",
 
-          "-map [audio]",
+          "-map 0:a?",
 
           "-c:v libx264",
 
-          "-preset veryfast",
-
-          "-crf 32",
-
-          "-pix_fmt yuv420p",
-
           "-c:a aac",
 
-          "-b:a 96k",
+          "-preset veryfast",
 
           "-movflags +faststart",
 
@@ -420,6 +355,27 @@ app.post(
         )
 
         .on(
+
+          "start",
+
+          (
+            command
+          ) => {
+
+            console.log(
+              "FFMPEG COMMAND"
+            );
+
+            console.log(
+              command
+            );
+
+          }
+
+        )
+
+        .on(
+
           "end",
 
           () => {
@@ -428,20 +384,43 @@ app.post(
               "FFMPEG DONE"
             );
 
-            res.json({
+            // CLEANUP
+            try {
+
+              fs.unlinkSync(
+                original.path
+              );
+
+              fs.unlinkSync(
+                reaction.path
+              );
+
+            } catch (
+              cleanupErr
+            ) {
+
+              console.log(
+                cleanupErr
+              );
+
+            }
+
+            return res.json({
 
               success:
                 true,
 
               videoUrl:
-                `${req.protocol}://${req.get("host")}/renders/${outputName}`,
+                `${APP_URL}/renders/${outputName}`,
 
             });
 
           }
+
         )
 
         .on(
+
           "error",
 
           (
@@ -456,7 +435,7 @@ app.post(
               err
             );
 
-            res
+            return res
               .status(500)
               .json({
 
@@ -466,15 +445,20 @@ app.post(
               });
 
           }
+
         );
 
     } catch (err) {
 
       console.log(
+        "SERVER ERROR"
+      );
+
+      console.log(
         err
       );
 
-      res
+      return res
         .status(500)
         .json({
 
@@ -486,18 +470,15 @@ app.post(
     }
 
   }
+
 );
 
-// START SERVER
-const PORT =
-  process.env.PORT || 5000;
-
+// START
 app.listen(
 
   PORT,
 
-
-    () => {
+  () => {
 
     console.log(
 

@@ -36,43 +36,66 @@ export default function DuetRecorder({
     );
 
   const mediaRecorderRef =
-    useRef<any>(null);
-
-  const recordedChunksRef =
-    useRef<Blob[]>([]);
+    useRef<MediaRecorder | null>(
+      null
+    );
 
   const streamRef =
     useRef<MediaStream | null>(
       null
     );
 
-  const [recording, setRecording] =
+  const chunksRef =
+    useRef<Blob[]>([]);
+
+  const [cameraReady,
+    setCameraReady] =
     useState(false);
 
-  const [loading, setLoading] =
+  const [recording,
+    setRecording] =
     useState(false);
 
-  const [cameraReady, setCameraReady] =
+  const [loading,
+    setLoading] =
     useState(false);
 
-  const [previewUrl, setPreviewUrl] =
+  const [previewUrl,
+    setPreviewUrl] =
     useState("");
 
   // CAMERA
   useEffect(() => {
 
-    async function setupCamera() {
+    async function initCamera() {
 
       try {
 
+        console.log(
+          "REQUEST CAMERA"
+        );
+
+        // FORCE CAMERA ACCESS
         const stream =
-          await navigator.mediaDevices.getUserMedia({
+          await navigator
+            .mediaDevices
+            .getUserMedia({
 
-            video: true,
+              video: {
 
-            audio: true,
+                width: 1280,
 
-          });
+                height: 720,
+
+              },
+
+              audio: false,
+
+            });
+
+        console.log(
+          "CAMERA OK"
+        );
 
         streamRef.current =
           stream;
@@ -84,6 +107,17 @@ export default function DuetRecorder({
           reactionVideoRef.current.srcObject =
             stream;
 
+          reactionVideoRef.current.muted =
+            true;
+
+          reactionVideoRef.current.autoplay =
+            true;
+
+          reactionVideoRef.current.playsInline =
+            true;
+
+          await reactionVideoRef.current.play();
+
         }
 
         setCameraReady(
@@ -93,6 +127,7 @@ export default function DuetRecorder({
       } catch (err) {
 
         console.log(
+          "CAMERA ERROR",
           err
         );
 
@@ -104,13 +139,14 @@ export default function DuetRecorder({
 
     }
 
-    setupCamera();
+    initCamera();
 
     return () => {
 
       streamRef.current
         ?.getTracks()
         .forEach(
+
           (
             track
           ) => {
@@ -118,6 +154,7 @@ export default function DuetRecorder({
             track.stop();
 
           }
+
         );
 
     };
@@ -141,12 +178,14 @@ export default function DuetRecorder({
 
       }
 
-      setPreviewUrl("");
-
-      recordedChunksRef.current =
+      chunksRef.current =
         [];
 
-      // PLAY SONG
+      setPreviewUrl(
+        ""
+      );
+
+      // PLAY ORIGINAL
       if (
         originalVideoRef.current
       ) {
@@ -154,20 +193,23 @@ export default function DuetRecorder({
         originalVideoRef.current.currentTime =
           0;
 
-        originalVideoRef.current.play();
+        await originalVideoRef.current.play();
 
       }
 
-      // RECORD CAMERA
+      // RECORDER
       const recorder =
         new MediaRecorder(
 
           streamRef.current,
 
           {
+
             mimeType:
               "video/webm",
+
           }
+
         );
 
       mediaRecorderRef.current =
@@ -182,7 +224,7 @@ export default function DuetRecorder({
             event.data.size > 0
           ) {
 
-            recordedChunksRef.current.push(
+            chunksRef.current.push(
               event.data
             );
 
@@ -193,29 +235,42 @@ export default function DuetRecorder({
       recorder.onstop =
         async () => {
 
-          const blob =
-            new Blob(
+          try {
 
-              recordedChunksRef.current,
+            const blob =
+              new Blob(
 
-              {
-                type:
-                  "video/webm",
-              }
+                chunksRef.current,
+
+                {
+
+                  type:
+                    "video/webm",
+
+                }
+
+              );
+
+            const preview =
+              URL.createObjectURL(
+                blob
+              );
+
+            setPreviewUrl(
+              preview
             );
 
-          const preview =
-            URL.createObjectURL(
+            await renderDuet(
               blob
             );
 
-          setPreviewUrl(
-            preview
-          );
+          } catch (err) {
 
-          await uploadAndRender(
-            blob
-          );
+            console.log(
+              err
+            );
+
+          }
 
         };
 
@@ -242,12 +297,16 @@ export default function DuetRecorder({
   // STOP RECORDING
   function stopRecording() {
 
-    if (
-      mediaRecorderRef.current &&
-      recording
-    ) {
+    try {
 
-      mediaRecorderRef.current.stop();
+      if (
+        mediaRecorderRef.current &&
+        recording
+      ) {
+
+        mediaRecorderRef.current.stop();
+
+      }
 
       if (
         originalVideoRef.current
@@ -261,12 +320,18 @@ export default function DuetRecorder({
         false
       );
 
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
     }
 
   }
 
-  // UPLOAD + RENDER
-  async function uploadAndRender(
+  // RENDER
+  async function renderDuet(
     reactionBlob: Blob
   ) {
 
@@ -276,7 +341,7 @@ export default function DuetRecorder({
         true
       );
 
-      // DOWNLOAD ORIGINAL
+      // FETCH ORIGINAL
       const originalResponse =
         await fetch(
           originalVideo
@@ -285,6 +350,7 @@ export default function DuetRecorder({
       const originalBlob =
         await originalResponse.blob();
 
+      // FORM DATA
       const formData =
         new FormData();
 
@@ -295,6 +361,7 @@ export default function DuetRecorder({
         originalBlob,
 
         "original.mp4"
+
       );
 
       formData.append(
@@ -304,32 +371,36 @@ export default function DuetRecorder({
         reactionBlob,
 
         "reaction.webm"
+
       );
 
-      // RENDER
-      const renderResponse =
+      // RENDER API
+      const response =
         await fetch(
 
-          "https://thriving-alignment-production.up.railway.app/render-duet",
+          "https://mreact.vercel.app/render-duet",
 
           {
+
             method:
               "POST",
 
             body:
               formData,
+
           }
+
         );
 
-      const renderData =
-        await renderResponse.json();
+      const data =
+        await response.json();
 
       console.log(
-        renderData
+        data
       );
 
       if (
-        !renderData.videoUrl
+        !data.videoUrl
       ) {
 
         alert(
@@ -344,26 +415,23 @@ export default function DuetRecorder({
 
       }
 
-      // DOWNLOAD RENDERED VIDEO
-      const renderedVideoResponse =
+      // DOWNLOAD VIDEO
+      const renderedResponse =
         await fetch(
-          renderData.videoUrl
+          data.videoUrl
         );
 
-      const renderedVideoBlob =
-        await renderedVideoResponse.blob();
+      const renderedBlob =
+        await renderedResponse.blob();
 
+      // FILE
       const fileName =
         `${Date.now()}.mp4`;
 
-      // UPLOAD TO SUPABASE
+      // UPLOAD
       const {
-        data:
-          uploadData,
-
         error:
           uploadError,
-
       } =
         await supabase
           .storage
@@ -374,18 +442,15 @@ export default function DuetRecorder({
 
             fileName,
 
-            renderedVideoBlob,
+            renderedBlob,
 
             {
-              cacheControl:
-                "3600",
-
-              upsert:
-                false,
 
               contentType:
                 "video/mp4",
+
             }
+
           );
 
       if (
@@ -424,58 +489,44 @@ export default function DuetRecorder({
 
       // USER
       const {
-        data: { user },
+        data: {
+          user,
+        },
       } =
         await supabase
           .auth
           .getUser();
 
-      const username =
-        user?.email?.split(
-          "@"
-        )[0];
+      // SAVE DB
+      await supabase
+        .from(
+          "reactions"
+        )
+        .insert({
 
-      // SAVE REACTION
-      const {
-        error:
-          insertError,
-      } =
-        await supabase
-          .from(
-            "reactions"
-          )
-          .insert({
+          username:
+            user?.email?.split(
+              "@"
+            )[0],
 
-            username,
+          song:
+            title ||
+            "Unknown",
 
-            song:
-              title ||
-              "Unknown Song",
+          artist:
+            artist ||
+            "Unknown",
 
-            artist:
-              artist ||
-              "Unknown Artist",
+          video_url:
+            publicData.publicUrl,
 
-            video_url:
-              publicData.publicUrl,
+          likes_count:
+            0,
 
-            likes_count:
-              0,
+          comments_count:
+            0,
 
-            comments_count:
-              0,
-
-          });
-
-      if (
-        insertError
-      ) {
-
-        console.log(
-          insertError
-        );
-
-      }
+        });
 
       alert(
         "Reaction uploaded!"
@@ -503,6 +554,7 @@ export default function DuetRecorder({
   }
 
   return (
+
     <main className="min-h-screen bg-black text-white p-5 pb-32">
 
       {/* HEADER */}
@@ -514,7 +566,7 @@ export default function DuetRecorder({
 
         </h1>
 
-        <p className="text-zinc-400 mt-3 text-lg">
+        <p className="text-zinc-400 mt-3">
 
           {title}
 
@@ -534,7 +586,7 @@ export default function DuetRecorder({
         {/* ORIGINAL */}
         <div>
 
-          <div className="text-sm font-bold mb-3 text-zinc-400">
+          <div className="text-sm mb-3 text-zinc-500">
 
             Original
 
@@ -549,17 +601,17 @@ export default function DuetRecorder({
             }
             controls
             playsInline
-            className="w-full aspect-[9/16] rounded-3xl object-cover bg-zinc-950"
+            className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
           />
 
         </div>
 
-        {/* CAMERA */}
+        {/* REACTION */}
         <div>
 
-          <div className="text-sm font-bold mb-3 text-zinc-400">
+          <div className="text-sm mb-3 text-zinc-500">
 
-            Your Reaction
+            Reaction
 
           </div>
 
@@ -570,14 +622,14 @@ export default function DuetRecorder({
             autoPlay
             muted
             playsInline
-            className="w-full aspect-[9/16] rounded-3xl object-cover bg-zinc-950"
+            className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
           />
 
         </div>
 
       </div>
 
-      {/* CONTROLS */}
+      {/* BUTTONS */}
       <div className="mt-8">
 
         {!recording ? (
@@ -590,7 +642,7 @@ export default function DuetRecorder({
               !cameraReady ||
               loading
             }
-            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-50 transition text-white font-black py-5 rounded-3xl text-xl"
+            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-50 transition py-5 rounded-3xl text-xl font-black"
           >
 
             {loading
@@ -605,7 +657,7 @@ export default function DuetRecorder({
             onClick={
               stopRecording
             }
-            className="w-full bg-zinc-800 hover:bg-zinc-700 transition text-white font-black py-5 rounded-3xl text-xl"
+            className="w-full bg-zinc-800 hover:bg-zinc-700 transition py-5 rounded-3xl text-xl font-black"
           >
 
             Stop Recording
@@ -640,5 +692,7 @@ export default function DuetRecorder({
       )}
 
     </main>
+
   );
+
 }
