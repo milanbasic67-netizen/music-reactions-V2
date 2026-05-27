@@ -6,7 +6,6 @@ import {
   Share,
   Volume2,
   VolumeX,
-  Trash2,
 } from "lucide-react";
 
 import {
@@ -17,9 +16,6 @@ import {
 
 import { supabase }
 from "@/lib/supabase";
-
-import CommentsModal
-from "./CommentsModal";
 
 type Props = {
   reaction: any;
@@ -45,18 +41,14 @@ export default function VideoCard({
   const [muted, setMuted] =
     useState(true);
 
-  const [
-    commentsOpen,
-    setCommentsOpen,
-  ] = useState(false);
+  // FINAL URL
+  const finalVideoUrl =
 
-  const [currentUser, setCurrentUser] =
-    useState<any>(null);
+    reaction.video_url ||
+    reaction.videoUrl ||
+    reaction.url;
 
-  const [following, setFollowing] =
-    useState(false);
-
-  // AUTOPLAY + USER
+  // AUTOPLAY
   useEffect(() => {
 
     const video =
@@ -64,98 +56,36 @@ export default function VideoCard({
 
     if (!video) return;
 
-    // GET USER
-    supabase.auth
-      .getUser()
-      .then(
-        async ({
-          data,
-        }) => {
-
-          setCurrentUser(
-            data.user
-          );
-
-          // CHECK FOLLOW
-          const username =
-            data.user?.email?.split(
-              "@"
-            )[0];
-
-          if (
-            username
-          ) {
-
-            const {
-              data: existing,
-            } =
-              await supabase
-                .from(
-                  "follows"
-                )
-                .select("*")
-                .eq(
-                  "follower_username",
-                  username
-                )
-                .eq(
-                  "following_username",
-                  reaction.username
-                )
-                .single();
-
-            if (
-              existing
-            ) {
-
-              setFollowing(
-                true
-              );
-
-            }
-
-          }
-
-        }
-      );
-
-    // AUTOPLAY
     const observer =
       new IntersectionObserver(
-        (
-          entries
-        ) => {
 
-          entries.forEach(
-            (
-              entry
-            ) => {
+        ([entry]) => {
 
-              if (
-                entry.isIntersecting
-              ) {
+          if (
+            entry.isIntersecting
+          ) {
 
-                video
-                  .play()
-                  .catch(
-                    () => {}
-                  );
+            video
+              .play()
+              .catch(
+                () => {}
+              );
 
-              } else {
+          } else {
 
-                video.pause();
+            video.pause();
 
-              }
-
-            }
-          );
+          }
 
         },
 
         {
+
           threshold:
             0.7,
+
         }
+
       );
 
     observer.observe(
@@ -170,7 +100,7 @@ export default function VideoCard({
 
   }, []);
 
-  // TOGGLE SOUND
+  // SOUND
   function toggleSound() {
 
     const video =
@@ -190,8 +120,6 @@ export default function VideoCard({
         false
       );
 
-      video.play();
-
     } else {
 
       video.muted =
@@ -205,7 +133,7 @@ export default function VideoCard({
 
   }
 
-  // LIKE SYSTEM
+  // LIKE
   async function toggleLike() {
 
     const {
@@ -223,7 +151,6 @@ export default function VideoCard({
 
     }
 
-    // EXISTING LIKE
     const {
       data: existing,
     } =
@@ -261,7 +188,7 @@ export default function VideoCard({
 
       setLikesCount(
         (
-          prev: number
+          prev
         ) =>
           prev - 1
       );
@@ -283,36 +210,13 @@ export default function VideoCard({
 
         });
 
-      // NOTIFICATION
-      await supabase
-        .from(
-          "notifications"
-        )
-        .insert({
-
-          username:
-            reaction.username,
-
-          actor:
-            user.email?.split(
-              "@"
-            )[0],
-
-          type:
-            "like",
-
-          reaction_id:
-            reaction.id,
-
-        });
-
       setLiked(
         true
       );
 
       setLikesCount(
         (
-          prev: number
+          prev
         ) =>
           prev + 1
       );
@@ -321,422 +225,148 @@ export default function VideoCard({
 
   }
 
-  // FOLLOW SYSTEM
-  async function toggleFollow() {
+  // SHARE
+  async function shareVideo() {
 
-    const {
-      data: { user },
-    } =
-      await supabase.auth.getUser();
+    await navigator.clipboard.writeText(
 
-    if (!user) {
+      `${window.location.origin}/reaction/${reaction.id}`
 
-      alert(
-        "Login required"
-      );
+    );
 
-      return;
-
-    }
-
-    const myUsername =
-      user.email?.split(
-        "@"
-      )[0];
-
-    // CAN’T FOLLOW SELF
-    if (
-      myUsername ===
-      reaction.username
-    ) {
-
-      return;
-
-    }
-
-    // EXISTING
-    const {
-      data: existing,
-    } =
-      await supabase
-        .from(
-          "follows"
-        )
-        .select("*")
-        .eq(
-          "follower_username",
-          myUsername
-        )
-        .eq(
-          "following_username",
-          reaction.username
-        )
-        .single();
-
-    // UNFOLLOW
-    if (existing) {
-
-      await supabase
-        .from(
-          "follows"
-        )
-        .delete()
-        .eq(
-          "id",
-          existing.id
-        );
-
-      setFollowing(
-        false
-      );
-
-    } else {
-
-      // FOLLOW
-      await supabase
-        .from(
-          "follows"
-        )
-        .insert({
-
-          follower_username:
-            myUsername,
-
-          following_username:
-            reaction.username,
-
-        });
-
-      // NOTIFICATION
-      await supabase
-        .from(
-          "notifications"
-        )
-        .insert({
-
-          username:
-            reaction.username,
-
-          actor:
-            myUsername,
-
-          type:
-            "follow",
-
-        });
-
-      setFollowing(
-        true
-      );
-
-    }
-
-  }
-
-  // DELETE POST
-  async function deletePost() {
-
-    const confirmDelete =
-      confirm(
-        "Delete this reaction?"
-      );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    try {
-
-      await supabase
-        .from(
-          "reactions"
-        )
-        .delete()
-        .eq(
-          "id",
-          reaction.id
-        );
-
-      window.location.reload();
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Delete failed"
-      );
-
-    }
+    alert(
+      "Link copied!"
+    );
 
   }
 
   return (
-    <div className="relative h-screen w-screen snap-start overflow-hidden bg-black">
+
+    <div className="relative h-screen w-screen overflow-hidden bg-black">
 
       {/* VIDEO */}
       <video
         ref={videoRef}
-        src={
-          reaction.video_url
-        }
+        src={finalVideoUrl}
+        className="absolute inset-0 h-full w-full object-contain bg-black"
+        autoPlay
         loop
-        muted={muted}
         playsInline
-        controls={false}
-        onClick={
-          toggleSound
-        }
-        className="absolute inset-0 h-full w-full object-cover"
+        muted={muted}
       />
 
       {/* OVERLAY */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-black/30 z-10 pointer-events-none" />
+      <div className="absolute inset-0 z-20 flex">
 
-      {/* SOUND BUTTON */}
-      <button
-        onClick={
-          toggleSound
-        }
-        className="absolute top-6 right-5 z-30 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-3"
-      >
+        {/* LEFT */}
+        <div className="flex-1 flex flex-col justify-end p-5">
 
-        {muted ? (
+          <div className="mb-24">
 
-          <VolumeX
-            size={24}
-            className="text-white"
-          />
+            <h2 className="font-black text-xl">
 
-        ) : (
+              @
+              {reaction.username ||
+                "user"}
 
-          <Volume2
-            size={24}
-            className="text-white"
-          />
+            </h2>
 
-        )}
+            <p className="text-sm text-zinc-300 mt-2">
 
-      </button>
+              {reaction.song}
 
-      {/* RIGHT ACTIONS */}
-      <div className="absolute right-4 bottom-32 z-30 flex flex-col items-center gap-7">
+            </p>
 
-        {/* DELETE */}
-        {currentUser?.email?.split(
-          "@"
-        )[0] ===
-        reaction.username && (
+            <p className="text-xs text-zinc-500 mt-1">
 
+              {reaction.artist}
+
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* RIGHT */}
+        <div className="w-24 flex flex-col items-center justify-end gap-6 pb-32">
+
+          {/* LIKE */}
           <button
             onClick={
-              deletePost
+              toggleLike
             }
-            className="flex flex-col items-center active:scale-90 transition"
+            className="flex flex-col items-center"
           >
 
-            <Trash2
-              size={36}
-              className="text-red-500"
+            <Heart
+              className={`w-8 h-8 ${
+                liked
+                  ? "fill-red-500 text-red-500"
+                  : "text-white"
+              }`}
             />
 
-            <span className="text-red-400 text-xs mt-2 font-semibold">
+            <span className="text-xs mt-1">
 
-              Delete
+              {likesCount}
 
             </span>
 
           </button>
 
-        )}
+          {/* COMMENTS */}
+          <button
+            className="flex flex-col items-center"
+          >
 
-        {/* LIKE */}
-        <button
-          onClick={
-            toggleLike
-          }
-          className="flex flex-col items-center active:scale-90 transition"
-        >
+            <MessageCircle className="w-8 h-8 text-white" />
 
-          <Heart
-            size={36}
-            className={
-              liked
-                ? "fill-red-500 text-red-500"
-                : "text-white"
+            <span className="text-xs mt-1">
+
+              {reaction.comments_count || 0}
+
+            </span>
+
+          </button>
+
+          {/* SHARE */}
+          <button
+            onClick={
+              shareVideo
             }
-          />
+            className="flex flex-col items-center"
+          >
 
-          <span className="text-white text-xs mt-2 font-semibold">
+            <Share className="w-8 h-8 text-white" />
 
-            {likesCount}
+          </button>
 
-          </span>
-
-        </button>
-
-        {/* COMMENTS */}
-        <button
-          onClick={() =>
-            setCommentsOpen(
-              true
-            )
-          }
-          className="flex flex-col items-center active:scale-90 transition"
-        >
-
-          <MessageCircle
-            size={36}
-            className="text-white"
-          />
-
-          <span className="text-white text-xs mt-2 font-semibold">
-
-            {
-              reaction.comments_count ||
-              0
+          {/* SOUND */}
+          <button
+            onClick={
+              toggleSound
             }
+            className="flex flex-col items-center"
+          >
 
-          </span>
+            {muted ? (
 
-        </button>
+              <VolumeX className="w-8 h-8 text-white" />
 
-        {/* SHARE */}
-        <button
-          onClick={
-            async () => {
+            ) : (
 
-              try {
-
-                await navigator.share({
-                  title:
-                    reaction.song,
-
-                  url:
-                    reaction.video_url,
-                });
-
-              } catch {}
-
-            }
-          }
-          className="flex flex-col items-center active:scale-90 transition"
-        >
-
-          <Share
-            size={36}
-            className="text-white"
-          />
-
-          <span className="text-white text-xs mt-2 font-semibold">
-
-            Share
-
-          </span>
-
-        </button>
-
-      </div>
-
-      {/* USER INFO */}
-      <div className="absolute bottom-10 left-5 right-24 z-30">
-
-        {/* USER */}
-        <div className="flex items-center gap-3">
-
-          <div className="w-12 h-12 rounded-full bg-zinc-700 border border-white/20 flex items-center justify-center text-white font-black">
-
-            {reaction.username?.[0]?.toUpperCase() ||
-              "U"}
-
-          </div>
-
-          <div>
-
-            <h2 className="text-white font-black text-xl">
-
-              @
-              {
-                reaction.username
-              }
-
-            </h2>
-
-            <p className="text-zinc-300 text-sm">
-
-              Music Reaction
-
-            </p>
-
-            {/* FOLLOW BUTTON */}
-            {currentUser?.email?.split(
-              "@"
-            )[0] !==
-            reaction.username && (
-
-              <button
-                onClick={
-                  toggleFollow
-                }
-                className={
-                  following
-                    ? "mt-3 bg-zinc-700 text-white px-4 py-2 rounded-full text-sm font-bold"
-                    : "mt-3 bg-red-600 text-white px-4 py-2 rounded-full text-sm font-bold"
-                }
-              >
-
-                {following
-                  ? "Following"
-                  : "Follow"}
-
-              </button>
+              <Volume2 className="w-8 h-8 text-white" />
 
             )}
 
-          </div>
-
-        </div>
-
-        {/* SONG */}
-        <div className="mt-5">
-
-          <h3 className="text-white text-xl font-bold leading-tight">
-
-            {
-              reaction.song
-            }
-
-          </h3>
-
-          <p className="text-zinc-300 mt-2">
-
-            {
-              reaction.artist
-            }
-
-          </p>
+          </button>
 
         </div>
 
       </div>
 
-      {/* COMMENTS MODAL */}
-      <CommentsModal
-        reactionId={
-          reaction.id
-        }
-        open={
-          commentsOpen
-        }
-        onClose={() =>
-          setCommentsOpen(
-            false
-          )
-        }
-      />
-
     </div>
+
   );
+
 }
