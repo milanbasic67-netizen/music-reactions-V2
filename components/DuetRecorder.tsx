@@ -25,7 +25,7 @@ export default function DuetRecorder({
 
 }: Props) {
 
-  // VIDEO REFS
+  // REFS
   const originalVideoRef =
     useRef<HTMLVideoElement>(
       null
@@ -36,7 +36,6 @@ export default function DuetRecorder({
       null
     );
 
-  // MEDIA
   const mediaRecorderRef =
     useRef<MediaRecorder | null>(
       null
@@ -92,7 +91,6 @@ export default function DuetRecorder({
         streamRef.current =
           stream;
 
-        // ATTACH STREAM
         if (
           reactionVideoRef.current
         ) {
@@ -109,11 +107,7 @@ export default function DuetRecorder({
           reactionVideoRef.current.playsInline =
             true;
 
-          reactionVideoRef.current
-            .play()
-            .catch(
-              console.log
-            );
+          await reactionVideoRef.current.play();
 
         }
 
@@ -128,7 +122,10 @@ export default function DuetRecorder({
       } catch (err) {
 
         console.log(
-          "CAMERA ERROR",
+          "CAMERA ERROR"
+        );
+
+        console.log(
           err
         );
 
@@ -158,7 +155,7 @@ export default function DuetRecorder({
 
   }, []);
 
-  // START RECORDING
+  // START
   async function startRecording() {
 
     try {
@@ -182,7 +179,7 @@ export default function DuetRecorder({
         ""
       );
 
-      // PLAY ORIGINAL VIDEO
+      // PLAY ORIGINAL
       if (
         originalVideoRef.current
       ) {
@@ -203,7 +200,7 @@ export default function DuetRecorder({
           {
 
             mimeType:
-              "video/mp4",
+              "video/webm;codecs=vp8",
 
           }
 
@@ -247,6 +244,10 @@ export default function DuetRecorder({
                 }
 
               );
+
+            console.log(
+              blob
+            );
 
             const preview =
               URL.createObjectURL(
@@ -338,7 +339,10 @@ export default function DuetRecorder({
         true
       );
 
-      // FETCH ORIGINAL VIDEO
+      console.log(
+        "FETCH ORIGINAL"
+      );
+
       const originalResponse =
         await fetch(
           originalVideo
@@ -346,6 +350,10 @@ export default function DuetRecorder({
 
       const originalBlob =
         await originalResponse.blob();
+
+      console.log(
+        originalBlob
+      );
 
       // FORM
       const formData =
@@ -371,6 +379,10 @@ export default function DuetRecorder({
 
       );
 
+      console.log(
+        "UPLOAD TO BACKEND"
+      );
+
       // BACKEND
       const response =
         await fetch(
@@ -388,6 +400,10 @@ export default function DuetRecorder({
           }
 
         );
+
+      console.log(
+        response.status
+      );
 
       const text =
         await response.text();
@@ -417,6 +433,10 @@ export default function DuetRecorder({
 
       }
 
+      console.log(
+        data.videoUrl
+      );
+
       // DOWNLOAD
       const renderedResponse =
         await fetch(
@@ -425,6 +445,10 @@ export default function DuetRecorder({
 
       const renderedBlob =
         await renderedResponse.blob();
+
+      console.log(
+        renderedBlob
+      );
 
       // FILE NAME
       const fileName =
@@ -464,7 +488,7 @@ export default function DuetRecorder({
         );
 
         alert(
-          "Upload failed"
+          uploadError.message
         );
 
         setLoading(
@@ -489,6 +513,10 @@ export default function DuetRecorder({
             fileName
           );
 
+      console.log(
+        publicData.publicUrl
+      );
+
       // USER
       const {
         data: {
@@ -500,35 +528,77 @@ export default function DuetRecorder({
           .getUser();
 
       // SAVE DB
-      await supabase
-        .from(
-          "reactions"
-        )
-        .insert({
+      const {
+        data:
+          insertData,
 
-          username:
-            user?.email?.split(
-              "@"
-            )[0],
+        error:
+          insertError,
 
-          song:
-            title ||
-            "Unknown",
+      } =
+        await supabase
+          .from(
+            "reactions"
+          )
+          .insert({
 
-          artist:
-            artist ||
-            "Unknown",
+            username:
+              user?.email?.split(
+                "@"
+              )[0] || "anon",
 
-          video_url:
-            publicData.publicUrl,
+            song:
+              title ||
+              "Unknown",
 
-          likes_count:
-            0,
+            artist:
+              artist ||
+              "Unknown",
 
-          comments_count:
-            0,
+            video_url:
+              publicData.publicUrl,
 
-        });
+            likes_count:
+              0,
+
+            comments_count:
+              0,
+
+          })
+
+          .select();
+
+      console.log(
+        "INSERT DATA"
+      );
+
+      console.log(
+        insertData
+      );
+
+      console.log(
+        "INSERT ERROR"
+      );
+
+      console.log(
+        insertError
+      );
+
+      if (
+        insertError
+      ) {
+
+        alert(
+          insertError.message
+        );
+
+        setLoading(
+          false
+        );
+
+        return;
+
+      }
 
       alert(
         "Reaction uploaded!"
@@ -601,7 +671,6 @@ export default function DuetRecorder({
             src={
               originalVideo
             }
-            autoPlay
             controls
             playsInline
             className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
