@@ -213,7 +213,7 @@ app.get(
 
 );
 
-// RENDER DUET
+// RENDER
 app.post(
 
   "/render-duet",
@@ -313,6 +313,11 @@ app.post(
           reaction.path
         )
 
+        // HARD LIMIT
+        .duration(
+          15
+        )
+
         .complexFilter([
 
           "[0:v]scale=540:960[left]",
@@ -335,17 +340,15 @@ app.post(
 
           "-preset ultrafast",
 
-          "-crf 30",
+          "-crf 35",
+
+          "-t 15",
+
+          "-threads 2",
 
           "-movflags +faststart",
 
-          "-shortest",
-
         ])
-
-        .save(
-          outputPath
-        )
 
         .on(
 
@@ -361,6 +364,39 @@ app.post(
 
             console.log(
               command
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "progress",
+
+          (
+            progress
+          ) => {
+
+            console.log(
+              "PROGRESS:",
+              progress.percent
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "stderr",
+
+          (
+            line
+          ) => {
+
+            console.log(
+              line
             );
 
           }
@@ -439,6 +475,10 @@ app.post(
 
           }
 
+        )
+
+        .save(
+          outputPath
         );
 
     } catch (err) {
