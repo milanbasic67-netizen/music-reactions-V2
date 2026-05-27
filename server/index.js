@@ -332,21 +332,25 @@ app.post(
 
           "-map [v]",
 
-          "-map 0:a?",
+  "-map 0:a?",
 
-          "-c:v libx264",
+  "-c:v libx264",
 
-          "-c:a aac",
+  "-c:a aac",
 
-          "-preset ultrafast",
+  "-preset ultrafast",
 
-          "-crf 35",
+  "-crf 35",
 
-          "-t 15",
+  "-r 30",
 
-          "-threads 2",
+  "-vsync 2",
 
-          "-movflags +faststart",
+  "-t 15",
+
+  "-threads 2",
+
+  "-movflags +faststart",
 
         ])
 
