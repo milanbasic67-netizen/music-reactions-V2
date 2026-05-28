@@ -5,6 +5,8 @@ export const dynamic =
 
 import {
 
+  Suspense,
+
   useEffect,
 
   useState,
@@ -20,7 +22,7 @@ import {
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-export default function CreatePage() {
+function CreateContent() {
 
   const searchParams =
     useSearchParams();
@@ -233,6 +235,31 @@ export default function CreatePage() {
       />
 
     </main>
+
+  );
+
+}
+
+export default function CreatePage() {
+
+  return (
+
+    <Suspense
+      fallback={
+
+        <main className="min-h-screen bg-black text-white flex items-center justify-center">
+
+          Loading...
+
+        </main>
+
+      }
+
+    >
+
+      <CreateContent />
+
+    </Suspense>
 
   );
 
