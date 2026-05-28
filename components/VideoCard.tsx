@@ -1,17 +1,29 @@
 "use client";
 
 import {
+
   Heart,
+
   MessageCircle,
+
   Share,
+
   Volume2,
+
   VolumeX,
+
+  Trash2,
+
 } from "lucide-react";
 
 import {
+
   useEffect,
+
   useRef,
+
   useState,
+
 } from "react";
 
 import { supabase }
@@ -240,6 +252,123 @@ export default function VideoCard({
 
   }
 
+  // DELETE
+  async function deleteReaction() {
+
+    const confirmed =
+      confirm(
+        "Delete reaction?"
+      );
+
+    if (
+      !confirmed
+    ) return;
+
+    try {
+
+      console.log(
+        reaction
+      );
+
+      // STORAGE PATH
+      let storagePath =
+        "";
+
+      if (
+        reaction.video_url
+      ) {
+
+        const split =
+          reaction.video_url.split(
+            "/videos/"
+          );
+
+        storagePath =
+          split[1];
+
+      }
+
+      console.log(
+        storagePath
+      );
+
+      // DELETE STORAGE VIDEO
+      if (
+        storagePath
+      ) {
+
+        const {
+          error:
+            storageError,
+        } =
+          await supabase
+            .storage
+            .from(
+              "videos"
+            )
+            .remove([
+              storagePath,
+            ]);
+
+        console.log(
+          storageError
+        );
+
+      }
+
+      // DELETE LIKES
+      await supabase
+        .from(
+          "likes"
+        )
+        .delete()
+        .eq(
+          "reaction_id",
+          reaction.id
+        );
+
+      // DELETE REACTION
+      const {
+        error,
+      } =
+        await supabase
+          .from(
+            "reactions"
+          )
+          .delete()
+          .eq(
+            "id",
+            reaction.id
+          );
+
+      if (
+        error
+      ) {
+
+        console.log(
+          error
+        );
+
+        alert(
+          error.message
+        );
+
+        return;
+
+      }
+
+      window.location.reload();
+
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
+    }
+
+  }
+
   return (
 
     <div className="relative h-screen w-screen overflow-hidden bg-black">
@@ -338,6 +467,21 @@ export default function VideoCard({
           >
 
             <Share className="w-8 h-8 text-white" />
+
+          </button>
+
+          {/* DELETE */}
+          <button
+
+            onClick={
+              deleteReaction
+            }
+
+            className="flex flex-col items-center"
+
+          >
+
+            <Trash2 className="w-8 h-8 text-white" />
 
           </button>
 
