@@ -319,6 +319,7 @@ app.post(
 
         .complexFilter([
 
+          // ORIGINAL VIDEO
           {
             filter:
               "fps",
@@ -347,6 +348,7 @@ app.post(
               "left",
           },
 
+          // REACTION VIDEO
           {
             filter:
               "fps",
@@ -375,6 +377,7 @@ app.post(
               "right",
           },
 
+          // STACK
           {
             filter:
               "hstack",
@@ -391,19 +394,59 @@ app.post(
               "v",
           },
 
+          // LOWER ORIGINAL AUDIO
+          {
+            filter:
+              "volume",
+
+            options:
+              "0.35",
+
+            inputs:
+              "0:a",
+
+            outputs:
+              "songquiet",
+          },
+
+          // BOOST MIC
+          {
+            filter:
+              "volume",
+
+            options:
+              "2.5",
+
+            inputs:
+              "1:a",
+
+            outputs:
+              "micboost",
+          },
+
+          // MIX AUDIO
           {
             filter:
               "amix",
 
             options:
               {
+
                 inputs: 2,
+
                 duration:
                   "shortest",
+
               },
 
             inputs:
-              ["0:a", "1:a"],
+              [
+
+                "songquiet",
+
+                "micboost",
+
+              ],
 
             outputs:
               "a",
