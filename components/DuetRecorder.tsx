@@ -18,7 +18,9 @@ from "@/lib/getProfile";
 
 type Props = {
 
-  youtubeUrl: string;
+  originalVideo: string;
+
+  tempFile: string;
 
   title: string;
 
@@ -28,7 +30,9 @@ type Props = {
 
 export default function DuetRecorder({
 
-  youtubeUrl,
+  originalVideo,
+
+  tempFile,
 
   title,
 
@@ -36,35 +40,21 @@ export default function DuetRecorder({
 
 }: Props) {
 
-  const cameraVideoRef =
+  const videoRef =
     useRef<HTMLVideoElement>(
       null
     );
 
-  const cameraRecorderRef =
+  const mediaRecorderRef =
     useRef<any>(
       null
     );
 
-  const screenRecorderRef =
-    useRef<any>(
-      null
-    );
-
-  const cameraChunksRef =
+  const chunksRef =
     useRef<Blob[]>([]);
 
-  const screenChunksRef =
-    useRef<Blob[]>([]);
-
-  const [cameraStream,
-    setCameraStream] =
-    useState<MediaStream | null>(
-      null
-    );
-
-  const [screenStream,
-    setScreenStream] =
+  const [stream,
+    setStream] =
     useState<MediaStream | null>(
       null
     );
@@ -95,15 +85,15 @@ export default function DuetRecorder({
 
             });
 
-        setCameraStream(
+        setStream(
           media
         );
 
         if (
-          cameraVideoRef.current
+          videoRef.current
         ) {
 
-          cameraVideoRef.current.srcObject =
+          videoRef.current.srcObject =
             media;
 
         }
@@ -131,36 +121,16 @@ export default function DuetRecorder({
 
     try {
 
-      if (!cameraStream)
+      if (!stream)
         return;
 
-      // SCREEN SHARE
-      const display =
-        await navigator
-          .mediaDevices
-          .getDisplayMedia({
-
-            video: true,
-
-            audio: true,
-
-          });
-
-      setScreenStream(
-        display
-      );
-
-      cameraChunksRef.current =
+      chunksRef.current =
         [];
 
-      screenChunksRef.current =
-        [];
-
-      // CAMERA RECORDER
-      const cameraRecorder =
+      const recorder =
         new MediaRecorder(
 
-          cameraStream,
+          stream,
 
           {
 
@@ -171,29 +141,10 @@ export default function DuetRecorder({
 
         );
 
-      // SCREEN RECORDER
-      const screenRecorder =
-        new MediaRecorder(
+      mediaRecorderRef.current =
+        recorder;
 
-          display,
-
-          {
-
-            mimeType:
-              "video/webm",
-
-          }
-
-        );
-
-      cameraRecorderRef.current =
-        cameraRecorder;
-
-      screenRecorderRef.current =
-        screenRecorder;
-
-      // CAMERA DATA
-      cameraRecorder.ondataavailable =
+      recorder.ondataavailable =
         (
           e
         ) => {
@@ -202,7 +153,7 @@ export default function DuetRecorder({
             e.data.size > 0
           ) {
 
-            cameraChunksRef.current.push(
+            chunksRef.current.push(
               e.data
             );
 
@@ -210,27 +161,7 @@ export default function DuetRecorder({
 
         };
 
-      // SCREEN DATA
-      screenRecorder.ondataavailable =
-        (
-          e
-        ) => {
-
-          if (
-            e.data.size > 0
-          ) {
-
-            screenChunksRef.current.push(
-              e.data
-            );
-
-          }
-
-        };
-
-      cameraRecorder.start();
-
-      screenRecorder.start();
+      recorder.start();
 
       setRecording(
         true
@@ -240,14 +171,23 @@ export default function DuetRecorder({
         "RECORDING"
       );
 
+      // AUTO STOP
+      setTimeout(
+
+        () => {
+
+          stopRecording();
+
+        },
+
+        15000
+
+      );
+
     } catch (err) {
 
       console.log(
         err
-      );
-
-      alert(
-        "Screen share required"
       );
 
     }
@@ -260,8 +200,7 @@ export default function DuetRecorder({
     try {
 
       if (
-        !cameraRecorderRef.current ||
-        !screenRecorderRef.current
+        !mediaRecorderRef.current
       ) {
 
         return;
@@ -272,15 +211,10 @@ export default function DuetRecorder({
         true
       );
 
-      cameraRecorderRef.current.stop();
+      mediaRecorderRef.current.stop();
 
-      screenRecorderRef.current.stop();
-
-      screenStream?.getTracks().forEach(
-        (
-          track: any
-        ) =>
-          track.stop()
+      setRecording(
+        false
       );
 
       setTimeout(
@@ -289,11 +223,11 @@ export default function DuetRecorder({
 
           try {
 
-            // CAMERA FILE
-            const cameraBlob =
+            // BLOB
+            const blob =
               new Blob(
 
-                cameraChunksRef.current,
+                chunksRef.current,
 
                 {
 
@@ -304,10 +238,11 @@ export default function DuetRecorder({
 
               );
 
-            const cameraFile =
+            // FILE
+            const file =
               new File(
 
-                [cameraBlob],
+                [blob],
 
                 `reaction-${Date.now()}.webm`,
 
@@ -320,62 +255,27 @@ export default function DuetRecorder({
 
               );
 
-            // SCREEN FILE
-            const screenBlob =
-              new Blob(
-
-                screenChunksRef.current,
-
-                {
-
-                  type:
-                    "video/webm",
-
-                }
-
-              );
-
-            const screenFile =
-              new File(
-
-                [screenBlob],
-
-                `original-${Date.now()}.webm`,
-
-                {
-
-                  type:
-                    "video/webm",
-
-                }
-
-              );
-
             console.log(
-              cameraFile
+              file
             );
 
-            console.log(
-              screenFile
-            );
-
-            // FORM DATA
+            // FORM
             const formData =
               new FormData();
 
             formData.append(
 
-              "original",
+              "reaction",
 
-              screenFile
+              file
 
             );
 
             formData.append(
 
-              "reaction",
+              "tempFile",
 
-              cameraFile
+              tempFile
 
             );
 
@@ -383,7 +283,7 @@ export default function DuetRecorder({
             const renderRes =
               await fetch(
 
-                `${process.env.NEXT_PUBLIC_API_URL}/render-duet`,
+`${process.env.NEXT_PUBLIC_API_URL}/render-duet`,
 
                 {
 
@@ -463,10 +363,6 @@ export default function DuetRecorder({
                 "Login required"
               );
 
-              setLoading(
-                false
-              );
-
               return;
 
             }
@@ -476,11 +372,11 @@ export default function DuetRecorder({
               await getProfile();
 
             // STORAGE NAME
-            const finalName =
+            const fileName =
 
-              `${Date.now()}-${finalFile.name}`;
+`${Date.now()}-${finalFile.name}`;
 
-            // UPLOAD FINAL VIDEO
+            // UPLOAD FINAL
             const {
               error:
                 uploadError,
@@ -492,7 +388,7 @@ export default function DuetRecorder({
                 )
                 .upload(
 
-                  finalName,
+                  fileName,
 
                   finalFile,
 
@@ -517,10 +413,6 @@ export default function DuetRecorder({
                 uploadError.message
               );
 
-              setLoading(
-                false
-              );
-
               return;
 
             }
@@ -536,10 +428,10 @@ export default function DuetRecorder({
                   "videos"
                 )
                 .getPublicUrl(
-                  finalName
+                  fileName
                 );
 
-            // INSERT POST
+            // INSERT REACTION
             const {
               error:
                 insertError,
@@ -550,19 +442,16 @@ export default function DuetRecorder({
                 )
                 .insert({
 
-                  username:
-                    profile?.username,
-
-                  user_id:
-                    user.id,
-
                   song:
                     title,
 
                   artist,
 
-                  youtube_url:
-                    youtubeUrl,
+                  user_id:
+                    user.id,
+
+                  username:
+                    profile?.username,
 
                   video_url:
                     publicData.publicUrl,
@@ -579,10 +468,6 @@ export default function DuetRecorder({
 
               alert(
                 insertError.message
-              );
-
-              setLoading(
-                false
               );
 
               return;
@@ -612,13 +497,9 @@ export default function DuetRecorder({
             false
           );
 
-          setRecording(
-            false
-          );
-
         },
 
-        1500
+        1200
 
       );
 
@@ -634,14 +515,35 @@ export default function DuetRecorder({
 
   return (
 
-    <div className="p-5">
+    <div className="p-4">
+
+      {/* ORIGINAL VIDEO */}
+      <div className="mb-4 rounded-2xl overflow-hidden bg-black">
+
+        <video
+
+          src={
+            originalVideo
+          }
+
+          autoPlay
+
+          controls
+
+          playsInline
+
+          className="w-full h-[180px] object-cover"
+
+        />
+
+      </div>
 
       {/* CAMERA */}
       <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] max-w-[110px] mx-auto border border-zinc-800 shadow-2xl">
 
         <video
 
-          ref={cameraVideoRef}
+          ref={videoRef}
 
           autoPlay
 
@@ -655,58 +557,40 @@ export default function DuetRecorder({
 
       </div>
 
-      {/* INFO */}
-      <div className="mb-5 text-zinc-500 text-sm">
+      {/* BUTTON */}
+      {!recording && !loading && (
 
-        After clicking Start:
-        choose current tab with
-        YouTube audio enabled.
+        <button
 
-      </div>
+          onClick={
+            startRecording
+          }
 
-      {/* BUTTONS */}
-      <div className="flex gap-4">
+          className="w-full bg-red-600 hover:bg-red-500 transition py-3 rounded-2xl font-black text-lg"
 
-        {!recording ? (
+        >
 
-          <button
+          Start Recording
 
-            onClick={
-              startRecording
-            }
+        </button>
 
-            className="flex-1 bg-red-600 hover:bg-red-500 transition py-3 rounded-3xl font-black text-xl"
+      )}
 
-          >
+      {/* RECORDING */}
+      {recording && (
 
-            Start Recording
+        <div className="text-center text-red-500 font-black">
 
-          </button>
+          Recording...
 
-        ) : (
+        </div>
 
-          <button
-
-            onClick={
-              stopRecording
-            }
-
-            className="flex-1 bg-white text-black py-5 rounded-3xl font-black text-xl"
-
-          >
-
-            Stop Recording
-
-          </button>
-
-        )}
-
-      </div>
+      )}
 
       {/* LOADING */}
       {loading && (
 
-        <div className="mt-5 text-center text-zinc-500">
+        <div className="text-center text-zinc-400 font-black">
 
           Rendering duet...
 

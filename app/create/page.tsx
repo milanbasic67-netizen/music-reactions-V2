@@ -1,11 +1,6 @@
 "use client";
 
-export const dynamic =
-  "force-dynamic";
-
 import {
-
-  Suspense,
 
   useEffect,
 
@@ -22,61 +17,172 @@ import {
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-function CreateContent() {
+export default function CreatePage() {
 
   const searchParams =
     useSearchParams();
 
-  const [mounted,
-    setMounted] =
-    useState(false);
+  const [loading,
+    setLoading] =
+    useState(true);
 
+  const [tempVideo,
+    setTempVideo] =
+    useState("");
+
+  const [tempFile,
+    setTempFile] =
+    useState("");
+
+  const [title,
+    setTitle] =
+    useState("");
+
+  const [artist,
+    setArtist] =
+    useState("");
+
+  // LOAD
   useEffect(() => {
 
-    setMounted(
-      true
-    );
+    async function prepareSong() {
+
+      try {
+
+        const youtubeUrl =
+
+          searchParams.get(
+            "youtube"
+          );
+
+        const songTitle =
+
+          searchParams.get(
+            "title"
+          ) || "";
+
+        const songArtist =
+
+          searchParams.get(
+            "artist"
+          ) || "";
+
+        setTitle(
+          decodeURIComponent(
+            songTitle
+          )
+        );
+
+        setArtist(
+          decodeURIComponent(
+            songArtist
+          )
+        );
+
+        if (!youtubeUrl) {
+
+          alert(
+            "Missing YouTube URL"
+          );
+
+          return;
+
+        }
+
+        console.log(
+          youtubeUrl
+        );
+
+        // PREPARE SONG
+        const res =
+          await fetch(
+
+`${process.env.NEXT_PUBLIC_API_URL}/prepare-song`,
+
+            {
+
+              method:
+                "POST",
+
+              headers: {
+
+                "Content-Type":
+                  "application/json",
+
+              },
+
+              body:
+                JSON.stringify({
+
+                  youtubeUrl,
+
+                }),
+
+            }
+
+          );
+
+        const data =
+          await res.json();
+
+        console.log(
+          data
+        );
+
+        if (
+          !data.videoUrl
+        ) {
+
+          alert(
+            "Prepare failed"
+          );
+
+          return;
+
+        }
+
+        setTempVideo(
+
+          data.videoUrl
+
+        );
+
+        setTempFile(
+
+          data.tempFile
+
+        );
+
+      } catch (err) {
+
+        console.log(
+          err
+        );
+
+        alert(
+          "Prepare error"
+        );
+
+      }
+
+      setLoading(
+        false
+      );
+
+    }
+
+    prepareSong();
 
   }, []);
 
-  if (!mounted) {
-
-    return null;
-
-  }
-
-  const youtube =
-
-    searchParams.get(
-      "youtube"
-    ) || "";
-
-  const title =
-
-    searchParams.get(
-      "title"
-    ) || "";
-
-  const artist =
-
-    searchParams.get(
-      "artist"
-    ) || "";
-
-  console.log({
-    youtube,
-    title,
-    artist,
-  });
-
-  // MISSING
-  if (!youtube) {
+  // LOADING
+  if (loading) {
 
     return (
 
       <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
 
-        Missing YouTube URL
+        Preparing song...
 
       </main>
 
@@ -84,84 +190,14 @@ function CreateContent() {
 
   }
 
-  // VIDEO ID
-  let videoId =
-    "";
-
-  try {
-
-    const decoded =
-      decodeURIComponent(
-        youtube
-      );
-
-    const parsed =
-      new URL(
-        decoded
-      );
-
-    // youtu.be
-    if (
-      parsed.hostname ===
-      "youtu.be"
-    ) {
-
-      videoId =
-        parsed.pathname.replace(
-          "/",
-          ""
-        );
-
-    }
-
-    // shorts
-    else if (
-
-      parsed.pathname.includes(
-        "/shorts/"
-      )
-
-    ) {
-
-      videoId =
-        parsed.pathname
-          .split(
-            "/shorts/"
-          )[1]
-          ?.split("?")[0] || "";
-
-    }
-
-    // watch?v=
-    else {
-
-      videoId =
-        parsed.searchParams.get(
-          "video"
-        ) || "";
-
-    }
-
-  } catch (
-
-    err
-
-  ) {
-
-    console.log(
-      err
-    );
-
-  }
-
-  // INVALID
-  if (!videoId) {
+  // FAILED
+  if (!tempVideo) {
 
     return (
 
       <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
 
-        Invalid YouTube URL
+        Failed to load song
 
       </main>
 
@@ -174,44 +210,40 @@ function CreateContent() {
     <main className="min-h-screen bg-black text-white">
 
       {/* PLAYER */}
-<div className="px-3 pt-3">
+      <div className="px-3 pt-3">
 
-  <div className="relative w-full h-[140px] rounded-2xl overflow-hidden bg-black">
+        <div className="relative w-full h-[140px] rounded-2xl overflow-hidden bg-black">
 
-    <iframe
+          <video
 
-      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1&controls=0&modestbranding=1&rel=0`}
+            src={tempVideo}
 
-      className="absolute inset-0 w-full h-full pointer-events-none"
+            autoPlay
 
-      allow="autoplay"
+            controls
 
-      allowFullScreen
+            playsInline
 
-    />
+            className="absolute inset-0 w-full h-full object-cover"
 
-  </div>
+          />
 
+        </div>
 
-
-</div>
+      </div>
 
       {/* INFO */}
-      <div className="p-5 border-b border-zinc-900">
+      <div className="p-4">
 
-        <h1 className="text-3xl font-black">
+        <h1 className="text-2xl font-black">
 
-          {decodeURIComponent(
-            title
-          )}
+          {title}
 
         </h1>
 
-        <p className="text-zinc-500 mt-2">
+        <p className="text-zinc-500 mt-1">
 
-          {decodeURIComponent(
-            artist
-          )}
+          {artist}
 
         </p>
 
@@ -220,52 +252,25 @@ function CreateContent() {
       {/* RECORDER */}
       <DuetRecorder
 
-        youtubeUrl={
-          decodeURIComponent(
-            youtube
-          )
+        originalVideo={
+          tempVideo
+        }
+
+        tempFile={
+          tempFile
         }
 
         title={
-          decodeURIComponent(
-            title
-          )
+          title
         }
 
         artist={
-          decodeURIComponent(
-            artist
-          )
+          artist
         }
 
       />
 
     </main>
-
-  );
-
-}
-
-export default function CreatePage() {
-
-  return (
-
-    <Suspense
-      fallback={
-
-        <main className="min-h-screen bg-black text-white flex items-center justify-center">
-
-          Loading...
-
-        </main>
-
-      }
-
-    >
-
-      <CreateContent />
-
-    </Suspense>
 
   );
 
