@@ -29,34 +29,61 @@ export default async function SongsPage() {
 
       );
 
-  if (error) {
+  console.log(
+    songs
+  );
 
-    console.log(
-      error
-    );
-
-  }
+  console.log(
+    error
+  );
 
   return (
 
     <main className="min-h-screen bg-black text-white p-4">
 
       {/* HEADER */}
-      <div className="mb-8">
+      <div className="mb-8 flex items-center justify-between">
 
-        <h1 className="text-4xl font-black">
+        <div>
 
-          Songs
+          <h1 className="text-4xl font-black">
 
-        </h1>
+            Songs
 
-        <p className="text-zinc-500 mt-2">
+          </h1>
 
-          Pick a song to react to
+          <p className="text-zinc-500 mt-2">
 
-        </p>
+            Pick a song to react to
+
+          </p>
+
+        </div>
+
+        <Link
+
+          href="/upload-song"
+
+          className="bg-red-600 hover:bg-red-500 transition px-5 py-3 rounded-2xl font-black"
+
+        >
+
+          Upload
+
+        </Link>
 
       </div>
+
+      {/* EMPTY */}
+      {!songs?.length && (
+
+        <div className="text-zinc-500 text-center mt-32">
+
+          No songs uploaded
+
+        </div>
+
+      )}
 
       {/* SONGS */}
       <div className="grid grid-cols-2 gap-4">
@@ -91,19 +118,43 @@ export default async function SongsPage() {
                   {/* THUMB */}
                   <div className="aspect-[9/16] bg-black">
 
-                    <img
+                    {song.thumbnail_url ? (
 
-                      src={
-                        song.thumbnail_url
-                      }
+                      <img
 
-                      alt={
-                        song.title
-                      }
+                        src={
+                          song.thumbnail_url
+                        }
 
-                      className="w-full h-full object-cover"
+                        alt={
+                          song.title
+                        }
 
-                    />
+                        className="w-full h-full object-cover"
+
+                      />
+
+                    ) : (
+
+                      <video
+
+                        src={
+                          song.video_url
+                        }
+
+                        className="w-full h-full object-cover"
+
+                        muted
+
+                        autoPlay
+
+                        loop
+
+                        playsInline
+
+                      />
+
+                    )}
 
                   </div>
 
@@ -112,13 +163,15 @@ export default async function SongsPage() {
 
                     <h2 className="font-black text-lg line-clamp-1">
 
-                      {song.title}
+                      {song.title ||
+                        "Untitled"}
 
                     </h2>
 
                     <p className="text-zinc-500 mt-1 line-clamp-1">
 
-                      {song.artist}
+                      {song.artist ||
+                        "Unknown"}
 
                     </p>
 
