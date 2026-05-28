@@ -24,6 +24,12 @@ export default async function SongsPage() {
 
       .select("*")
 
+      .not(
+        "youtube_url",
+        "is",
+        null
+      )
+
       .order(
         "created_at",
         {
@@ -65,7 +71,7 @@ export default async function SongsPage() {
       {(!songs ||
         songs.length === 0) && (
 
-        <div className="text-zinc-500">
+        <div className="text-zinc-500 text-lg">
 
           No songs uploaded
 
@@ -80,74 +86,90 @@ export default async function SongsPage() {
 
           (
             song
-          ) => (
+          ) => {
 
-            <Link
+            // SKIP INVALID
+            if (
+              !song.youtube_url
+            ) {
 
-              key={
-                song.id
-              }
+              return null;
 
-              href={
+            }
 
-                `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`
+            return (
 
-              }
+              <Link
 
-              className="group"
+                key={
+                  song.id
+                }
 
-            >
+                href={
 
-              {/* THUMB */}
-              <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900 relative">
+                  `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`
 
-                <img
+                }
 
-                  src={
-                    song.thumbnail_url
-                  }
+                className="group"
 
-                  alt={
-                    song.title
-                  }
+              >
 
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                {/* THUMB */}
+                <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900 relative">
 
-                />
+                  <img
 
-                {/* PLAY */}
-                <div className="absolute inset-0 flex items-center justify-center">
+                    src={
+                      song.thumbnail_url ||
+                      "/placeholder.jpg"
+                    }
 
-                  <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur flex items-center justify-center text-white text-3xl">
+                    alt={
+                      song.title
+                    }
 
-                    ▶
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+
+                  />
+
+                  {/* PLAY */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+
+                    <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur flex items-center justify-center text-white text-3xl">
+
+                      ▶
+
+                    </div>
 
                   </div>
 
                 </div>
 
-              </div>
+                {/* INFO */}
+                <div className="mt-3">
 
-              {/* INFO */}
-              <div className="mt-3">
+                  <h2 className="font-black text-lg line-clamp-1">
 
-                <h2 className="font-black text-lg line-clamp-1">
+                    {song.title ||
+                      "Untitled"}
 
-                  {song.title}
+                  </h2>
 
-                </h2>
+                  <p className="text-zinc-500 text-sm">
 
-                <p className="text-zinc-500 text-sm">
+                    {song.artist ||
+                      "Unknown Artist"}
 
-                  {song.artist}
+                  </p>
 
-                </p>
+                </div>
 
-              </div>
+              </Link>
 
-            </Link>
+            );
 
-          )
+          }
 
         )}
 
