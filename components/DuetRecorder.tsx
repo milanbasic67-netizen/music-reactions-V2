@@ -276,7 +276,7 @@ export default function DuetRecorder({
 
       screenRecorderRef.current.stop();
 
-      screenRecorder?.getTracks?.().forEach(
+      screenStream?.getTracks().forEach(
         (
           track: any
         ) =>
