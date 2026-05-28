@@ -2,28 +2,7 @@
 
 import {
 
-  Heart,
-
-  MessageCircle,
-
-  Share,
-
-  Trash2,
-
-  Volume2,
-
-  VolumeX,
-
-} from "lucide-react";
-
-import Link
-from "next/link";
-
-import {
-
   useEffect,
-
-  useMemo,
 
   useRef,
 
@@ -31,605 +10,142 @@ import {
 
 } from "react";
 
-import { supabase }
-from "@/lib/supabase";
-
-import { getProfile }
-from "@/lib/getProfile";
-
 type Props = {
 
   reaction: any;
 
+  active?: boolean;
+
 };
 
 export default function VideoCard({
+
   reaction,
+
+  active = true,
+
 }: Props) {
 
-  const reactionVideoRef =
+  const videoRef =
     useRef<HTMLVideoElement>(
       null
     );
 
-  const [profile,
-    setProfile] =
-    useState<any>(
-      null
-    );
-
-  const [liked,
-    setLiked] =
-    useState(false);
-
-  const [likesCount,
-    setLikesCount] =
-    useState(
-
-      reaction.likes_count ||
-      0
-
-    );
-
   const [muted,
     setMuted] =
-    useState(true);
+    useState(false);
 
-  // LOAD PROFILE
+  // AUTOPLAY
   useEffect(() => {
 
-    async function load() {
-
-      const p =
-        await getProfile();
-
-      setProfile(
-        p
-      );
-
-    }
-
-    load();
-
-  }, []);
-
-  // YOUTUBE VIDEO ID
-  const videoId =
-    useMemo(() => {
-
-      try {
-
-        const parsed =
-          new URL(
-            reaction.youtube_url
-          );
-
-        return parsed
-          .searchParams
-          .get("v");
-
-      } catch {
-
-        return "";
-
-      }
-
-    }, [
-
-      reaction.youtube_url,
-
-    ]);
-
-  // AUTOPLAY CAMERA
-  useEffect(() => {
-
-    const video =
-      reactionVideoRef.current;
-
-    if (!video) return;
-
-    const observer =
-      new IntersectionObserver(
-
-        ([entry]) => {
-
-          if (
-            entry.isIntersecting
-          ) {
-
-            video
-              .play()
-              .catch(
-                () => {}
-              );
-
-          } else {
-
-            video.pause();
-
-          }
-
-        },
-
-        {
-
-          threshold:
-            0.7,
-
-        }
-
-      );
-
-    observer.observe(
-      video
-    );
-
-    return () => {
-
-      observer.disconnect();
-
-    };
-
-  }, []);
-
-  // TOGGLE SOUND
-  function toggleSound() {
-
-    const video =
-      reactionVideoRef.current;
-
-    if (!video) return;
-
-    if (muted) {
-
-      video.muted =
-        false;
-
-      video.volume =
-        1;
-
-      setMuted(
-        false
-      );
-
-    } else {
-
-      video.muted =
-        true;
-
-      setMuted(
-        true
-      );
-
-    }
-
-  }
-
-  // LIKE
-  async function toggleLike() {
-
-    const {
-      data: { user },
-    } =
-      await supabase
-        .auth
-        .getUser();
-
-    if (!user) {
-
-      alert(
-        "Login required"
-      );
+    if (
+      !videoRef.current
+    ) {
 
       return;
 
     }
 
-    const {
-      data: existing,
-    } =
-      await supabase
+    if (active) {
 
-        .from(
-          "likes"
-        )
-
-        .select("*")
-
-        .eq(
-          "reaction_id",
-          reaction.id
-        )
-
-        .eq(
-          "user_id",
-          user.id
-        )
-
-        .single();
-
-    // UNLIKE
-    if (existing) {
-
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .delete()
-
-        .eq(
-          "id",
-          existing.id
+      videoRef.current
+        .play()
+        .catch(
+          console.log
         );
-
-      setLiked(
-        false
-      );
-
-      setLikesCount(
-        (
-          prev: number
-        ) =>
-          prev - 1
-      );
 
     } else {
 
-      // LIKE
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .insert({
-
-          reaction_id:
-            reaction.id,
-
-          user_id:
-            user.id,
-
-        });
-
-      setLiked(
-        true
-      );
-
-      setLikesCount(
-        (
-          prev: number
-        ) =>
-          prev + 1
-      );
+      videoRef.current
+        .pause();
 
     }
 
-  }
+  }, [active]);
 
-  // SHARE
-  async function shareVideo() {
+  // TOGGLE SOUND
+  function toggleMute() {
 
-    await navigator
-      .clipboard
-      .writeText(
-
-        `${window.location.origin}/reaction/${reaction.id}`
-
-      );
-
-    alert(
-      "Link copied!"
+    setMuted(
+      !muted
     );
-
-  }
-
-  // DELETE
-  async function deleteReaction() {
-
-    try {
-
-      const {
-        data: {
-          user,
-        },
-      } =
-        await supabase
-          .auth
-          .getUser();
-
-      if (!user) {
-
-        alert(
-          "Login required"
-        );
-
-        return;
-
-      }
-
-      const canDelete =
-
-        reaction.user_id ===
-        user.id ||
-
-        profile?.role ===
-        "admin";
-
-      if (!canDelete) {
-
-        alert(
-          "You can delete only your own reactions"
-        );
-
-        return;
-
-      }
-
-      const confirmed =
-        confirm(
-          "Delete reaction?"
-        );
-
-      if (
-        !confirmed
-      ) return;
-
-      // STORAGE PATH
-      let storagePath =
-        "";
-
-      if (
-        reaction.video_url
-      ) {
-
-        const split =
-          reaction.video_url.split(
-            "/videos/"
-          );
-
-        storagePath =
-          split[1];
-
-      }
-
-      // DELETE STORAGE VIDEO
-      if (
-        storagePath
-      ) {
-
-        await supabase
-          .storage
-          .from(
-            "videos"
-          )
-          .remove([
-            storagePath,
-          ]);
-
-      }
-
-      // DELETE LIKES
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .delete()
-
-        .eq(
-          "reaction_id",
-          reaction.id
-        );
-
-      // DELETE REACTION
-      const {
-        error,
-      } =
-        await supabase
-
-          .from(
-            "reactions"
-          )
-
-          .delete()
-
-          .eq(
-            "id",
-            reaction.id
-          );
-
-      if (
-        error
-      ) {
-
-        alert(
-          error.message
-        );
-
-        return;
-
-      }
-
-      window.location.reload();
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-    }
 
   }
 
   return (
 
-    <div className="relative h-screen w-screen overflow-hidden bg-black snap-start">
+    <div className="relative w-full h-screen bg-black overflow-hidden">
 
-      {/* YOUTUBE BACKGROUND */}
-      <iframe
+      {/* FINAL DUET VIDEO */}
+      <video
 
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&playsinline=1&loop=1&playlist=${videoId}`}
+        ref={videoRef}
 
-        className="absolute inset-0 w-full h-full"
+        src={
+          reaction.video_url
+        }
 
-        allow="autoplay"
+        autoPlay
 
-        allowFullScreen
+        loop
+
+        playsInline
+
+        muted={muted}
+
+        className="absolute inset-0 w-full h-full object-cover"
 
       />
 
-      {/* DARK OVERLAY */}
-      <div className="absolute inset-0 bg-black/20 z-10" />
+      {/* GRADIENT */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-      {/* REACTION VIDEO */}
-      <div className="absolute top-6 left-6 z-30 w-[32vw] max-w-[220px] aspect-[9/16] rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+      {/* INFO */}
+      <div className="absolute bottom-24 left-4 right-24 z-20">
 
-        <video
+        <div className="mb-4">
 
-          ref={reactionVideoRef}
+          <h2 className="font-black text-2xl text-white">
 
-          src={reaction.video_url}
+            @{reaction.username || "user"}
 
-          autoPlay
+          </h2>
 
-          loop
+          <p className="text-zinc-300 mt-2 text-lg">
 
-          playsInline
+            {reaction.song || "Song"}
 
-          muted={muted}
+          </p>
 
-          className="w-full h-full object-cover"
+          <p className="text-zinc-500 mt-1">
 
-        />
+            {reaction.artist || "Artist"}
+
+          </p>
+
+        </div>
 
       </div>
 
-      {/* CONTENT */}
-      <div className="absolute inset-0 z-40 flex">
+      {/* RIGHT ACTIONS */}
+      <div className="absolute right-4 bottom-24 z-20 flex flex-col items-center gap-6">
 
-        {/* LEFT */}
-        <div className="flex-1 flex flex-col justify-end p-5">
+        {/* SOUND */}
+        <button
 
-          <div className="mb-24">
+          onClick={
+            toggleMute
+          }
 
-            {/* USER */}
-            <Link
+          className="w-14 h-14 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-white text-2xl"
 
-              href={`/u/${reaction.username}`}
+        >
 
-              className="font-black text-2xl"
+          {muted
+            ? "🔇"
+            : "🔊"}
 
-            >
-
-              @
-              {reaction.username}
-
-            </Link>
-
-            {/* SONG */}
-            <h2 className="text-lg mt-3 font-bold">
-
-              {reaction.song}
-
-            </h2>
-
-            {/* ARTIST */}
-            <p className="text-zinc-300 mt-1">
-
-              {reaction.artist}
-
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* RIGHT */}
-        <div className="w-24 flex flex-col items-center justify-end gap-6 pb-32">
-
-          {/* LIKE */}
-          <button
-            onClick={
-              toggleLike
-            }
-            className="flex flex-col items-center"
-          >
-
-            <Heart
-              className={`w-8 h-8 ${
-                liked
-                  ? "fill-red-500 text-red-500"
-                  : "text-white"
-              }`}
-            />
-
-            <span className="text-xs mt-1">
-
-              {likesCount}
-
-            </span>
-
-          </button>
-
-          {/* COMMENTS */}
-          <button
-            className="flex flex-col items-center"
-          >
-
-            <MessageCircle className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* SHARE */}
-          <button
-            onClick={
-              shareVideo
-            }
-            className="flex flex-col items-center"
-          >
-
-            <Share className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* DELETE */}
-          <button
-            onClick={
-              deleteReaction
-            }
-            className="flex flex-col items-center"
-          >
-
-            <Trash2 className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* SOUND */}
-          <button
-            onClick={
-              toggleSound
-            }
-            className="flex flex-col items-center"
-          >
-
-            {muted ? (
-
-              <VolumeX className="w-8 h-8 text-white" />
-
-            ) : (
-
-              <Volume2 className="w-8 h-8 text-white" />
-
-            )}
-
-          </button>
-
-        </div>
+        </button>
 
       </div>
 
