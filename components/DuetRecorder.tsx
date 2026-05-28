@@ -429,6 +429,23 @@ export default function DuetRecorder({
                   fileName
                 );
 
+console.log({
+
+  song: title,
+
+  artist,
+
+  user_id:
+    user.id,
+
+  username:
+    profile?.username,
+
+  video_url:
+    publicData.publicUrl,
+
+});
+
             // INSERT REACTION
             const {
               error:
