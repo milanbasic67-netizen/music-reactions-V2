@@ -2,6 +2,25 @@
 
 import {
 
+  Heart,
+
+  MessageCircle,
+
+  Share,
+
+  Trash2,
+
+  Volume2,
+
+  VolumeX,
+
+} from "lucide-react";
+
+import Link
+from "next/link";
+
+import {
+
   useEffect,
 
   useRef,
@@ -10,20 +29,20 @@ import {
 
 } from "react";
 
+import { supabase }
+from "@/lib/supabase";
+
+import { getProfile }
+from "@/lib/getProfile";
+
 type Props = {
 
   reaction: any;
 
-  active?: boolean;
-
 };
 
 export default function VideoCard({
-
   reaction,
-
-  active = true,
-
 }: Props) {
 
   const videoRef =
@@ -31,50 +50,398 @@ export default function VideoCard({
       null
     );
 
+  const [profile,
+    setProfile] =
+    useState<any>(
+      null
+    );
+
+  const [liked,
+    setLiked] =
+    useState(false);
+
+  const [likesCount,
+    setLikesCount] =
+    useState(
+
+      reaction.likes_count ||
+      0
+
+    );
+
   const [muted,
     setMuted] =
     useState(false);
 
+  // LOAD PROFILE
+  useEffect(() => {
+
+    async function load() {
+
+      const p =
+        await getProfile();
+
+      setProfile(
+        p
+      );
+
+    }
+
+    load();
+
+  }, []);
+
   // AUTOPLAY
   useEffect(() => {
 
-    if (
-      !videoRef.current
-    ) {
+    const video =
+      videoRef.current;
+
+    if (!video)
+      return;
+
+    const observer =
+      new IntersectionObserver(
+
+        ([entry]) => {
+
+          if (
+            entry.isIntersecting
+          ) {
+
+            video
+              .play()
+              .catch(
+                () => {}
+              );
+
+          } else {
+
+            video.pause();
+
+          }
+
+        },
+
+        {
+
+          threshold:
+            0.7,
+
+        }
+
+      );
+
+    observer.observe(
+      video
+    );
+
+    return () => {
+
+      observer.disconnect();
+
+    };
+
+  }, []);
+
+  // TOGGLE SOUND
+  function toggleSound() {
+
+    const video =
+      videoRef.current;
+
+    if (!video)
+      return;
+
+    if (muted) {
+
+      video.muted =
+        false;
+
+      video.volume =
+        1;
+
+      setMuted(
+        false
+      );
+
+    } else {
+
+      video.muted =
+        true;
+
+      setMuted(
+        true
+      );
+
+    }
+
+  }
+
+  // LIKE
+  async function toggleLike() {
+
+    const {
+      data: { user },
+    } =
+      await supabase
+        .auth
+        .getUser();
+
+    if (!user) {
+
+      alert(
+        "Login required"
+      );
 
       return;
 
     }
 
-    if (active) {
+    const {
+      data: existing,
+    } =
+      await supabase
 
-      videoRef.current
-        .play()
-        .catch(
-          console.log
+        .from(
+          "likes"
+        )
+
+        .select("*")
+
+        .eq(
+          "reaction_id",
+          reaction.id
+        )
+
+        .eq(
+          "user_id",
+          user.id
+        )
+
+        .single();
+
+    // UNLIKE
+    if (existing) {
+
+      await supabase
+
+        .from(
+          "likes"
+        )
+
+        .delete()
+
+        .eq(
+          "id",
+          existing.id
         );
+
+      setLiked(
+        false
+      );
+
+      setLikesCount(
+        (
+          prev: number
+        ) =>
+          prev - 1
+      );
 
     } else {
 
-      videoRef.current
-        .pause();
+      // LIKE
+      await supabase
+
+        .from(
+          "likes"
+        )
+
+        .insert({
+
+          reaction_id:
+            reaction.id,
+
+          user_id:
+            user.id,
+
+        });
+
+      setLiked(
+        true
+      );
+
+      setLikesCount(
+        (
+          prev: number
+        ) =>
+          prev + 1
+      );
 
     }
 
-  }, [active]);
+  }
 
-  // TOGGLE SOUND
-  function toggleMute() {
+  // SHARE
+  async function shareVideo() {
 
-    setMuted(
-      !muted
+    await navigator
+      .clipboard
+      .writeText(
+
+`${window.location.origin}/reaction/${reaction.id}`
+
+      );
+
+    alert(
+      "Link copied!"
     );
+
+  }
+
+  // DELETE
+  async function deleteReaction() {
+
+    try {
+
+      const {
+        data: {
+          user,
+        },
+      } =
+        await supabase
+          .auth
+          .getUser();
+
+      if (!user) {
+
+        alert(
+          "Login required"
+        );
+
+        return;
+
+      }
+
+      const canDelete =
+
+        reaction.user_id ===
+        user.id ||
+
+        profile?.role ===
+        "admin";
+
+      if (!canDelete) {
+
+        alert(
+          "You can delete only your own reactions"
+        );
+
+        return;
+
+      }
+
+      const confirmed =
+        confirm(
+          "Delete reaction?"
+        );
+
+      if (
+        !confirmed
+      ) return;
+
+      // STORAGE PATH
+      let storagePath =
+        "";
+
+      if (
+        reaction.video_url
+      ) {
+
+        const split =
+          reaction.video_url.split(
+            "/videos/"
+          );
+
+        storagePath =
+          split[1];
+
+      }
+
+      // DELETE STORAGE VIDEO
+      if (
+        storagePath
+      ) {
+
+        await supabase
+          .storage
+          .from(
+            "videos"
+          )
+          .remove([
+            storagePath,
+          ]);
+
+      }
+
+      // DELETE LIKES
+      await supabase
+
+        .from(
+          "likes"
+        )
+
+        .delete()
+
+        .eq(
+          "reaction_id",
+          reaction.id
+        );
+
+      // DELETE REACTION
+      const {
+        error,
+      } =
+        await supabase
+
+          .from(
+            "reactions"
+          )
+
+          .delete()
+
+          .eq(
+            "id",
+            reaction.id
+          );
+
+      if (
+        error
+      ) {
+
+        alert(
+          error.message
+        );
+
+        return;
+
+      }
+
+      window.location.reload();
+
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
+    }
 
   }
 
   return (
 
-    <div className="relative w-full h-screen bg-black overflow-hidden">
+    <div className="relative h-screen w-screen overflow-hidden bg-black snap-start">
 
       {/* FINAL DUET VIDEO */}
       <video
@@ -97,55 +464,130 @@ export default function VideoCard({
 
       />
 
-      {/* GRADIENT */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+      {/* DARK OVERLAY */}
+      <div className="absolute inset-0 bg-black/20 z-10" />
 
-      {/* INFO */}
-      <div className="absolute bottom-24 left-4 right-24 z-20">
+      {/* CONTENT */}
+      <div className="absolute inset-0 z-40 flex">
 
-        <div className="mb-4">
+        {/* LEFT */}
+        <div className="flex-1 flex flex-col justify-end p-5">
 
-          <h2 className="font-black text-2xl text-white">
+          <div className="mb-24">
 
-            @{reaction.username || "user"}
+            {/* USER */}
+            <Link
 
-          </h2>
+              href={`/u/${reaction.username}`}
 
-          <p className="text-zinc-300 mt-2 text-lg">
+              className="font-black text-2xl"
 
-            {reaction.song || "Song"}
+            >
 
-          </p>
+              @
+              {reaction.username}
 
-          <p className="text-zinc-500 mt-1">
+            </Link>
 
-            {reaction.artist || "Artist"}
+            {/* SONG */}
+            <h2 className="text-lg mt-3 font-bold">
 
-          </p>
+              {reaction.song}
+
+            </h2>
+
+            {/* ARTIST */}
+            <p className="text-zinc-300 mt-1">
+
+              {reaction.artist}
+
+            </p>
+
+          </div>
 
         </div>
 
-      </div>
+        {/* RIGHT */}
+        <div className="w-24 flex flex-col items-center justify-end gap-6 pb-32">
 
-      {/* RIGHT ACTIONS */}
-      <div className="absolute right-4 bottom-24 z-20 flex flex-col items-center gap-6">
+          {/* LIKE */}
+          <button
+            onClick={
+              toggleLike
+            }
+            className="flex flex-col items-center"
+          >
 
-        {/* SOUND */}
-        <button
+            <Heart
+              className={`w-8 h-8 ${
+                liked
+                  ? "fill-red-500 text-red-500"
+                  : "text-white"
+              }`}
+            />
 
-          onClick={
-            toggleMute
-          }
+            <span className="text-xs mt-1">
 
-          className="w-14 h-14 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-white text-2xl"
+              {likesCount}
 
-        >
+            </span>
 
-          {muted
-            ? "🔇"
-            : "🔊"}
+          </button>
 
-        </button>
+          {/* COMMENTS */}
+          <button
+            className="flex flex-col items-center"
+          >
+
+            <MessageCircle className="w-8 h-8 text-white" />
+
+          </button>
+
+          {/* SHARE */}
+          <button
+            onClick={
+              shareVideo
+            }
+            className="flex flex-col items-center"
+          >
+
+            <Share className="w-8 h-8 text-white" />
+
+          </button>
+
+          {/* DELETE */}
+          <button
+            onClick={
+              deleteReaction
+            }
+            className="flex flex-col items-center"
+          >
+
+            <Trash2 className="w-8 h-8 text-white" />
+
+          </button>
+
+          {/* SOUND */}
+          <button
+            onClick={
+              toggleSound
+            }
+            className="flex flex-col items-center"
+          >
+
+            {muted ? (
+
+              <VolumeX className="w-8 h-8 text-white" />
+
+            ) : (
+
+              <Volume2 className="w-8 h-8 text-white" />
+
+            )}
+
+          </button>
+
+        </div>
 
       </div>
 
