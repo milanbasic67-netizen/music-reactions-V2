@@ -103,11 +103,21 @@ export default function UploadSongPage() {
         regExp
       );
 
-    return
+    if (
+
       match &&
+
+      match[2] &&
+
       match[2].length === 11
-        ? match[2]
-        : null;
+
+    ) {
+
+      return match[2];
+
+    }
+
+    return null;
 
   }
 
@@ -175,6 +185,20 @@ export default function UploadSongPage() {
           .auth
           .getUser();
 
+      if (!user) {
+
+        alert(
+          "Login required"
+        );
+
+        setLoading(
+          false
+        );
+
+        return;
+
+      }
+
       // INSERT SONG
       const {
         error,
@@ -206,7 +230,7 @@ export default function UploadSongPage() {
               profile.username,
 
             user_id:
-              user?.id,
+              user.id,
 
           });
 
