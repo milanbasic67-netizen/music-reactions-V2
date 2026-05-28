@@ -40,12 +40,6 @@ export default function UploadSongPage() {
       null
     );
 
-  const [thumbFile,
-    setThumbFile] =
-    useState<File | null>(
-      null
-    );
-
   // LOAD PROFILE
   useEffect(() => {
 
@@ -63,6 +57,113 @@ export default function UploadSongPage() {
     load();
 
   }, []);
+
+  // GENERATE THUMBNAIL
+  async function generateThumbnail(
+    file: File
+  ) {
+
+    return new Promise<File>(
+      (
+        resolve
+      ) => {
+
+        const video =
+          document.createElement(
+            "video"
+          );
+
+        video.src =
+          URL.createObjectURL(
+            file
+          );
+
+        video.currentTime =
+          1;
+
+        video.muted =
+          true;
+
+        video.playsInline =
+          true;
+
+        video.onloadeddata =
+          () => {
+
+            const canvas =
+              document.createElement(
+                "canvas"
+              );
+
+            canvas.width =
+              video.videoWidth;
+
+            canvas.height =
+              video.videoHeight;
+
+            const ctx =
+              canvas.getContext(
+                "2d"
+              );
+
+            ctx?.drawImage(
+
+              video,
+
+              0,
+
+              0,
+
+              canvas.width,
+
+              canvas.height
+
+            );
+
+            canvas.toBlob(
+
+              (
+                blob
+              ) => {
+
+                if (!blob)
+                  return;
+
+                const thumb =
+                  new File(
+
+                    [blob],
+
+                    `thumb-${Date.now()}.jpg`,
+
+                    {
+
+                      type:
+                        "image/jpeg",
+
+                    }
+
+                  );
+
+                resolve(
+                  thumb
+                );
+
+              },
+
+              "image/jpeg",
+
+              0.8
+
+            );
+
+          };
+
+      }
+
+    );
+
+  }
 
   // NOT ADMIN
   if (
@@ -114,18 +215,6 @@ export default function UploadSongPage() {
 
       }
 
-      if (
-        !thumbFile
-      ) {
-
-        alert(
-          "Missing thumbnail"
-        );
-
-        return;
-
-      }
-
       setLoading(
         true
       );
@@ -150,15 +239,53 @@ export default function UploadSongPage() {
 
       }
 
+      // GENERATE THUMB
+      const thumbFile =
+        await generateThumbnail(
+          videoFile
+        );
+
+      // CLEAN VIDEO NAME
+      const cleanVideoName =
+
+        videoFile.name
+
+          .replace(
+            /[^a-zA-Z0-9.-]/g,
+            "-"
+          )
+
+          .toLowerCase();
+
+      // CLEAN THUMB NAME
+      const cleanThumbName =
+
+        thumbFile.name
+
+          .replace(
+            /[^a-zA-Z0-9.-]/g,
+            "-"
+          )
+
+          .toLowerCase();
+
       // VIDEO NAME
       const videoName =
 
-`${Date.now()}-${videoFile.name}`;
+`${Date.now()}-${cleanVideoName}`;
 
       // THUMB NAME
       const thumbName =
 
-`${Date.now()}-${thumbFile.name}`;
+`${Date.now()}-${cleanThumbName}`;
+
+      console.log(
+        videoName
+      );
+
+      console.log(
+        thumbName
+      );
 
       // UPLOAD VIDEO
       const {
@@ -364,7 +491,7 @@ export default function UploadSongPage() {
 
         <p className="text-zinc-500 mt-2">
 
-          Upload mp4 + thumbnail
+          Upload mp4 video
 
         </p>
 
@@ -427,7 +554,7 @@ export default function UploadSongPage() {
       </div>
 
       {/* VIDEO */}
-      <div className="mb-5">
+      <div className="mb-8">
 
         <label className="block mb-2 text-zinc-400">
 
@@ -447,41 +574,6 @@ export default function UploadSongPage() {
             ) =>
 
               setVideoFile(
-
-                e.target
-                  .files?.[0] ||
-                  null
-
-              )
-          }
-
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
-
-        />
-
-      </div>
-
-      {/* THUMB */}
-      <div className="mb-8">
-
-        <label className="block mb-2 text-zinc-400">
-
-          Thumbnail
-
-        </label>
-
-        <input
-
-          type="file"
-
-          accept="image/*"
-
-          onChange={
-            (
-              e
-            ) =>
-
-              setThumbFile(
 
                 e.target
                   .files?.[0] ||
