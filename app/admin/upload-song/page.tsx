@@ -210,8 +210,8 @@ export default function UploadSongPage() {
 
             artist,
 
-            youtube_url:
-              youtubeUrl,
+            video_id:
+              videoId,
 
             thumbnail_url:
               thumbnailUrl,

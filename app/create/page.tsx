@@ -137,7 +137,7 @@ function CreateContent() {
 
       videoId =
         parsed.searchParams.get(
-          "v"
+          "video"
         ) || "";
 
     }
@@ -178,7 +178,7 @@ function CreateContent() {
 
         <iframe
 
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1`}
+          src={`https://www.youtube.com/embed/${videoId}`}
 
           className="w-full h-full"
 
