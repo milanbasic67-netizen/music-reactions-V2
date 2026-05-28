@@ -184,7 +184,7 @@ export default function UploadSongPage() {
       // THUMB
       const thumbnailUrl =
 
-        `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
       // USER
       const {
