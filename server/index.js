@@ -15,15 +15,16 @@ const ytdlp =
     "yt-dlp-exec"
   );
 
-console.log(
-  "YTDLP OK"
-);
-
 const path =
   require("path");
 
 const fs =
   require("fs");
+
+const { exec }
+  = require(
+    "child_process"
+  );
 
 require("dotenv")
   .config();
@@ -119,10 +120,17 @@ const rendersDir =
     "renders"
   );
 
+const tempDir =
+  path.join(
+    __dirname,
+    "temp"
+  );
+
 // CREATE FOLDERS
 [
   uploadsDir,
   rendersDir,
+  tempDir,
 ].forEach(
 
   (
@@ -171,6 +179,16 @@ app.use(
 
   express.static(
     uploadsDir
+  )
+
+);
+
+app.use(
+
+  "/temp",
+
+  express.static(
+    tempDir
   )
 
 );
@@ -235,6 +253,157 @@ app.get(
 
 );
 
+// PREPARE SONG
+app.post(
+
+  "/prepare-song",
+
+  async (
+    req,
+    res
+  ) => {
+
+    try {
+
+      console.log(
+        "PREPARE SONG"
+      );
+
+      const {
+        youtubeUrl,
+      } =
+        req.body;
+
+      if (
+        !youtubeUrl
+      ) {
+
+        return res
+          .status(400)
+          .json({
+
+            error:
+              "Missing youtubeUrl",
+
+          });
+
+      }
+
+      // UNIQUE ID
+      const id =
+
+        Date.now() +
+        "-" +
+        Math.random()
+          .toString(
+            36
+          )
+          .substring(
+            2,
+            8
+          );
+
+      // OUTPUT
+      const outputPath =
+
+        path.join(
+
+          tempDir,
+
+          `${id}.mp4`
+
+        );
+
+      console.log(
+        "DOWNLOADING..."
+      );
+
+      // DOWNLOAD
+      await ytdlp(
+
+        youtubeUrl,
+
+        {
+
+          output:
+            outputPath,
+
+          format:
+            "best[ext=mp4]",
+
+          noCheckCertificates:
+            true,
+
+          preferFreeFormats:
+            false,
+
+          youtubeSkipDashManifest:
+            true,
+
+        }
+
+      );
+
+      // EXISTS?
+      const exists =
+        fs.existsSync(
+          outputPath
+        );
+
+      if (!exists) {
+
+        return res
+          .status(500)
+          .json({
+
+            error:
+              "Download failed",
+
+          });
+
+      }
+
+      console.log(
+        "DOWNLOAD DONE"
+      );
+
+      return res.json({
+
+        success:
+          true,
+
+        videoUrl:
+
+`${APP_URL}/temp/${id}.mp4`,
+
+        tempFile:
+          `${id}.mp4`,
+
+      });
+
+    } catch (
+      err
+    ) {
+
+      console.log(
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            "Prepare failed",
+
+        });
+
+    }
+
+  }
+
+);
+
 // YOUTUBE IMPORT
 app.post(
 
@@ -254,10 +423,6 @@ app.post(
       const {
         youtubeUrl,
       } = req.body;
-
-      console.log(
-        youtubeUrl
-      );
 
       if (
         !youtubeUrl
@@ -316,20 +481,11 @@ app.post(
 
       );
 
-      console.log(
-        "DOWNLOAD DONE"
-      );
-
       // FILE EXISTS?
       const exists =
         fs.existsSync(
           outputPath
         );
-
-      console.log(
-        "FILE EXISTS:",
-        exists
-      );
 
       if (!exists) {
 
@@ -344,7 +500,7 @@ app.post(
 
       }
 
-      // THUMB PATH
+      // THUMB
       const thumbPath =
         path.join(
 
@@ -353,10 +509,6 @@ app.post(
           `${id}.jpg`
 
         );
-
-      console.log(
-        "GENERATING THUMB..."
-      );
 
       // GENERATE THUMB
       await new Promise(
@@ -387,58 +539,17 @@ app.post(
             })
 
             .on(
-
               "end",
-
-              () => {
-
-                console.log(
-                  "THUMB DONE"
-                );
-
-                resolve();
-
-              }
-
+              resolve
             )
 
             .on(
-
               "error",
-
-              (
-                err
-              ) => {
-
-                console.log(
-                  "THUMB ERROR"
-                );
-
-                console.log(
-                  err
-                );
-
-                reject(
-                  err
-                );
-
-              }
-
+              reject
             );
 
         }
 
-      );
-
-      // THUMB EXISTS?
-      const thumbExists =
-        fs.existsSync(
-          thumbPath
-        );
-
-      console.log(
-        "THUMB EXISTS:",
-        thumbExists
       );
 
       return res.json({
@@ -455,10 +566,6 @@ app.post(
       });
 
     } catch (err) {
-
-      console.log(
-        "YOUTUBE IMPORT ERROR"
-      );
 
       console.log(
         err
@@ -546,16 +653,6 @@ app.post(
 
       }
 
-      console.log(
-        "ORIGINAL:",
-        original.path
-      );
-
-      console.log(
-        "REACTION:",
-        reaction.path
-      );
-
       // OUTPUT
       const outputName =
         `duet-${Date.now()}.mp4`;
@@ -585,7 +682,6 @@ app.post(
 
         .complexFilter([
 
-          // MAIN REACTION VIDEO
           {
             filter:
               "fps",
@@ -614,7 +710,6 @@ app.post(
               "reactionfull",
           },
 
-          // SMALL ORIGINAL VIDEO
           {
             filter:
               "fps",
@@ -643,36 +738,6 @@ app.post(
               "smalloriginal",
           },
 
-          // ROUNDED CORNERS
-          {
-            filter:
-              "format",
-
-            options:
-              "rgba",
-
-            inputs:
-              "smalloriginal",
-
-            outputs:
-              "roundedprep",
-          },
-
-          {
-            filter:
-              "geq",
-
-            options:
-              "lum='p(X,Y)':a='if(gt(abs(W/2-X),W/2-30)*gt(abs(H/2-Y),H/2-30),0,255)'",
-
-            inputs:
-              "roundedprep",
-
-            outputs:
-              "roundedvideo",
-          },
-
-          // OVERLAY
           {
             filter:
               "overlay",
@@ -691,7 +756,7 @@ app.post(
 
                 "reactionfull",
 
-                "roundedvideo",
+                "smalloriginal",
 
               ],
 
@@ -699,7 +764,6 @@ app.post(
               "v",
           },
 
-          // SONG AUDIO
           {
             filter:
               "volume",
@@ -714,7 +778,6 @@ app.post(
               "songquiet",
           },
 
-          // MIC AUDIO
           {
             filter:
               "volume",
@@ -729,7 +792,6 @@ app.post(
               "micboost",
           },
 
-          // MIX
           {
             filter:
               "amix",
@@ -787,54 +849,6 @@ app.post(
           "-movflags +faststart",
 
         ])
-
-        .on(
-
-          "start",
-
-          (
-            command
-          ) => {
-
-            console.log(
-              command
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "progress",
-
-          (
-            progress
-          ) => {
-
-            console.log(
-              progress.percent
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "stderr",
-
-          (
-            line
-          ) => {
-
-            console.log(
-              line
-            );
-
-          }
-
-        )
 
         .on(
 
