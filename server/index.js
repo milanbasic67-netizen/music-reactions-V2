@@ -320,11 +320,13 @@ app.post(
 
         .complexFilter([
 
-          "[0:v]scale=540:960[left]",
+          "[0:v]fps=30,scale=540:960[left]",
 
-          "[1:v]scale=540:960[right]",
+          "[1:v]fps=30,scale=540:960[right]",
 
-          "[left][right]hstack=inputs=2[v]"
+          "[left][right]hstack=inputs=2[v]",
+
+          "[0:a][1:a]amix=inputs=2:duration=shortest[a]"
 
         ])
 
@@ -332,7 +334,9 @@ app.post(
 
           "-map [v]",
 
-  "-map 0:a?",
+  "-map [v]",
+
+  "-map [a]",
 
   "-c:v libx264",
 

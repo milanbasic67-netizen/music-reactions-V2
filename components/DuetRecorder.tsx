@@ -84,7 +84,7 @@ export default function DuetRecorder({
 
               video: true,
 
-              audio: false,
+              audio: true,
 
             });
 
