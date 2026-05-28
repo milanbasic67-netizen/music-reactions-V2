@@ -112,7 +112,7 @@ export default function DuetRecorder({
 
   }, []);
 
-  // START
+  // START RECORDING
   async function startRecording() {
 
     try {
@@ -167,30 +167,21 @@ export default function DuetRecorder({
         "RECORDING"
       );
 
-      // AUTO STOP
-      setTimeout(
-
-        () => {
-
-          stopRecording();
-
-        },
-
-        15000
-
-      );
-
     } catch (err) {
 
       console.log(
         err
       );
 
+      alert(
+        "Recording failed"
+      );
+
     }
 
   }
 
-  // STOP
+  // STOP RECORDING
   async function stopRecording() {
 
     try {
@@ -251,15 +242,11 @@ export default function DuetRecorder({
 
               );
 
-            console.log(
-              reactionFile
-            );
-
             // FORM DATA
             const formData =
               new FormData();
 
-            // SEND ORIGINAL URL
+            // ORIGINAL VIDEO URL
             formData.append(
 
               "originalUrl",
@@ -268,7 +255,7 @@ export default function DuetRecorder({
 
             );
 
-            // SEND REACTION
+            // REACTION FILE
             formData.append(
 
               "reaction",
@@ -277,7 +264,7 @@ export default function DuetRecorder({
 
             );
 
-            // RENDER
+            // RENDER REQUEST
             const renderRes =
               await fetch(
 
@@ -369,7 +356,7 @@ export default function DuetRecorder({
             const profile =
               await getProfile();
 
-            // STORAGE NAME
+            // FILE NAME
             const fileName =
 
 `${Date.now()}-${finalFile.name}`;
@@ -429,22 +416,22 @@ export default function DuetRecorder({
                   fileName
                 );
 
-console.log({
+            console.log({
 
-  song: title,
+              song: title,
 
-  artist,
+              artist,
 
-  user_id:
-    user.id,
+              user_id:
+                user.id,
 
-  username:
-    profile?.username,
+              username:
+                profile?.username,
 
-  video_url:
-    publicData.publicUrl,
+              video_url:
+                publicData.publicUrl,
 
-});
+            });
 
             // INSERT REACTION
             const {
@@ -477,12 +464,16 @@ console.log({
               insertError
             ) {
 
-              console.log(
-                insertError
+              alert(
+
+                JSON.stringify(
+                  insertError
+                )
+
               );
 
-              alert(
-                insertError.message
+              console.log(
+                insertError
               );
 
               return;
@@ -514,7 +505,7 @@ console.log({
 
         },
 
-        1200
+        1000
 
       );
 
@@ -551,7 +542,7 @@ console.log({
 
       </div>
 
-      {/* BUTTON */}
+      {/* START BUTTON */}
       {!recording && !loading && (
 
         <button
@@ -570,21 +561,29 @@ console.log({
 
       )}
 
-      {/* RECORDING */}
+      {/* STOP BUTTON */}
       {recording && (
 
-        <div className="text-center text-red-500 font-black">
+        <button
 
-          Recording...
+          onClick={
+            stopRecording
+          }
 
-        </div>
+          className="w-full bg-zinc-800 hover:bg-zinc-700 transition py-3 rounded-2xl font-black text-lg"
+
+        >
+
+          Stop Recording
+
+        </button>
 
       )}
 
       {/* LOADING */}
       {loading && (
 
-        <div className="text-center text-zinc-400 font-black">
+        <div className="text-center text-zinc-400 font-black mt-4">
 
           Rendering duet...
 

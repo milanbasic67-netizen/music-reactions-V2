@@ -303,9 +303,7 @@ app.post(
           reaction.path
         )
 
-        .duration(
-          15
-        )
+        .shortest()
 
         .complexFilter([
 
@@ -475,8 +473,7 @@ app.post(
 
           "-vsync 2",
 
-          "-t 15",
-
+          
           "-threads 2",
 
           "-movflags +faststart",
