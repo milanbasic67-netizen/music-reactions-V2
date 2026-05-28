@@ -180,9 +180,9 @@ function CreateContent() {
 
     <iframe
 
-      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1`}
+      src={https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1&controls=0&modestbranding=1&rel=0`}
 
-      className="absolute inset-0 w-full h-full"
+      className="absolute inset-0 w-full h-full pointer-events-none"
 
       allow="autoplay"
 
