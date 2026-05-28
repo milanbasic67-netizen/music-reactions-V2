@@ -303,7 +303,7 @@ app.post(
           reaction.path
         )
 
-        .shortest()
+        
 
         .complexFilter([
 
@@ -473,6 +473,7 @@ app.post(
 
           "-vsync 2",
 
+          "-shortest",
           
           "-threads 2",
 
