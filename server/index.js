@@ -291,292 +291,17 @@ app.post(
 
         );
 
-      ffmpeg()
+      // GET REACTION DURATION
+      ffmpeg.ffprobe(
 
-        // ORIGINAL SONG
-        .input(
-          originalUrl
-        )
+        reaction.path,
 
-        // REACTION
-        .input(
-          reaction.path
-        )
+        (
+          err,
+          metadata
+        ) => {
 
-        
-
-        .complexFilter([
-
-          // MAIN REACTION
-          {
-            filter:
-              "fps",
-
-            options:
-              30,
-
-            inputs:
-              "1:v",
-
-            outputs:
-              "reactionfps",
-          },
-
-          {
-            filter:
-              "scale",
-
-            options:
-              "1080:1920",
-
-            inputs:
-              "reactionfps",
-
-            outputs:
-              "reactionfull",
-          },
-
-          // SMALL ORIGINAL
-          {
-            filter:
-              "fps",
-
-            options:
-              30,
-
-            inputs:
-              "0:v",
-
-            outputs:
-              "originalfps",
-          },
-
-          {
-            filter:
-              "scale",
-
-            options:
-              "320:568",
-
-            inputs:
-              "originalfps",
-
-            outputs:
-              "smalloriginal",
-          },
-
-          // OVERLAY
-          {
-            filter:
-              "overlay",
-
-            options:
-              {
-
-                x: 40,
-
-                y: 40,
-
-              },
-
-            inputs:
-              [
-
-                "reactionfull",
-
-                "smalloriginal",
-
-              ],
-
-            outputs:
-              "v",
-          },
-
-          // SONG AUDIO
-          {
-            filter:
-              "volume",
-
-            options:
-              "0.3",
-
-            inputs:
-              "0:a",
-
-            outputs:
-              "songquiet",
-          },
-
-          // MIC AUDIO
-          {
-            filter:
-              "volume",
-
-            options:
-              "4",
-
-            inputs:
-              "1:a",
-
-            outputs:
-              "micboost",
-          },
-
-          // MIX AUDIO
-          {
-            filter:
-              "amix",
-
-            options:
-              {
-
-                inputs: 2,
-
-                duration:
-                  "shortest",
-
-                dropout_transition:
-                  0,
-
-              },
-
-            inputs:
-              [
-
-                "songquiet",
-
-                "micboost",
-
-              ],
-
-            outputs:
-              "a",
-          },
-
-        ])
-
-        .outputOptions([
-
-          "-map [v]",
-
-          "-map [a]",
-
-          "-c:v libx264",
-
-          "-c:a aac",
-
-          "-preset ultrafast",
-
-          "-crf 35",
-
-          "-r 30",
-
-          "-vsync 2",
-
-          "-shortest",
-          
-          "-threads 2",
-
-          "-movflags +faststart",
-
-        ])
-
-        .on(
-
-          "start",
-
-          (
-            command
-          ) => {
-
-            console.log(
-              command
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "progress",
-
-          (
-            progress
-          ) => {
-
-            console.log(
-              progress.percent
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "stderr",
-
-          (
-            line
-          ) => {
-
-            console.log(
-              line
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "end",
-
-          () => {
-
-            console.log(
-              "DONE"
-            );
-
-            try {
-
-              // DELETE REACTION FILE
-              fs.unlinkSync(
-                reaction.path
-              );
-
-            } catch (
-              cleanupErr
-            ) {
-
-              console.log(
-                cleanupErr
-              );
-
-            }
-
-            return res.json({
-
-              success:
-                true,
-
-              videoUrl:
-`${APP_URL}/renders/${outputName}`,
-
-            });
-
-          }
-
-        )
-
-        .on(
-
-          "error",
-
-          (
-            err
-          ) => {
+          if (err) {
 
             console.log(
               err
@@ -587,17 +312,335 @@ app.post(
               .json({
 
                 error:
-                  "Render failed",
+                  "ffprobe failed",
 
               });
 
           }
 
-        )
+          const duration =
 
-        .save(
-          outputPath
-        );
+            metadata.format
+              .duration || 15;
+
+          console.log(
+            "REACTION DURATION:",
+            duration
+          );
+
+          // START FFMPEG
+          ffmpeg()
+
+            // ORIGINAL SONG
+            .input(
+              originalUrl
+            )
+
+            // REACTION
+            .input(
+              reaction.path
+            )
+
+            // LIMIT TO REACTION LENGTH
+            .duration(
+              duration
+            )
+
+            .complexFilter([
+
+              // MAIN REACTION
+              {
+                filter:
+                  "fps",
+
+                options:
+                  30,
+
+                inputs:
+                  "1:v",
+
+                outputs:
+                  "reactionfps",
+              },
+
+              {
+                filter:
+                  "scale",
+
+                options:
+                  "1080:1920",
+
+                inputs:
+                  "reactionfps",
+
+                outputs:
+                  "reactionfull",
+              },
+
+              // SMALL ORIGINAL
+              {
+                filter:
+                  "fps",
+
+                options:
+                  30,
+
+                inputs:
+                  "0:v",
+
+                outputs:
+                  "originalfps",
+              },
+
+              {
+                filter:
+                  "scale",
+
+                options:
+                  "320:568",
+
+                inputs:
+                  "originalfps",
+
+                outputs:
+                  "smalloriginal",
+              },
+
+              // OVERLAY
+              {
+                filter:
+                  "overlay",
+
+                options:
+                  {
+
+                    x: 40,
+
+                    y: 40,
+
+                  },
+
+                inputs:
+                  [
+
+                    "reactionfull",
+
+                    "smalloriginal",
+
+                  ],
+
+                outputs:
+                  "v",
+              },
+
+              // SONG AUDIO
+              {
+                filter:
+                  "volume",
+
+                options:
+                  "0.3",
+
+                inputs:
+                  "0:a",
+
+                outputs:
+                  "songquiet",
+              },
+
+              // MIC AUDIO
+              {
+                filter:
+                  "volume",
+
+                options:
+                  "4",
+
+                inputs:
+                  "1:a",
+
+                outputs:
+                  "micboost",
+              },
+
+              // MIX AUDIO
+              {
+                filter:
+                  "amix",
+
+                options:
+                  {
+
+                    inputs: 2,
+
+                    duration:
+                      "shortest",
+
+                    dropout_transition:
+                      0,
+
+                  },
+
+                inputs:
+                  [
+
+                    "songquiet",
+
+                    "micboost",
+
+                  ],
+
+                outputs:
+                  "a",
+              },
+
+            ])
+
+            .outputOptions([
+
+              "-map [v]",
+
+              "-map [a]",
+
+              "-c:v libx264",
+
+              "-c:a aac",
+
+              "-preset ultrafast",
+
+              "-crf 35",
+
+              "-r 30",
+
+              "-vsync 2",
+
+              "-threads 2",
+
+              "-movflags +faststart",
+
+            ])
+
+            .on(
+
+              "start",
+
+              (
+                command
+              ) => {
+
+                console.log(
+                  command
+                );
+
+              }
+
+            )
+
+            .on(
+
+              "progress",
+
+              (
+                progress
+              ) => {
+
+                console.log(
+                  progress.percent
+                );
+
+              }
+
+            )
+
+            .on(
+
+              "stderr",
+
+              (
+                line
+              ) => {
+
+                console.log(
+                  line
+                );
+
+              }
+
+            )
+
+            .on(
+
+              "end",
+
+              () => {
+
+                console.log(
+                  "DONE"
+                );
+
+                try {
+
+                  // DELETE REACTION FILE
+                  fs.unlinkSync(
+                    reaction.path
+                  );
+
+                } catch (
+                  cleanupErr
+                ) {
+
+                  console.log(
+                    cleanupErr
+                  );
+
+                }
+
+                return res.json({
+
+                  success:
+                    true,
+
+                  videoUrl:
+`${APP_URL}/renders/${outputName}`,
+
+                });
+
+              }
+
+            )
+
+            .on(
+
+              "error",
+
+              (
+                err
+              ) => {
+
+                console.log(
+                  err
+                );
+
+                return res
+                  .status(500)
+                  .json({
+
+                    error:
+                      "Render failed",
+
+                  });
+
+              }
+
+            )
+
+            .save(
+              outputPath
+            );
+
+        }
+
+      );
 
     } catch (err) {
 
