@@ -13,34 +13,24 @@ export const revalidate =
 export default async function SongsPage() {
 
   const {
-    data: songs,
-    error,
-  } =
-    await supabase
+  data: songs,
+  error,
+} =
+  await supabase
 
-      .from(
-        "songs"
-      )
+    .from(
+      "songs"
+    )
 
-      .select("*")
+    .select("*")
 
-      .not(
-        "youtube_url",
-        "is",
-        null
-      )
-
-      .order(
-        "created_at",
-        {
-          ascending:
-            false,
-        }
-      );
-
-  console.log(
-    songs
-  );
+    .order(
+      "created_at",
+      {
+        ascending:
+          false,
+      }
+    );
 
   console.log(
     error
@@ -88,13 +78,7 @@ export default async function SongsPage() {
             song
           ) => {
 
-            if (
-              !song.youtube_url
-            ) {
-
-              return null;
-
-            }
+            
 
             const createUrl =
 
