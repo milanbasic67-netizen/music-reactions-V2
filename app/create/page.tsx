@@ -174,21 +174,25 @@ function CreateContent() {
     <main className="min-h-screen bg-black text-white">
 
       {/* PLAYER */}
-      <div className="w-full h-[220px] md:h-[320px] bg-black sticky top-0 z-40 rounded-b-3xl overflow-hidden">
+<div className="px-4 pt-4">
 
-        <iframe
+  <div className="relative w-full h-[220px] rounded-3xl overflow-hidden bg-black">
 
-          src={`https://www.youtube.com/embed/${videoId}`}
+    <iframe
 
-          className="w-full h-[220px] md:h-[320px]"
+      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1`}
 
-          allow="autoplay"
+      className="absolute inset-0 w-full h-full"
 
-          allowFullScreen
+      allow="autoplay"
 
-        />
+      allowFullScreen
 
-      </div>
+    />
+
+  </div>
+
+</div>
 
       {/* INFO */}
       <div className="p-5 border-b border-zinc-900">
