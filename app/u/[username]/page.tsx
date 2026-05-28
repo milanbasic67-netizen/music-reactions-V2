@@ -168,5 +168,51 @@ export default async function UserPage({
     </main>
 
   );
+const {
+  count: followersCount,
+} =
+  await supabase
 
+    .from(
+      "followers"
+    )
+
+    .select(
+      "*",
+      {
+        count:
+          "exact",
+        head:
+          true,
+      }
+    )
+
+    .eq(
+      "following_id",
+      profile.id
+    );
+
+const {
+  count: followingCount,
+} =
+  await supabase
+
+    .from(
+      "followers"
+    )
+
+    .select(
+      "*",
+      {
+        count:
+          "exact",
+        head:
+          true,
+      }
+    )
+
+    .eq(
+      "follower_id",
+      profile.id
+    );
 }
