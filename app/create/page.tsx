@@ -28,11 +28,15 @@ export default function CreatePage({
   const artist =
     searchParams.artist;
 
+  console.log(
+    searchParams
+  );
+
   if (!youtube) {
 
     return (
 
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
 
         Missing YouTube URL
 
@@ -48,19 +52,84 @@ export default function CreatePage({
 
   try {
 
-    const parsed =
-      new URL(
-        decodeURIComponent(
-          youtube
-        )
+    const decoded =
+      decodeURIComponent(
+        youtube
       );
 
-    videoId =
-      parsed.searchParams.get(
-        "v"
-      ) || "";
+    const parsed =
+      new URL(
+        decoded
+      );
 
-  } catch {}
+    // youtu.be
+    if (
+      parsed.hostname ===
+      "youtu.be"
+    ) {
+
+      videoId =
+        parsed.pathname.replace(
+          "/",
+          ""
+        );
+
+    }
+
+    // shorts
+    else if (
+
+      parsed.pathname.includes(
+        "/shorts/"
+      )
+
+    ) {
+
+      videoId =
+        parsed.pathname
+          .split(
+            "/shorts/"
+          )[1]
+          ?.split("?")[0] || "";
+
+    }
+
+    // watch?v=
+    else {
+
+      videoId =
+        parsed.searchParams.get(
+          "v"
+        ) || "";
+
+    }
+
+  } catch (
+
+    err
+
+  ) {
+
+    console.log(
+      err
+    );
+
+  }
+
+  // INVALID
+  if (!videoId) {
+
+    return (
+
+      <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
+
+        Invalid YouTube URL
+
+      </main>
+
+    );
+
+  }
 
   return (
 
@@ -71,7 +140,7 @@ export default function CreatePage({
 
         <iframe
 
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1`}
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&controls=1`}
 
           className="w-full h-full"
 
