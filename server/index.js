@@ -592,29 +592,9 @@ app.post(
 
   "/render-duet",
 
-  upload.fields([
-
-    {
-
-      name:
-        "original",
-
-      maxCount:
-        1,
-
-    },
-
-    {
-
-      name:
-        "reaction",
-
-      maxCount:
-        1,
-
-    },
-
-  ]),
+  upload.single(
+    "reaction"
+  ),
 
   async (
     req,
@@ -627,19 +607,17 @@ app.post(
         "RENDER START"
       );
 
-      const original =
-        req.files[
-          "original"
-        ]?.[0];
-
       const reaction =
-        req.files[
-          "reaction"
-        ]?.[0];
+        req.file;
+
+      const {
+        tempFile,
+      } =
+        req.body;
 
       if (
-        !original ||
-        !reaction
+        !reaction ||
+        !tempFile
       ) {
 
         return res
@@ -652,6 +630,45 @@ app.post(
           });
 
       }
+
+      // ORIGINAL TEMP VIDEO
+      const originalPath =
+
+        path.join(
+
+          tempDir,
+
+          tempFile
+
+        );
+
+      // EXISTS?
+      if (
+
+        !fs.existsSync(
+          originalPath
+        )
+
+      ) {
+
+        return res
+          .status(404)
+          .json({
+
+            error:
+              "Temp video missing",
+
+          });
+
+      }
+
+      console.log(
+        originalPath
+      );
+
+      console.log(
+        reaction.path
+      );
 
       // OUTPUT
       const outputName =
@@ -669,7 +686,7 @@ app.post(
       ffmpeg()
 
         .input(
-          original.path
+          originalPath
         )
 
         .input(
@@ -682,6 +699,7 @@ app.post(
 
         .complexFilter([
 
+          // MAIN REACTION
           {
             filter:
               "fps",
@@ -710,6 +728,7 @@ app.post(
               "reactionfull",
           },
 
+          // SMALL ORIGINAL
           {
             filter:
               "fps",
@@ -738,6 +757,7 @@ app.post(
               "smalloriginal",
           },
 
+          // OVERLAY
           {
             filter:
               "overlay",
@@ -764,6 +784,7 @@ app.post(
               "v",
           },
 
+          // SONG AUDIO
           {
             filter:
               "volume",
@@ -778,6 +799,7 @@ app.post(
               "songquiet",
           },
 
+          // MIC AUDIO
           {
             filter:
               "volume",
@@ -792,6 +814,7 @@ app.post(
               "micboost",
           },
 
+          // MIX
           {
             filter:
               "amix",
@@ -862,12 +885,13 @@ app.post(
 
             try {
 
+              // DELETE TEMP FILES
               fs.unlinkSync(
-                original.path
+                reaction.path
               );
 
               fs.unlinkSync(
-                reaction.path
+                originalPath
               );
 
             } catch (
@@ -886,7 +910,7 @@ app.post(
                 true,
 
               videoUrl:
-                `${APP_URL}/renders/${outputName}`,
+`${APP_URL}/renders/${outputName}`,
 
             });
 
