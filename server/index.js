@@ -10,13 +10,11 @@ const multer =
 const ffmpeg =
   require("fluent-ffmpeg");
 
-
 const path =
   require("path");
 
 const fs =
   require("fs");
-
 
 require("dotenv")
   .config();
@@ -112,12 +110,11 @@ const rendersDir =
     "renders"
   );
 
-
 // CREATE FOLDERS
 [
   uploadsDir,
   rendersDir,
- ].forEach(
+].forEach(
 
   (
     dir
@@ -165,14 +162,6 @@ app.use(
 
   express.static(
     uploadsDir
-  )
-
-);
-
-
-
-  express.static(
-    tempDir
   )
 
 );
@@ -237,292 +226,7 @@ app.get(
 
 );
 
-
-
-      // UNIQUE ID
-      const id =
-
-        Date.now() +
-        "-" +
-        Math.random()
-          .toString(
-            36
-          )
-          .substring(
-            2,
-            8
-          );
-
-      // OUTPUT
-      const outputPath =
-
-        path.join(
-
-          tempDir,
-
-          `${id}.mp4`
-
-        );
-
-      console.log(
-        "DOWNLOADING..."
-      );
-
-      // DOWNLOAD
-      await ytdlp(
-
-        youtubeUrl,
-
-        {
-
-          output:
-            outputPath,
-
-          format:
-            "best[ext=mp4]",
-
-          noCheckCertificates:
-            true,
-
-          preferFreeFormats:
-            false,
-
-          youtubeSkipDashManifest:
-            true,
-
-        }
-
-      );
-
-      // EXISTS?
-      const exists =
-        fs.existsSync(
-          outputPath
-        );
-
-      if (!exists) {
-
-        return res
-          .status(500)
-          .json({
-
-            error:
-              "Download failed",
-
-          });
-
-      }
-
-      console.log(
-        "DOWNLOAD DONE"
-      );
-
-      return res.json({
-
-        success:
-          true,
-
-        videoUrl:
-
-`${APP_URL}/temp/${id}.mp4`,
-
-        tempFile:
-          `${id}.mp4`,
-
-      });
-
-    } catch (
-      err
-    ) {
-
-      console.log(
-        err
-      );
-
-      return res
-        .status(500)
-        .json({
-
-          error:
-            "Prepare failed",
-
-        });
-
-    }
-
-  }
-
-);
-
-
-      const {
-        youtubeUrl,
-      } = req.body;
-
-      if (
-        !youtubeUrl
-      ) {
-
-        return res
-          .status(400)
-          .json({
-
-            error:
-              "Missing URL",
-
-          });
-
-      }
-
-      const id =
-        Date.now();
-
-      const outputPath =
-        path.join(
-
-          uploadsDir,
-
-          `${id}.mp4`
-
-        );
-
-      console.log(
-        "DOWNLOADING..."
-      );
-
-      // DOWNLOAD VIDEO
-      await ytdlp(
-
-        youtubeUrl,
-
-        {
-
-          output:
-            outputPath,
-
-          format:
-            "best",
-
-          noCheckCertificates:
-            true,
-
-          preferFreeFormats:
-            false,
-
-          youtubeSkipDashManifest:
-            true,
-
-        }
-
-      );
-
-      // FILE EXISTS?
-      const exists =
-        fs.existsSync(
-          outputPath
-        );
-
-      if (!exists) {
-
-        return res
-          .status(500)
-          .json({
-
-            error:
-              "Video not downloaded",
-
-          });
-
-      }
-
-      // THUMB
-      const thumbPath =
-        path.join(
-
-          uploadsDir,
-
-          `${id}.jpg`
-
-        );
-
-      // GENERATE THUMB
-      await new Promise(
-
-        (
-          resolve,
-          reject
-        ) => {
-
-          ffmpeg(
-            outputPath
-          )
-
-            .screenshots({
-
-              timestamps:
-                ["1"],
-
-              filename:
-                `${id}.jpg`,
-
-              folder:
-                uploadsDir,
-
-              size:
-                "720x1280",
-
-            })
-
-            .on(
-              "end",
-              resolve
-            )
-
-            .on(
-              "error",
-              reject
-            );
-
-        }
-
-      );
-
-      return res.json({
-
-        success:
-          true,
-
-        localVideo:
-          `${APP_URL}/uploads/${id}.mp4`,
-
-        localThumb:
-          `${APP_URL}/uploads/${id}.jpg`,
-
-      });
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      return res
-        .status(500)
-        .json({
-
-          error:
-            err.message ||
-            "Import failed",
-
-        });
-
-    }
-
-  }
-
-);
-
-// RENDER
+// RENDER DUET
 app.post(
 
   "/render-duet",
@@ -801,6 +505,54 @@ app.post(
 
         .on(
 
+          "start",
+
+          (
+            command
+          ) => {
+
+            console.log(
+              command
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "progress",
+
+          (
+            progress
+          ) => {
+
+            console.log(
+              progress.percent
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "stderr",
+
+          (
+            line
+          ) => {
+
+            console.log(
+              line
+            );
+
+          }
+
+        )
+
+        .on(
+
           "end",
 
           () => {
@@ -888,6 +640,23 @@ app.post(
         });
 
     }
+
+  }
+
+);
+
+// START
+app.listen(
+
+  PORT,
+
+  () => {
+
+    console.log(
+
+      `Server running on ${PORT}`
+
+    );
 
   }
 
