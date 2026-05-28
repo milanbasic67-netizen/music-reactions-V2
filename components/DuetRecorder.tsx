@@ -1,23 +1,34 @@
 "use client";
 
 import {
+
   useEffect,
+
   useRef,
+
   useState,
+
 } from "react";
 
 import { supabase }
 from "@/lib/supabase";
 
+import { getProfile }
+from "@/lib/getProfile";
+
 type Props = {
-  originalVideo: string;
-  title?: string;
-  artist?: string;
+
+  youtubeUrl: string;
+
+  title: string;
+
+  artist: string;
+
 };
 
 export default function DuetRecorder({
 
-  originalVideo,
+  youtubeUrl,
 
   title,
 
@@ -25,34 +36,24 @@ export default function DuetRecorder({
 
 }: Props) {
 
-  // REFS
-  const originalVideoRef =
-    useRef<HTMLVideoElement>(
-      null
-    );
-
-  const reactionVideoRef =
+  const videoRef =
     useRef<HTMLVideoElement>(
       null
     );
 
   const mediaRecorderRef =
-    useRef<MediaRecorder | null>(
-      null
-    );
-
-  const streamRef =
-    useRef<MediaStream | null>(
+    useRef<any>(
       null
     );
 
   const chunksRef =
     useRef<Blob[]>([]);
 
-  // STATE
-  const [cameraReady,
-    setCameraReady] =
-    useState(false);
+  const [stream,
+    setStream] =
+    useState<MediaStream | null>(
+      null
+    );
 
   const [recording,
     setRecording] =
@@ -62,22 +63,14 @@ export default function DuetRecorder({
     setLoading] =
     useState(false);
 
-  const [previewUrl,
-    setPreviewUrl] =
-    useState("");
-
   // CAMERA
   useEffect(() => {
 
-    async function initCamera() {
+    async function setup() {
 
       try {
 
-        console.log(
-          "REQUEST CAMERA"
-        );
-
-        const stream =
+        const media =
           await navigator
             .mediaDevices
             .getUserMedia({
@@ -88,648 +81,365 @@ export default function DuetRecorder({
 
             });
 
-        streamRef.current =
-          stream;
+        setStream(
+          media
+        );
 
         if (
-          reactionVideoRef.current
+          videoRef.current
         ) {
 
-          reactionVideoRef.current.srcObject =
-            stream;
-
-          reactionVideoRef.current.muted =
-            true;
-
-          reactionVideoRef.current.autoplay =
-            true;
-
-          reactionVideoRef.current.playsInline =
-            true;
-
-          await reactionVideoRef.current.play();
+          videoRef.current.srcObject =
+            media;
 
         }
-
-        setCameraReady(
-          true
-        );
-
-        console.log(
-          "CAMERA READY"
-        );
 
       } catch (err) {
 
         console.log(
-          "CAMERA ERROR"
+          err
         );
 
-        console.log(
-          err
+        alert(
+          "Camera error"
         );
 
       }
 
     }
 
-    initCamera();
-
-    return () => {
-
-      streamRef.current
-        ?.getTracks()
-        .forEach(
-
-          (
-            track
-          ) => {
-
-            track.stop();
-
-          }
-
-        );
-
-    };
+    setup();
 
   }, []);
 
   // START
-  async function startRecording() {
+  function startRecording() {
 
-    try {
+    if (!stream) return;
 
-      if (
-        !streamRef.current
-      ) {
+    chunksRef.current =
+      [];
 
-        alert(
-          "Camera not ready"
-        );
+    const recorder =
+      new MediaRecorder(
+        stream,
+        {
 
-        return;
+          mimeType:
+            "video/webm",
 
-      }
-
-      chunksRef.current =
-        [];
-
-      setPreviewUrl(
-        ""
+        }
       );
 
-      // PLAY ORIGINAL
-      if (
-        originalVideoRef.current
-      ) {
+    mediaRecorderRef.current =
+      recorder;
 
-        originalVideoRef.current.currentTime =
-          0;
+    recorder.ondataavailable =
+      (
+        e
+      ) => {
 
-        await originalVideoRef.current.play();
+        if (
+          e.data.size > 0
+        ) {
 
-      }
+          chunksRef.current.push(
+            e.data
+          );
 
-      // RECORDER
-      const recorder =
-        new MediaRecorder(
+        }
 
-          streamRef.current,
+      };
 
-          {
+    recorder.start();
 
-            mimeType:
-              "video/webm;codecs=vp8",
+    setRecording(
+      true
+    );
 
-          }
+    console.log(
+      "RECORDING"
+    );
 
-        );
+  }
 
-      mediaRecorderRef.current =
-        recorder;
+  // STOP
+  async function stopRecording() {
 
-      recorder.ondataavailable =
-        (
-          event
-        ) => {
+    if (
+      !mediaRecorderRef.current
+    ) return;
 
-          if (
-            event.data.size > 0
-          ) {
+    setLoading(
+      true
+    );
 
-            chunksRef.current.push(
-              event.data
+    mediaRecorderRef.current.stop();
+
+    mediaRecorderRef.current.onstop =
+      async () => {
+
+        try {
+
+          const blob =
+            new Blob(
+
+              chunksRef.current,
+
+              {
+
+                type:
+                  "video/webm",
+
+              }
+
             );
 
+          console.log(
+            blob
+          );
+
+          const file =
+            new File(
+
+              [blob],
+
+              `reaction-${Date.now()}.webm`,
+
+              {
+
+                type:
+                  "video/webm",
+
+              }
+
+            );
+
+          // USER
+          const {
+            data: {
+              user,
+            },
+          } =
+            await supabase
+              .auth
+              .getUser();
+
+          if (!user) {
+
+            alert(
+              "Login required"
+            );
+
+            setLoading(
+              false
+            );
+
+            return;
+
           }
 
-        };
+          // PROFILE
+          const profile =
+            await getProfile();
 
-      recorder.onstop =
-        async () => {
+          // FILE NAME
+          const fileName =
 
-          try {
+            `${Date.now()}-${file.name}`;
 
-            const blob =
-              new Blob(
+          // UPLOAD
+          const {
+            error:
+              uploadError,
+          } =
+            await supabase
+              .storage
+              .from(
+                "videos"
+              )
+              .upload(
 
-                chunksRef.current,
+                fileName,
+
+                file,
 
                 {
 
-                  type:
+                  contentType:
                     "video/webm",
 
                 }
 
               );
 
+          if (
+            uploadError
+          ) {
+
             console.log(
-              blob
+              uploadError
             );
 
-            const preview =
-              URL.createObjectURL(
-                blob
+            alert(
+              uploadError.message
+            );
+
+            setLoading(
+              false
+            );
+
+            return;
+
+          }
+
+          // PUBLIC URL
+          const {
+            data:
+              publicData,
+          } =
+            supabase
+              .storage
+              .from(
+                "videos"
+              )
+              .getPublicUrl(
+                fileName
               );
 
-            setPreviewUrl(
-              preview
-            );
+          // INSERT
+          const {
+            error:
+              insertError,
+          } =
+            await supabase
+              .from(
+                "reactions"
+              )
+              .insert({
 
-            await renderDuet(
-              blob
-            );
+                username:
+                  profile?.username,
 
-          } catch (err) {
+                user_id:
+                  user.id,
+
+                song:
+                  title,
+
+                artist,
+
+                youtube_url:
+                  youtubeUrl,
+
+                video_url:
+                  publicData.publicUrl,
+
+              });
+
+          if (
+            insertError
+          ) {
 
             console.log(
-              err
+              insertError
             );
 
-          }
+            alert(
+              insertError.message
+            );
 
-        };
+            setLoading(
+              false
+            );
 
-      recorder.start();
-
-      setRecording(
-        true
-      );
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Recording failed"
-      );
-
-    }
-
-  }
-
-  // STOP
-  function stopRecording() {
-
-    try {
-
-      if (
-        mediaRecorderRef.current &&
-        recording
-      ) {
-
-        mediaRecorderRef.current.stop();
-
-      }
-
-      if (
-        originalVideoRef.current
-      ) {
-
-        originalVideoRef.current.pause();
-
-      }
-
-      setRecording(
-        false
-      );
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-    }
-
-  }
-
-  // RENDER
-  async function renderDuet(
-    reactionBlob: Blob
-  ) {
-
-    try {
-
-      setLoading(
-        true
-      );
-
-      console.log(
-        "FETCH ORIGINAL"
-      );
-
-      const originalResponse =
-        await fetch(
-          originalVideo
-        );
-
-      const originalBlob =
-        await originalResponse.blob();
-
-      console.log(
-        originalBlob
-      );
-
-      // FORM
-      const formData =
-        new FormData();
-
-      formData.append(
-
-        "original",
-
-        originalBlob,
-
-        "original.mp4"
-
-      );
-
-      formData.append(
-
-        "reaction",
-
-        reactionBlob,
-
-        "reaction.webm"
-
-      );
-
-      console.log(
-        "UPLOAD TO BACKEND"
-      );
-
-      // BACKEND
-      const response =
-        await fetch(
-
-          "https://music-reactions-v2.onrender.com/render-duet",
-
-          {
-
-            method:
-              "POST",
-
-            body:
-              formData,
+            return;
 
           }
 
-        );
-
-      console.log(
-        response.status
-      );
-
-      const text =
-        await response.text();
-
-      console.log(
-        text
-      );
-
-      const data =
-        JSON.parse(
-          text
-        );
-
-      if (
-        !data.videoUrl
-      ) {
-
-        alert(
-          "Render failed"
-        );
-
-        setLoading(
-          false
-        );
-
-        return;
-
-      }
-
-      console.log(
-        data.videoUrl
-      );
-
-      // DOWNLOAD
-      const renderedResponse =
-        await fetch(
-          data.videoUrl
-        );
-
-      const renderedBlob =
-        await renderedResponse.blob();
-
-      console.log(
-        renderedBlob
-      );
-
-      // FILE NAME
-      const fileName =
-        `${Date.now()}.mp4`;
-
-      // UPLOAD
-      const {
-        error:
-          uploadError,
-      } =
-        await supabase
-          .storage
-          .from(
-            "videos"
-          )
-          .upload(
-
-            fileName,
-
-            renderedBlob,
-
-            {
-
-              contentType:
-                "video/mp4",
-
-            }
-
+          alert(
+            "Reaction uploaded!"
           );
 
-      if (
-        uploadError
-      ) {
+          window.location.href =
+            "/";
 
-        console.log(
-          uploadError
-        );
+        } catch (err) {
 
-        alert(
-          uploadError.message
-        );
-
-        setLoading(
-          false
-        );
-
-        return;
-
-      }
-
-      // PUBLIC URL
-      const {
-        data:
-          publicData,
-      } =
-        supabase
-          .storage
-          .from(
-            "videos"
-          )
-          .getPublicUrl(
-            fileName
+          console.log(
+            err
           );
 
-      console.log(
-        publicData.publicUrl
-      );
+          alert(
+            "Upload failed"
+          );
 
-      // USER
-      const {
-        data: {
-          user,
-        },
-      } =
-        await supabase
-          .auth
-          .getUser();
-
-      // SAVE DB
-      const {
-        data:
-          insertData,
-
-        error:
-          insertError,
-
-      } =
-        await supabase
-          .from(
-            "reactions"
-          )
-          .insert({
-
-            username:
-              user?.email?.split(
-                "@"
-              )[0] || "anon",
-
-            song:
-              title ||
-              "Unknown",
-
-            artist:
-              artist ||
-              "Unknown",
-
-            video_url:
-              publicData.publicUrl,
-
-            likes_count:
-              0,
-
-            comments_count:
-              0,
-
-          })
-
-          .select();
-
-      console.log(
-        "INSERT DATA"
-      );
-
-      console.log(
-        insertData
-      );
-
-      console.log(
-        "INSERT ERROR"
-      );
-
-      console.log(
-        insertError
-      );
-
-      if (
-        insertError
-      ) {
-
-        alert(
-          insertError.message
-        );
+        }
 
         setLoading(
           false
         );
 
-        return;
+        setRecording(
+          false
+        );
 
-      }
-
-      alert(
-        "Reaction uploaded!"
-      );
-
-      window.location.href =
-        "/";
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Render failed"
-      );
-
-    }
-
-    setLoading(
-      false
-    );
+      };
 
   }
 
   return (
 
-    <main className="min-h-screen bg-black text-white p-5 pb-32">
+    <div className="p-5">
 
-      {/* HEADER */}
-      <div className="mb-8">
+      {/* CAMERA */}
+      <div className="rounded-3xl overflow-hidden bg-black mb-5 aspect-[9/16]">
 
-        <h1 className="text-4xl font-black">
+        <video
 
-          Record Reaction
+          ref={videoRef}
 
-        </h1>
+          autoPlay
 
-        <p className="text-zinc-400 mt-3">
+          muted
 
-          {title}
+          playsInline
 
-        </p>
+          className="w-full h-full object-cover"
 
-        <p className="text-zinc-600 text-sm mt-1">
-
-          {artist}
-
-        </p>
+        />
 
       </div>
 
-      {/* VIDEOS */}
-      <div className="grid grid-cols-2 gap-4">
-
-        {/* ORIGINAL */}
-        <div>
-
-          <div className="text-sm mb-3 text-zinc-500">
-
-            Original
-
-          </div>
-
-          <video
-            ref={
-              originalVideoRef
-            }
-            src={
-              originalVideo
-            }
-            controls
-            playsInline
-            className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
-          />
-
-        </div>
-
-        {/* REACTION */}
-        <div>
-
-          <div className="text-sm mb-3 text-zinc-500">
-
-            Reaction
-
-          </div>
-
-          <video
-            ref={
-              reactionVideoRef
-            }
-            autoPlay
-            muted
-            playsInline
-            className="w-full aspect-[9/16] object-cover rounded-3xl bg-zinc-900"
-          />
-
-        </div>
-
-      </div>
-
-      {/* BUTTON */}
-      <div className="mt-8">
+      {/* BUTTONS */}
+      <div className="flex gap-4">
 
         {!recording ? (
 
           <button
+
             onClick={
               startRecording
             }
-            disabled={
-              !cameraReady ||
-              loading
-            }
-            className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-50 transition py-5 rounded-3xl text-xl font-black"
+
+            className="flex-1 bg-red-600 hover:bg-red-500 transition py-5 rounded-3xl font-black text-xl"
+
           >
 
-            {loading
-              ? "Processing..."
-              : "Start Recording"}
+            Start Recording
 
           </button>
 
         ) : (
 
           <button
+
             onClick={
               stopRecording
             }
-            className="w-full bg-zinc-800 hover:bg-zinc-700 transition py-5 rounded-3xl text-xl font-black"
+
+            className="flex-1 bg-white text-black py-5 rounded-3xl font-black text-xl"
+
           >
 
             Stop Recording
@@ -740,30 +450,18 @@ export default function DuetRecorder({
 
       </div>
 
-      {/* PREVIEW */}
-      {previewUrl && (
+      {/* LOADING */}
+      {loading && (
 
-        <div className="mt-10">
+        <div className="mt-5 text-center text-zinc-500">
 
-          <h2 className="text-2xl font-black mb-5">
-
-            Preview
-
-          </h2>
-
-          <video
-            src={
-              previewUrl
-            }
-            controls
-            className="w-full rounded-3xl"
-          />
+          Uploading...
 
         </div>
 
       )}
 
-    </main>
+    </div>
 
   );
 

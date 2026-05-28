@@ -26,10 +26,6 @@ export default function UploadSongPage() {
     setLoading] =
     useState(false);
 
-  const [youtubeLoading,
-    setYoutubeLoading] =
-    useState(false);
-
   const [title,
     setTitle] =
     useState("");
@@ -40,26 +36,6 @@ export default function UploadSongPage() {
 
   const [youtubeUrl,
     setYoutubeUrl] =
-    useState("");
-
-  const [video,
-    setVideo] =
-    useState<File | null>(
-      null
-    );
-
-  const [thumbnail,
-    setThumbnail] =
-    useState<File | null>(
-      null
-    );
-
-  const [importedVideoUrl,
-    setImportedVideoUrl] =
-    useState("");
-
-  const [importedThumbUrl,
-    setImportedThumbUrl] =
     useState("");
 
   // LOAD PROFILE
@@ -113,8 +89,30 @@ export default function UploadSongPage() {
 
   }
 
-  // IMPORT YOUTUBE
-  async function importYoutube() {
+  // GET VIDEO ID
+  function getYoutubeId(
+    url: string
+  ) {
+
+    try {
+
+      const parsed =
+        new URL(url);
+
+      return parsed
+        .searchParams
+        .get("v");
+
+    } catch {
+
+      return null;
+
+    }
+
+  }
+
+  // UPLOAD SONG
+  async function uploadSong() {
 
     try {
 
@@ -130,56 +128,23 @@ export default function UploadSongPage() {
 
       }
 
-      setYoutubeLoading(
+      setLoading(
         true
       );
 
-      const res =
-        await fetch(
-
-          `${process.env.NEXT_PUBLIC_API_URL}/import-youtube`,
-
-          {
-
-            method:
-              "POST",
-
-            headers:
-              {
-
-                "Content-Type":
-                  "application/json",
-
-              },
-
-            body:
-              JSON.stringify({
-
-                youtubeUrl,
-
-              }),
-
-          }
-
+      // VIDEO ID
+      const videoId =
+        getYoutubeId(
+          youtubeUrl
         );
 
-      const data =
-        await res.json();
-
-      console.log(
-        data
-      );
-
-      if (
-        !data.success
-      ) {
+      if (!videoId) {
 
         alert(
-          data.error ||
-          "Import failed"
+          "Invalid YouTube URL"
         );
 
-        setYoutubeLoading(
+        setLoading(
           false
         );
 
@@ -187,214 +152,10 @@ export default function UploadSongPage() {
 
       }
 
-      setImportedVideoUrl(
-        data.localVideo
-      );
+      // THUMB
+      const thumbnailUrl =
 
-      setImportedThumbUrl(
-        data.localThumb
-      );
-
-      alert(
-        "YouTube imported!"
-      );
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Import failed"
-      );
-
-    }
-
-    setYoutubeLoading(
-      false
-    );
-
-  }
-
-  // UPLOAD SONG
-  async function uploadSong() {
-
-    try {
-
-      setLoading(
-        true
-      );
-
-      let finalVideoUrl =
-        "";
-
-      let finalThumbUrl =
-        "";
-
-      // YOUTUBE IMPORT
-      if (
-        importedVideoUrl
-      ) {
-
-        finalVideoUrl =
-          importedVideoUrl;
-
-        finalThumbUrl =
-          importedThumbUrl;
-
-      } else {
-
-        // NORMAL UPLOAD
-        if (
-          !video ||
-          !thumbnail
-        ) {
-
-          alert(
-            "Missing files"
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-
-        }
-
-        // VIDEO NAME
-        const videoName =
-          `${Date.now()}-${video.name}`;
-
-        // THUMB NAME
-        const thumbName =
-          `${Date.now()}-${thumbnail.name}`;
-
-        // VIDEO UPLOAD
-        const {
-          error:
-            videoError,
-        } =
-          await supabase
-            .storage
-            .from(
-              "songs"
-            )
-            .upload(
-
-              videoName,
-
-              video,
-
-              {
-
-                contentType:
-                  video.type,
-
-              }
-
-            );
-
-        if (
-          videoError
-        ) {
-
-          console.log(
-            videoError
-          );
-
-          alert(
-            videoError.message
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-
-        }
-
-        // THUMB UPLOAD
-        const {
-          error:
-            thumbError,
-        } =
-          await supabase
-            .storage
-            .from(
-              "thumbnails"
-            )
-            .upload(
-
-              thumbName,
-
-              thumbnail,
-
-              {
-
-                contentType:
-                  thumbnail.type,
-
-              }
-
-            );
-
-        if (
-          thumbError
-        ) {
-
-          console.log(
-            thumbError
-          );
-
-          alert(
-            thumbError.message
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-
-        }
-
-        // PUBLIC URLS
-        const {
-          data:
-            videoPublic,
-        } =
-          supabase
-            .storage
-            .from(
-              "songs"
-            )
-            .getPublicUrl(
-              videoName
-            );
-
-        const {
-          data:
-            thumbPublic,
-        } =
-          supabase
-            .storage
-            .from(
-              "thumbnails"
-            )
-            .getPublicUrl(
-              thumbName
-            );
-
-        finalVideoUrl =
-          videoPublic.publicUrl;
-
-        finalThumbUrl =
-          thumbPublic.publicUrl;
-
-      }
+        `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
       // USER
       const {
@@ -408,8 +169,7 @@ export default function UploadSongPage() {
 
       // INSERT SONG
       const {
-        error:
-          insertError,
+        error,
       } =
         await supabase
           .from(
@@ -421,11 +181,11 @@ export default function UploadSongPage() {
 
             artist,
 
-            video_url:
-              finalVideoUrl,
+            youtube_url:
+              youtubeUrl,
 
             thumbnail_url:
-              finalThumbUrl,
+              thumbnailUrl,
 
             uploaded_by:
               profile.username,
@@ -436,15 +196,15 @@ export default function UploadSongPage() {
           });
 
       if (
-        insertError
+        error
       ) {
 
         console.log(
-          insertError
+          error
         );
 
         alert(
-          insertError.message
+          error.message
         );
 
         setLoading(
@@ -495,59 +255,9 @@ export default function UploadSongPage() {
 
         <p className="text-zinc-500 mt-2">
 
-          Admin panel
+          YouTube song import
 
         </p>
-
-      </div>
-
-      {/* YOUTUBE */}
-      <div className="mb-10 p-5 rounded-3xl border border-zinc-800 bg-zinc-950">
-
-        <h2 className="text-2xl font-black mb-4">
-
-          Import from YouTube
-
-        </h2>
-
-        <input
-
-          value={youtubeUrl}
-
-          onChange={
-            (
-              e
-            ) =>
-              setYoutubeUrl(
-                e.target.value
-              )
-          }
-
-          placeholder="https://youtube.com/..."
-
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 outline-none mb-4"
-
-        />
-
-        <button
-
-          onClick={
-            importYoutube
-          }
-
-          disabled={
-            youtubeLoading
-          }
-
-          className="w-full bg-red-600 hover:bg-red-500 transition py-4 rounded-2xl font-black"
-
-        >
-
-          {youtubeLoading
-            ? "Importing..."
-            : "Import YouTube"}
-
-        </button>
 
       </div>
 
@@ -607,90 +317,35 @@ export default function UploadSongPage() {
 
       </div>
 
-      {/* MANUAL VIDEO */}
-      {!importedVideoUrl && (
+      {/* YOUTUBE URL */}
+      <div className="mb-8">
 
-        <div className="mb-5">
+        <label className="block mb-2 text-zinc-400">
 
-          <label className="block mb-2 text-zinc-400">
+          YouTube URL
 
-            Video
+        </label>
 
-          </label>
+        <input
 
-          <input
+          value={youtubeUrl}
 
-            type="file"
+          onChange={
+            (
+              e
+            ) =>
+              setYoutubeUrl(
+                e.target.value
+              )
+          }
 
-            accept="video/*"
+          placeholder="https://youtube.com/watch?v=..."
 
-            onChange={
-              (
-                e
-              ) =>
-                setVideo(
-                  e.target.files?.[0] ||
-                  null
-                )
-            }
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 outline-none"
 
-          />
+        />
 
-        </div>
-
-      )}
-
-      {/* MANUAL THUMB */}
-      {!importedVideoUrl && (
-
-        <div className="mb-8">
-
-          <label className="block mb-2 text-zinc-400">
-
-            Thumbnail
-
-          </label>
-
-          <input
-
-            type="file"
-
-            accept="image/*"
-
-            onChange={
-              (
-                e
-              ) =>
-                setThumbnail(
-                  e.target.files?.[0] ||
-                  null
-                )
-            }
-
-          />
-
-        </div>
-
-      )}
-
-      {/* IMPORTED PREVIEW */}
-      {importedThumbUrl && (
-
-        <div className="mb-8">
-
-          <img
-
-            src={
-              importedThumbUrl
-            }
-
-            className="rounded-3xl overflow-hidden"
-
-          />
-
-        </div>
-
-      )}
+      </div>
 
       {/* BUTTON */}
       <button
@@ -703,13 +358,13 @@ export default function UploadSongPage() {
           loading
         }
 
-        className="w-full bg-white text-black py-5 rounded-3xl font-black text-xl"
+        className="w-full bg-red-600 hover:bg-red-500 transition py-5 rounded-3xl font-black text-xl"
 
       >
 
         {loading
           ? "Uploading..."
-          : "Upload Song"}
+          : "Import YouTube Song"}
 
       </button>
 

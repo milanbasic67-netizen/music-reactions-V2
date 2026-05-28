@@ -4,7 +4,6 @@ from "next/link";
 import { supabase }
 from "@/lib/supabase";
 
-// NO CACHE
 export const dynamic =
   "force-dynamic";
 
@@ -91,7 +90,7 @@ export default async function SongsPage() {
 
               href={
 
-                `/create?video=${encodeURIComponent(song.video_url)}&title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`
+                `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`
 
               }
 
@@ -100,7 +99,7 @@ export default async function SongsPage() {
             >
 
               {/* THUMB */}
-              <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900">
+              <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900 relative">
 
                 <img
 
@@ -115,6 +114,17 @@ export default async function SongsPage() {
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
 
                 />
+
+                {/* PLAY */}
+                <div className="absolute inset-0 flex items-center justify-center">
+
+                  <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur flex items-center justify-center text-white text-3xl">
+
+                    ▶
+
+                  </div>
+
+                </div>
 
               </div>
 

@@ -8,11 +8,11 @@ import {
 
   Share,
 
+  Trash2,
+
   Volume2,
 
   VolumeX,
-
-  Trash2,
 
 } from "lucide-react";
 
@@ -22,6 +22,8 @@ from "next/link";
 import {
 
   useEffect,
+
+  useMemo,
 
   useRef,
 
@@ -36,28 +38,19 @@ import { getProfile }
 from "@/lib/getProfile";
 
 type Props = {
+
   reaction: any;
+
 };
 
 export default function VideoCard({
   reaction,
 }: Props) {
 
-  const videoRef =
+  const reactionVideoRef =
     useRef<HTMLVideoElement>(
       null
     );
-
-  const [liked, setLiked] =
-    useState(false);
-
-  const [likesCount, setLikesCount] =
-    useState(
-      reaction.likes_count || 0
-    );
-
-  const [muted, setMuted] =
-    useState(true);
 
   const [profile,
     setProfile] =
@@ -65,12 +58,22 @@ export default function VideoCard({
       null
     );
 
-  // FINAL VIDEO URL
-  const finalVideoUrl =
+  const [liked,
+    setLiked] =
+    useState(false);
 
-    reaction.video_url ||
-    reaction.videoUrl ||
-    reaction.url;
+  const [likesCount,
+    setLikesCount] =
+    useState(
+
+      reaction.likes_count ||
+      0
+
+    );
+
+  const [muted,
+    setMuted] =
+    useState(true);
 
   // LOAD PROFILE
   useEffect(() => {
@@ -90,11 +93,38 @@ export default function VideoCard({
 
   }, []);
 
-  // AUTOPLAY
+  // YOUTUBE VIDEO ID
+  const videoId =
+    useMemo(() => {
+
+      try {
+
+        const parsed =
+          new URL(
+            reaction.youtube_url
+          );
+
+        return parsed
+          .searchParams
+          .get("v");
+
+      } catch {
+
+        return "";
+
+      }
+
+    }, [
+
+      reaction.youtube_url,
+
+    ]);
+
+  // AUTOPLAY CAMERA
   useEffect(() => {
 
     const video =
-      videoRef.current;
+      reactionVideoRef.current;
 
     if (!video) return;
 
@@ -142,11 +172,11 @@ export default function VideoCard({
 
   }, []);
 
-  // SOUND
+  // TOGGLE SOUND
   function toggleSound() {
 
     const video =
-      videoRef.current;
+      reactionVideoRef.current;
 
     if (!video) return;
 
@@ -181,7 +211,9 @@ export default function VideoCard({
     const {
       data: { user },
     } =
-      await supabase.auth.getUser();
+      await supabase
+        .auth
+        .getUser();
 
     if (!user) {
 
@@ -197,28 +229,36 @@ export default function VideoCard({
       data: existing,
     } =
       await supabase
+
         .from(
           "likes"
         )
+
         .select("*")
+
         .eq(
           "reaction_id",
           reaction.id
         )
+
         .eq(
           "user_id",
           user.id
         )
+
         .single();
 
     // UNLIKE
     if (existing) {
 
       await supabase
+
         .from(
           "likes"
         )
+
         .delete()
+
         .eq(
           "id",
           existing.id
@@ -239,9 +279,11 @@ export default function VideoCard({
 
       // LIKE
       await supabase
+
         .from(
           "likes"
         )
+
         .insert({
 
           reaction_id:
@@ -270,11 +312,13 @@ export default function VideoCard({
   // SHARE
   async function shareVideo() {
 
-    await navigator.clipboard.writeText(
+    await navigator
+      .clipboard
+      .writeText(
 
-      `${window.location.origin}/reaction/${reaction.id}`
+        `${window.location.origin}/reaction/${reaction.id}`
 
-    );
+      );
 
     alert(
       "Link copied!"
@@ -287,7 +331,6 @@ export default function VideoCard({
 
     try {
 
-      // CURRENT USER
       const {
         data: {
           user,
@@ -307,7 +350,6 @@ export default function VideoCard({
 
       }
 
-      // OWNER OR ADMIN
       const canDelete =
 
         reaction.user_id ===
@@ -335,10 +377,6 @@ export default function VideoCard({
         !confirmed
       ) return;
 
-      console.log(
-        reaction
-      );
-
       // STORAGE PATH
       let storagePath =
         "";
@@ -357,40 +395,31 @@ export default function VideoCard({
 
       }
 
-      console.log(
-        storagePath
-      );
-
       // DELETE STORAGE VIDEO
       if (
         storagePath
       ) {
 
-        const {
-          error:
-            storageError,
-        } =
-          await supabase
-            .storage
-            .from(
-              "videos"
-            )
-            .remove([
-              storagePath,
-            ]);
-
-        console.log(
-          storageError
-        );
+        await supabase
+          .storage
+          .from(
+            "videos"
+          )
+          .remove([
+            storagePath,
+          ]);
 
       }
 
       // DELETE LIKES
       await supabase
+
         .from(
           "likes"
         )
+
         .delete()
+
         .eq(
           "reaction_id",
           reaction.id
@@ -401,10 +430,13 @@ export default function VideoCard({
         error,
       } =
         await supabase
+
           .from(
             "reactions"
           )
+
           .delete()
+
           .eq(
             "id",
             reaction.id
@@ -413,10 +445,6 @@ export default function VideoCard({
       if (
         error
       ) {
-
-        console.log(
-          error
-        );
 
         alert(
           error.message
@@ -440,21 +468,49 @@ export default function VideoCard({
 
   return (
 
-    <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <div className="relative h-screen w-screen overflow-hidden bg-black snap-start">
 
-      {/* VIDEO */}
-      <video
-        ref={videoRef}
-        src={finalVideoUrl}
-        className="absolute inset-0 h-full w-full object-contain bg-black"
-        autoPlay
-        loop
-        playsInline
-        muted={muted}
+      {/* YOUTUBE BACKGROUND */}
+      <iframe
+
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&playsinline=1&loop=1&playlist=${videoId}`}
+
+        className="absolute inset-0 w-full h-full"
+
+        allow="autoplay"
+
+        allowFullScreen
+
       />
 
-      {/* OVERLAY */}
-      <div className="absolute inset-0 z-20 flex">
+      {/* DARK OVERLAY */}
+      <div className="absolute inset-0 bg-black/20 z-10" />
+
+      {/* REACTION VIDEO */}
+      <div className="absolute top-6 left-6 z-30 w-[32vw] max-w-[220px] aspect-[9/16] rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+
+        <video
+
+          ref={reactionVideoRef}
+
+          src={reaction.video_url}
+
+          autoPlay
+
+          loop
+
+          playsInline
+
+          muted={muted}
+
+          className="w-full h-full object-cover"
+
+        />
+
+      </div>
+
+      {/* CONTENT */}
+      <div className="absolute inset-0 z-40 flex">
 
         {/* LEFT */}
         <div className="flex-1 flex flex-col justify-end p-5">
@@ -466,25 +522,24 @@ export default function VideoCard({
 
               href={`/u/${reaction.username}`}
 
-              className="font-black text-xl"
+              className="font-black text-2xl"
 
             >
 
               @
-              {reaction.username ||
-                "user"}
+              {reaction.username}
 
             </Link>
 
             {/* SONG */}
-            <p className="text-sm text-zinc-300 mt-2">
+            <h2 className="text-lg mt-3 font-bold">
 
               {reaction.song}
 
-            </p>
+            </h2>
 
             {/* ARTIST */}
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-zinc-300 mt-1">
 
               {reaction.artist}
 
@@ -528,12 +583,6 @@ export default function VideoCard({
 
             <MessageCircle className="w-8 h-8 text-white" />
 
-            <span className="text-xs mt-1">
-
-              {reaction.comments_count || 0}
-
-            </span>
-
           </button>
 
           {/* SHARE */}
@@ -550,13 +599,10 @@ export default function VideoCard({
 
           {/* DELETE */}
           <button
-
             onClick={
               deleteReaction
             }
-
             className="flex flex-col items-center"
-
           >
 
             <Trash2 className="w-8 h-8 text-white" />
