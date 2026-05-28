@@ -247,9 +247,17 @@ app.post(
 
     try {
 
+      console.log(
+        "IMPORT YOUTUBE HIT"
+      );
+
       const {
         youtubeUrl,
       } = req.body;
+
+      console.log(
+        youtubeUrl
+      );
 
       if (
         !youtubeUrl
@@ -293,10 +301,17 @@ app.post(
             outputPath,
 
           format:
-            "bestvideo+bestaudio/best",
+            "best",
 
-          mergeOutputFormat:
-             "mp4",
+          noCheckCertificates:
+            true,
+
+          preferFreeFormats:
+            false,
+
+          youtubeSkipDashManifest:
+            true,
+
         }
 
       );
@@ -305,7 +320,31 @@ app.post(
         "DOWNLOAD DONE"
       );
 
-      // THUMBNAIL
+      // FILE EXISTS?
+      const exists =
+        fs.existsSync(
+          outputPath
+        );
+
+      console.log(
+        "FILE EXISTS:",
+        exists
+      );
+
+      if (!exists) {
+
+        return res
+          .status(500)
+          .json({
+
+            error:
+              "Video not downloaded",
+
+          });
+
+      }
+
+      // THUMB PATH
       const thumbPath =
         path.join(
 
@@ -314,6 +353,10 @@ app.post(
           `${id}.jpg`
 
         );
+
+      console.log(
+        "GENERATING THUMB..."
+      );
 
       // GENERATE THUMB
       await new Promise(
@@ -344,21 +387,58 @@ app.post(
             })
 
             .on(
+
               "end",
-              resolve
+
+              () => {
+
+                console.log(
+                  "THUMB DONE"
+                );
+
+                resolve();
+
+              }
+
             )
 
             .on(
+
               "error",
-              reject
+
+              (
+                err
+              ) => {
+
+                console.log(
+                  "THUMB ERROR"
+                );
+
+                console.log(
+                  err
+                );
+
+                reject(
+                  err
+                );
+
+              }
+
             );
 
         }
 
       );
 
+      // THUMB EXISTS?
+      const thumbExists =
+        fs.existsSync(
+          thumbPath
+        );
+
       console.log(
-        "THUMB DONE"
+        "THUMB EXISTS:",
+        thumbExists
       );
 
       return res.json({
@@ -377,6 +457,10 @@ app.post(
     } catch (err) {
 
       console.log(
+        "YOUTUBE IMPORT ERROR"
+      );
+
+      console.log(
         err
       );
 
@@ -385,6 +469,7 @@ app.post(
         .json({
 
           error:
+            err.message ||
             "Import failed",
 
         });
@@ -484,7 +569,6 @@ app.post(
 
         );
 
-      // FFMPEG
       ffmpeg()
 
         .input(
@@ -559,7 +643,7 @@ app.post(
               "smalloriginal",
           },
 
-          // ROUNDED
+          // ROUNDED CORNERS
           {
             filter:
               "format",
