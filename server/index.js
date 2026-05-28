@@ -313,42 +313,14 @@ app.post(
           reaction.path
         )
 
+        // LIMIT
         .duration(
           15
         )
 
         .complexFilter([
 
-          // ORIGINAL VIDEO
-          {
-            filter:
-              "fps",
-
-            options:
-              30,
-
-            inputs:
-              "0:v",
-
-            outputs:
-              "leftfps",
-          },
-
-          {
-            filter:
-              "scale",
-
-            options:
-              "540:960",
-
-            inputs:
-              "leftfps",
-
-            outputs:
-              "left",
-          },
-
-          // REACTION VIDEO
+          // MAIN REACTION VIDEO
           {
             filter:
               "fps",
@@ -360,7 +332,7 @@ app.post(
               "1:v",
 
             outputs:
-              "rightfps",
+              "reactionfps",
           },
 
           {
@@ -368,27 +340,66 @@ app.post(
               "scale",
 
             options:
-              "540:960",
+              "1080:1920",
 
             inputs:
-              "rightfps",
+              "reactionfps",
 
             outputs:
-              "right",
+              "reactionfull",
           },
 
-          // STACK
+          // SMALL ORIGINAL VIDEO
           {
             filter:
-              "hstack",
+              "fps",
+
+            options:
+              30,
+
+            inputs:
+              "0:v",
+
+            outputs:
+              "originalfps",
+          },
+
+          {
+            filter:
+              "scale",
+
+            options:
+              "320:568",
+
+            inputs:
+              "originalfps",
+
+            outputs:
+              "smalloriginal",
+          },
+
+          // OVERLAY
+          {
+            filter:
+              "overlay",
 
             options:
               {
-                inputs: 2,
+
+                x: 40,
+
+                y: 40,
+
               },
 
             inputs:
-              ["left", "right"],
+              [
+
+                "reactionfull",
+
+                "smalloriginal",
+
+              ],
 
             outputs:
               "v",
@@ -436,6 +447,9 @@ app.post(
 
                 duration:
                   "shortest",
+
+                dropout_transition:
+                  0,
 
               },
 
