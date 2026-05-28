@@ -378,6 +378,36 @@ app.post(
               "smalloriginal",
           },
 
+          // ROUNDED CORNERS PREP
+          {
+            filter:
+              "format",
+
+            options:
+              "rgba",
+
+            inputs:
+              "smalloriginal",
+
+            outputs:
+              "roundedprep",
+          },
+
+          // ROUNDED MASK
+          {
+            filter:
+              "geq",
+
+            options:
+              "lum='p(X,Y)':a='if(gt(abs(W/2-X),W/2-30)*gt(abs(H/2-Y),H/2-30),0,255)'",
+
+            inputs:
+              "roundedprep",
+
+            outputs:
+              "roundedvideo",
+          },
+
           // OVERLAY
           {
             filter:
@@ -397,7 +427,7 @@ app.post(
 
                 "reactionfull",
 
-                "smalloriginal",
+                "roundedvideo",
 
               ],
 
