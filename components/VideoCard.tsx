@@ -53,7 +53,7 @@ export default function VideoCard({
   const [muted, setMuted] =
     useState(true);
 
-  // FINAL URL
+  // FINAL VIDEO URL
   const finalVideoUrl =
 
     reaction.video_url ||
@@ -255,16 +255,56 @@ export default function VideoCard({
   // DELETE
   async function deleteReaction() {
 
-    const confirmed =
-      confirm(
-        "Delete reaction?"
-      );
-
-    if (
-      !confirmed
-    ) return;
-
     try {
+
+      // CURRENT USER
+      const {
+        data: {
+          user,
+        },
+      } =
+        await supabase
+          .auth
+          .getUser();
+
+      if (!user) {
+
+        alert(
+          "Login required"
+        );
+
+        return;
+
+      }
+
+      // OWNER CHECK
+      const currentUsername =
+        user.email
+          ?.split("@")[0];
+
+      if (
+
+        reaction.username !==
+        currentUsername
+
+      ) {
+
+        alert(
+          "You can delete only your own reactions"
+        );
+
+        return;
+
+      }
+
+      const confirmed =
+        confirm(
+          "Delete reaction?"
+        );
+
+      if (
+        !confirmed
+      ) return;
 
       console.log(
         reaction
