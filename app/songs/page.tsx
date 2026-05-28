@@ -88,7 +88,6 @@ export default async function SongsPage() {
             song
           ) => {
 
-            // SKIP INVALID
             if (
               !song.youtube_url
             ) {
@@ -96,6 +95,14 @@ export default async function SongsPage() {
               return null;
 
             }
+
+            const createUrl =
+
+              `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`;
+
+            console.log(
+              createUrl
+            );
 
             return (
 
@@ -105,25 +112,9 @@ export default async function SongsPage() {
                   song.id
                 }
 
-                href={{
-
-  pathname:
-    "/create",
-
-  query: {
-
-    youtube:
-      song.youtube_url,
-
-    title:
-      song.title,
-
-    artist:
-      song.artist,
-
-  },
-
-}}
+                href={
+                  createUrl
+                }
 
                 className="group"
 
