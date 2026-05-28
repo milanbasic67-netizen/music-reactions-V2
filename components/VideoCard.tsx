@@ -16,6 +16,9 @@ import {
 
 } from "lucide-react";
 
+import Link
+from "next/link";
+
 import {
 
   useEffect,
@@ -28,6 +31,9 @@ import {
 
 import { supabase }
 from "@/lib/supabase";
+
+import { getProfile }
+from "@/lib/getProfile";
 
 type Props = {
   reaction: any;
@@ -53,12 +59,36 @@ export default function VideoCard({
   const [muted, setMuted] =
     useState(true);
 
+  const [profile,
+    setProfile] =
+    useState<any>(
+      null
+    );
+
   // FINAL VIDEO URL
   const finalVideoUrl =
 
     reaction.video_url ||
     reaction.videoUrl ||
     reaction.url;
+
+  // LOAD PROFILE
+  useEffect(() => {
+
+    async function load() {
+
+      const p =
+        await getProfile();
+
+      setProfile(
+        p
+      );
+
+    }
+
+    load();
+
+  }, []);
 
   // AUTOPLAY
   useEffect(() => {
@@ -277,17 +307,16 @@ export default function VideoCard({
 
       }
 
-      // OWNER CHECK
-      const currentUsername =
-        user.email
-          ?.split("@")[0];
+      // OWNER OR ADMIN
+      const canDelete =
 
-      if (
+        reaction.user_id ===
+        user.id ||
 
-        reaction.username !==
-        currentUsername
+        profile?.role ===
+        "admin";
 
-      ) {
+      if (!canDelete) {
 
         alert(
           "You can delete only your own reactions"
@@ -432,20 +461,29 @@ export default function VideoCard({
 
           <div className="mb-24">
 
-            <h2 className="font-black text-xl">
+            {/* USER */}
+            <Link
+
+              href={`/u/${reaction.username}`}
+
+              className="font-black text-xl"
+
+            >
 
               @
               {reaction.username ||
                 "user"}
 
-            </h2>
+            </Link>
 
+            {/* SONG */}
             <p className="text-sm text-zinc-300 mt-2">
 
               {reaction.song}
 
             </p>
 
+            {/* ARTIST */}
             <p className="text-xs text-zinc-500 mt-1">
 
               {reaction.artist}
