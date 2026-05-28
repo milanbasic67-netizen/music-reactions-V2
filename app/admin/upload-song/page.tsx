@@ -2,6 +2,8 @@
 
 import {
 
+  useEffect,
+
   useState,
 
 } from "react";
@@ -9,7 +11,20 @@ import {
 import { supabase }
 from "@/lib/supabase";
 
+import { getProfile }
+from "@/lib/getProfile";
+
 export default function UploadSongPage() {
+
+  const [profile,
+    setProfile] =
+    useState<any>(
+      null
+    );
+
+  const [loading,
+    setLoading] =
+    useState(false);
 
   const [title,
     setTitle] =
@@ -31,10 +46,58 @@ export default function UploadSongPage() {
       null
     );
 
-  const [loading,
-    setLoading] =
-    useState(false);
+  // LOAD PROFILE
+  useEffect(() => {
 
+    async function load() {
+
+      const p =
+        await getProfile();
+
+      setProfile(
+        p
+      );
+
+    }
+
+    load();
+
+  }, []);
+
+  // NOT ADMIN
+  if (
+    profile &&
+    profile.role !== "admin"
+  ) {
+
+    return (
+
+      <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
+
+        Not authorized
+
+      </main>
+
+    );
+
+  }
+
+  // LOADING
+  if (!profile) {
+
+    return (
+
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+
+        Loading...
+
+      </main>
+
+    );
+
+  }
+
+  // UPLOAD
   async function uploadSong() {
 
     try {
@@ -64,7 +127,7 @@ export default function UploadSongPage() {
       const thumbName =
         `${Date.now()}-${thumbnail.name}`;
 
-      // UPLOAD VIDEO
+      // VIDEO UPLOAD
       const {
         error:
           videoError,
@@ -109,7 +172,7 @@ export default function UploadSongPage() {
 
       }
 
-      // UPLOAD THUMB
+      // THUMB UPLOAD
       const {
         error:
           thumbError,
@@ -154,7 +217,7 @@ export default function UploadSongPage() {
 
       }
 
-      // PUBLIC VIDEO URL
+      // PUBLIC URLS
       const {
         data:
           videoPublic,
@@ -168,7 +231,6 @@ export default function UploadSongPage() {
             videoName
           );
 
-      // PUBLIC THUMB URL
       const {
         data:
           thumbPublic,
@@ -181,14 +243,6 @@ export default function UploadSongPage() {
           .getPublicUrl(
             thumbName
           );
-
-      console.log(
-        videoPublic.publicUrl
-      );
-
-      console.log(
-        thumbPublic.publicUrl
-      );
 
       // USER
       const {
@@ -222,8 +276,10 @@ export default function UploadSongPage() {
               thumbPublic.publicUrl,
 
             uploaded_by:
-              user?.email ||
-              "admin",
+              profile.username,
+
+            user_id:
+              user?.id,
 
           });
 
@@ -287,7 +343,7 @@ export default function UploadSongPage() {
 
         <p className="text-zinc-500 mt-2">
 
-          Add new reaction video
+          Admin panel
 
         </p>
 
