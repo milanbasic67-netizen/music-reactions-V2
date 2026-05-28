@@ -34,9 +34,17 @@ export default function UploadSongPage() {
     setArtist] =
     useState("");
 
-  const [youtubeUrl,
-    setYoutubeUrl] =
-    useState("");
+  const [videoFile,
+    setVideoFile] =
+    useState<File | null>(
+      null
+    );
+
+  const [thumbFile,
+    setThumbFile] =
+    useState<File | null>(
+      null
+    );
 
   // LOAD PROFILE
   useEffect(() => {
@@ -89,49 +97,29 @@ export default function UploadSongPage() {
 
   }
 
-  // GET VIDEO ID
-  function getYoutubeId(
-    url: string
-  ) {
-
-    const regExp =
-
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|shorts\/)([^#&?]*).*/;
-
-    const match =
-      url.match(
-        regExp
-      );
-
-    if (
-
-      match &&
-
-      match[2] &&
-
-      match[2].length === 11
-
-    ) {
-
-      return match[2];
-
-    }
-
-    return null;
-
-  }
-
   // UPLOAD SONG
   async function uploadSong() {
 
     try {
 
       if (
-        !youtubeUrl
+        !videoFile
       ) {
 
         alert(
-          "Missing YouTube URL"
+          "Missing video"
+        );
+
+        return;
+
+      }
+
+      if (
+        !thumbFile
+      ) {
+
+        alert(
+          "Missing thumbnail"
         );
 
         return;
@@ -141,39 +129,6 @@ export default function UploadSongPage() {
       setLoading(
         true
       );
-
-      // VIDEO ID
-      const videoId =
-        getYoutubeId(
-          youtubeUrl
-        );
-
-      console.log({
-
-        youtubeUrl,
-
-        videoId,
-
-      });
-
-      if (!videoId) {
-
-        alert(
-          "Invalid YouTube URL"
-        );
-
-        setLoading(
-          false
-        );
-
-        return;
-
-      }
-
-      // THUMB
-      const thumbnailUrl =
-
-        `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
       // USER
       const {
@@ -191,6 +146,57 @@ export default function UploadSongPage() {
           "Login required"
         );
 
+        return;
+
+      }
+
+      // VIDEO NAME
+      const videoName =
+
+`${Date.now()}-${videoFile.name}`;
+
+      // THUMB NAME
+      const thumbName =
+
+`${Date.now()}-${thumbFile.name}`;
+
+      // UPLOAD VIDEO
+      const {
+        error:
+          videoError,
+      } =
+        await supabase
+          .storage
+          .from(
+            "songs"
+          )
+          .upload(
+
+            videoName,
+
+            videoFile,
+
+            {
+
+              contentType:
+                "video/mp4",
+
+            }
+
+          );
+
+      if (
+        videoError
+      ) {
+
+        console.log(
+          videoError
+        );
+
+        alert(
+          videoError.message
+        );
+
         setLoading(
           false
         );
@@ -199,9 +205,76 @@ export default function UploadSongPage() {
 
       }
 
+      // UPLOAD THUMB
+      const {
+        error:
+          thumbError,
+      } =
+        await supabase
+          .storage
+          .from(
+            "songs"
+          )
+          .upload(
+
+            thumbName,
+
+            thumbFile
+
+          );
+
+      if (
+        thumbError
+      ) {
+
+        console.log(
+          thumbError
+        );
+
+        alert(
+          thumbError.message
+        );
+
+        setLoading(
+          false
+        );
+
+        return;
+
+      }
+
+      // VIDEO URL
+      const {
+        data:
+          videoPublic,
+      } =
+        supabase
+          .storage
+          .from(
+            "songs"
+          )
+          .getPublicUrl(
+            videoName
+          );
+
+      // THUMB URL
+      const {
+        data:
+          thumbPublic,
+      } =
+        supabase
+          .storage
+          .from(
+            "songs"
+          )
+          .getPublicUrl(
+            thumbName
+          );
+
       // INSERT SONG
       const {
-        error,
+        error:
+          insertError,
       } =
         await supabase
 
@@ -217,14 +290,11 @@ export default function UploadSongPage() {
             artist:
               artist || "Unknown",
 
-            youtube_url:
-              youtubeUrl,
-
-            video_id:
-              videoId,
+            video_url:
+              videoPublic.publicUrl,
 
             thumbnail_url:
-              thumbnailUrl,
+              thumbPublic.publicUrl,
 
             uploaded_by:
               profile.username,
@@ -235,15 +305,15 @@ export default function UploadSongPage() {
           });
 
       if (
-        error
+        insertError
       ) {
 
         console.log(
-          error
+          insertError
         );
 
         alert(
-          error.message
+          insertError.message
         );
 
         setLoading(
@@ -294,7 +364,7 @@ export default function UploadSongPage() {
 
         <p className="text-zinc-500 mt-2">
 
-          YouTube song import
+          Upload mp4 + thumbnail
 
         </p>
 
@@ -356,31 +426,71 @@ export default function UploadSongPage() {
 
       </div>
 
-      {/* YOUTUBE URL */}
-      <div className="mb-8">
+      {/* VIDEO */}
+      <div className="mb-5">
 
         <label className="block mb-2 text-zinc-400">
 
-          YouTube URL
+          MP4 Video
 
         </label>
 
         <input
 
-          value={youtubeUrl}
+          type="file"
+
+          accept="video/mp4"
 
           onChange={
             (
               e
             ) =>
-              setYoutubeUrl(
-                e.target.value
+
+              setVideoFile(
+
+                e.target
+                  .files?.[0] ||
+                  null
+
               )
           }
 
-          placeholder="https://youtube.com/watch?v=..."
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
 
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 outline-none"
+        />
+
+      </div>
+
+      {/* THUMB */}
+      <div className="mb-8">
+
+        <label className="block mb-2 text-zinc-400">
+
+          Thumbnail
+
+        </label>
+
+        <input
+
+          type="file"
+
+          accept="image/*"
+
+          onChange={
+            (
+              e
+            ) =>
+
+              setThumbFile(
+
+                e.target
+                  .files?.[0] ||
+                  null
+
+              )
+          }
+
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
 
         />
 
@@ -403,7 +513,7 @@ export default function UploadSongPage() {
 
         {loading
           ? "Uploading..."
-          : "Import YouTube Song"}
+          : "Upload Song"}
 
       </button>
 
