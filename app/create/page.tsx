@@ -5,6 +5,8 @@ export const dynamic =
 
 import {
 
+  Suspense,
+
   useEffect,
 
   useState,
@@ -20,7 +22,8 @@ import {
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-export default function CreatePage() {
+// CONTENT
+function CreateContent() {
 
   const searchParams =
     useSearchParams();
@@ -88,13 +91,19 @@ export default function CreatePage() {
             "Missing YouTube URL"
           );
 
+          setLoading(
+            false
+          );
+
           return;
 
         }
 
-        console.log(
-          youtubeUrl
-        );
+        console.log({
+
+          youtubeUrl,
+
+        });
 
         // PREPARE SONG
         const res =
@@ -138,6 +147,10 @@ export default function CreatePage() {
 
           alert(
             "Prepare failed"
+          );
+
+          setLoading(
+            false
           );
 
           return;
@@ -274,6 +287,21 @@ export default function CreatePage() {
       />
 
     </main>
+
+  );
+
+}
+
+// PAGE
+export default function CreatePage() {
+
+  return (
+
+    <Suspense>
+
+      <CreateContent />
+
+    </Suspense>
 
   );
 
