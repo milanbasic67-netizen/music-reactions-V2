@@ -157,20 +157,7 @@ export default function TopBar() {
 
             </button>
 
-            {/* CREATE */}
-            <button
-              onClick={() => {
-
-                window.location.href =
-                  "/create";
-
-              }}
-              className="shrink-0 bg-green-500 hover:bg-green-400 transition px-4 py-2 rounded-full text-black text-xs font-black"
-            >
-
-              Create
-
-            </button>
+            
 
             {/* ADMIN UPLOAD */}
             {profile?.role ===
