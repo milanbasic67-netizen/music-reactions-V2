@@ -76,6 +76,8 @@ function CreateContent() {
 
           <video
 
+            id="song-video"
+
             src={videoUrl}
 
             autoPlay

@@ -36,7 +36,7 @@ export default function DuetRecorder({
 
 }: Props) {
 
-  const videoRef =
+  const cameraRef =
     useRef<HTMLVideoElement>(
       null
     );
@@ -86,10 +86,10 @@ export default function DuetRecorder({
         );
 
         if (
-          videoRef.current
+          cameraRef.current
         ) {
 
-          videoRef.current.srcObject =
+          cameraRef.current.srcObject =
             media;
 
         }
@@ -120,9 +120,27 @@ export default function DuetRecorder({
       if (!stream)
         return;
 
+      // RESET CHUNKS
       chunksRef.current =
         [];
 
+      // SONG VIDEO
+      const songVideo =
+        document.getElementById(
+          "song-video"
+        ) as HTMLVideoElement;
+
+      // START SONG FROM BEGINNING
+      if (songVideo) {
+
+        songVideo.currentTime =
+          0;
+
+        await songVideo.play();
+
+      }
+
+      // RECORDER
       const recorder =
         new MediaRecorder(
 
@@ -198,6 +216,19 @@ export default function DuetRecorder({
         true
       );
 
+      // PAUSE SONG
+      const songVideo =
+        document.getElementById(
+          "song-video"
+        ) as HTMLVideoElement;
+
+      if (songVideo) {
+
+        songVideo.pause();
+
+      }
+
+      // STOP CAMERA RECORDING
       mediaRecorderRef.current.stop();
 
       setRecording(
@@ -264,7 +295,7 @@ export default function DuetRecorder({
 
             );
 
-            // RENDER REQUEST
+            // RENDER
             const renderRes =
               await fetch(
 
@@ -416,23 +447,6 @@ export default function DuetRecorder({
                   fileName
                 );
 
-            console.log({
-
-              song: title,
-
-              artist,
-
-              user_id:
-                user.id,
-
-              username:
-                profile?.username,
-
-              video_url:
-                publicData.publicUrl,
-
-            });
-
             // INSERT REACTION
             const {
               error:
@@ -464,16 +478,16 @@ export default function DuetRecorder({
               insertError
             ) {
 
+              console.log(
+                insertError
+              );
+
               alert(
 
                 JSON.stringify(
                   insertError
                 )
 
-              );
-
-              console.log(
-                insertError
               );
 
               return;
@@ -528,7 +542,7 @@ export default function DuetRecorder({
 
         <video
 
-          ref={videoRef}
+          ref={cameraRef}
 
           autoPlay
 
