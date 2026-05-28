@@ -174,9 +174,9 @@ function CreateContent() {
     <main className="min-h-screen bg-black text-white">
 
       {/* PLAYER */}
-<div className="px-4 pt-4">
+<div className="px-3 pt-3">
 
-  <div className="relative w-full h-[220px] rounded-3xl overflow-hidden bg-black">
+  <div className="relative w-full h-[140px] rounded-2xl overflow-hidden bg-black">
 
     <iframe
 
@@ -191,6 +191,8 @@ function CreateContent() {
     />
 
   </div>
+
+</div>
 
 </div>
 

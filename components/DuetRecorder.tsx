@@ -637,7 +637,7 @@ export default function DuetRecorder({
     <div className="p-5">
 
       {/* CAMERA */}
-      <div className="rounded-3xl overflow-hidden bg-black mb-5 h-[280px] max-w-[180px] mx-auto border border-zinc-800 shadow-2xl">
+      <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] max-w-[110px] mx-auto border border-zinc-800 shadow-2xl">
 
         <video
 
@@ -675,7 +675,7 @@ export default function DuetRecorder({
               startRecording
             }
 
-            className="flex-1 bg-red-600 hover:bg-red-500 transition py-5 rounded-3xl font-black text-xl"
+            className="flex-1 bg-red-600 hover:bg-red-500 transition py-3 rounded-3xl font-black text-xl"
 
           >
 
