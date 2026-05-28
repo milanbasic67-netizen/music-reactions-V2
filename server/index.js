@@ -15,6 +15,10 @@ const ytdlp =
     "yt-dlp-exec"
   );
 
+console.log(
+  "YTDLP OK"
+);
+
 const path =
   require("path");
 
