@@ -544,26 +544,7 @@ export default function DuetRecorder({
 
     <div className="p-4">
 
-      {/* ORIGINAL VIDEO */}
-      <div className="mb-4 rounded-2xl overflow-hidden bg-black">
-
-        <video
-
-          src={
-            originalVideo
-          }
-
-          autoPlay
-
-          controls
-
-          playsInline
-
-          className="w-full h-[180px] object-cover"
-
-        />
-
-      </div>
+      
 
       {/* CAMERA */}
       <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] max-w-[110px] mx-auto border border-zinc-800 shadow-2xl">
