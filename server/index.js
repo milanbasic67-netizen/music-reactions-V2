@@ -411,7 +411,7 @@ app.post(
               "volume",
 
             options:
-              "0.35",
+              "0.3",
 
             inputs:
               "0:a",
@@ -426,7 +426,7 @@ app.post(
               "volume",
 
             options:
-              "2.5",
+              "4",
 
             inputs:
               "1:a",
