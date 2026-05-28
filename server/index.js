@@ -16,8 +16,6 @@ const path =
 const fs =
   require("fs");
 
-const originalUrl =
-  req.body.originalUrl;
 
 require("dotenv")
   .config();
@@ -234,29 +232,9 @@ app.post(
 
   "/render-duet",
 
-  upload.fields([
-
-    {
-
-      name:
-        "original",
-
-      maxCount:
-        1,
-
-    },
-
-    {
-
-      name:
-        "reaction",
-
-      maxCount:
-        1,
-
-    },
-
-  ]),
+  upload.single(
+    "reaction"
+  ),
 
   async (
     req,
@@ -269,18 +247,16 @@ app.post(
         "RENDER START"
       );
 
-      const original =
-        req.files[
-          "original"
-        ]?.[0];
+      // ORIGINAL URL
+      const originalUrl =
+        req.body.originalUrl;
 
+      // REACTION FILE
       const reaction =
-        req.files[
-          "reaction"
-        ]?.[0];
+        req.file;
 
       if (
-        !original ||
+        !originalUrl ||
         !reaction
       ) {
 
@@ -296,7 +272,7 @@ app.post(
       }
 
       console.log(
-        original.path
+        originalUrl
       );
 
       console.log(
@@ -317,8 +293,13 @@ app.post(
         );
 
       ffmpeg()
-  .input(originalUrl)
 
+        // ORIGINAL SONG
+        .input(
+          originalUrl
+        )
+
+        // REACTION
         .input(
           reaction.path
         )
@@ -329,7 +310,6 @@ app.post(
 
         .complexFilter([
 
-          // MAIN REACTION
           {
             filter:
               "fps",
@@ -358,7 +338,6 @@ app.post(
               "reactionfull",
           },
 
-          // SMALL ORIGINAL
           {
             filter:
               "fps",
@@ -387,7 +366,6 @@ app.post(
               "smalloriginal",
           },
 
-          // OVERLAY
           {
             filter:
               "overlay",
@@ -414,7 +392,6 @@ app.post(
               "v",
           },
 
-          // SONG AUDIO
           {
             filter:
               "volume",
@@ -429,7 +406,6 @@ app.post(
               "songquiet",
           },
 
-          // MIC AUDIO
           {
             filter:
               "volume",
@@ -444,7 +420,6 @@ app.post(
               "micboost",
           },
 
-          // MIX
           {
             filter:
               "amix",
@@ -505,54 +480,6 @@ app.post(
 
         .on(
 
-          "start",
-
-          (
-            command
-          ) => {
-
-            console.log(
-              command
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "progress",
-
-          (
-            progress
-          ) => {
-
-            console.log(
-              progress.percent
-            );
-
-          }
-
-        )
-
-        .on(
-
-          "stderr",
-
-          (
-            line
-          ) => {
-
-            console.log(
-              line
-            );
-
-          }
-
-        )
-
-        .on(
-
           "end",
 
           () => {
@@ -562,10 +489,6 @@ app.post(
             );
 
             try {
-
-              fs.unlinkSync(
-                original.path
-              );
 
               fs.unlinkSync(
                 reaction.path
@@ -640,23 +563,6 @@ app.post(
         });
 
     }
-
-  }
-
-);
-
-// START
-app.listen(
-
-  PORT,
-
-  () => {
-
-    console.log(
-
-      `Server running on ${PORT}`
-
-    );
 
   }
 
