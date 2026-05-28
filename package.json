@@ -3,10 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
@@ -15,11 +12,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "yt-dlp-exec": "^1.0.2"
-    
   },
-"scripts": {
-  "start": "node index.js"
-},
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
