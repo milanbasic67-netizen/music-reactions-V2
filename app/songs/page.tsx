@@ -105,11 +105,25 @@ export default async function SongsPage() {
                   song.id
                 }
 
-                href={
+                href={{
 
-                  `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`
+  pathname:
+    "/create",
 
-                }
+  query: {
+
+    youtube:
+      song.youtube_url,
+
+    title:
+      song.title,
+
+    artist:
+      song.artist,
+
+  },
+
+}}
 
                 className="group"
 
