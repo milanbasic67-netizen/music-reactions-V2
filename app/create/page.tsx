@@ -7,10 +7,6 @@ import {
 
   Suspense,
 
-  useEffect,
-
-  useState,
-
 } from "react";
 
 import {
@@ -28,192 +24,40 @@ function CreateContent() {
   const searchParams =
     useSearchParams();
 
-  const [loading,
-    setLoading] =
-    useState(true);
+  const videoUrl =
 
-  const [tempVideo,
-    setTempVideo] =
-    useState("");
+    searchParams.get(
+      "video"
+    ) || "";
 
-  const [tempFile,
-    setTempFile] =
-    useState("");
+  const title =
 
-  const [title,
-    setTitle] =
-    useState("");
+    decodeURIComponent(
 
-  const [artist,
-    setArtist] =
-    useState("");
-
-  // LOAD
-  useEffect(() => {
-
-    async function prepareSong() {
-
-      try {
-
-        const youtubeUrl =
-
-          searchParams.get(
-            "youtube"
-          );
-
-        const songTitle =
-
-          searchParams.get(
-            "title"
-          ) || "";
-
-        const songArtist =
-
-          searchParams.get(
-            "artist"
-          ) || "";
-
-        setTitle(
-          decodeURIComponent(
-            songTitle
-          )
-        );
-
-        setArtist(
-          decodeURIComponent(
-            songArtist
-          )
-        );
-
-        if (!youtubeUrl) {
-
-          alert(
-            "Missing YouTube URL"
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-
-        }
-
-        console.log({
-
-          youtubeUrl,
-
-        });
-
-        // PREPARE SONG
-        const res =
-          await fetch(
-
-`${process.env.NEXT_PUBLIC_API_URL}/prepare-song`,
-
-            {
-
-              method:
-                "POST",
-
-              headers: {
-
-                "Content-Type":
-                  "application/json",
-
-              },
-
-              body:
-                JSON.stringify({
-
-                  youtubeUrl,
-
-                }),
-
-            }
-
-          );
-
-        const data =
-          await res.json();
-
-        console.log(
-          data
-        );
-
-        if (
-          !data.videoUrl
-        ) {
-
-          alert(
-            "Prepare failed"
-          );
-
-          setLoading(
-            false
-          );
-
-          return;
-
-        }
-
-        setTempVideo(
-
-          data.videoUrl
-
-        );
-
-        setTempFile(
-
-          data.tempFile
-
-        );
-
-      } catch (err) {
-
-        console.log(
-          err
-        );
-
-        alert(
-          "Prepare error"
-        );
-
-      }
-
-      setLoading(
-        false
-      );
-
-    }
-
-    prepareSong();
-
-  }, []);
-
-  // LOADING
-  if (loading) {
-
-    return (
-
-      <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
-
-        Preparing song...
-
-      </main>
+      searchParams.get(
+        "title"
+      ) || ""
 
     );
 
-  }
+  const artist =
 
-  // FAILED
-  if (!tempVideo) {
+    decodeURIComponent(
+
+      searchParams.get(
+        "artist"
+      ) || ""
+
+    );
+
+  // MISSING
+  if (!videoUrl) {
 
     return (
 
       <main className="min-h-screen bg-black text-white flex items-center justify-center text-2xl font-black">
 
-        Failed to load song
+        Missing video
 
       </main>
 
@@ -232,7 +76,7 @@ function CreateContent() {
 
           <video
 
-            src={tempVideo}
+            src={videoUrl}
 
             autoPlay
 
@@ -269,11 +113,7 @@ function CreateContent() {
       <DuetRecorder
 
         originalVideo={
-          tempVideo
-        }
-
-        tempFile={
-          tempFile
+          videoUrl
         }
 
         title={

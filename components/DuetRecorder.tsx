@@ -20,8 +20,6 @@ type Props = {
 
   originalVideo: string;
 
-  tempFile: string;
-
   title: string;
 
   artist: string;
@@ -31,8 +29,6 @@ type Props = {
 export default function DuetRecorder({
 
   originalVideo,
-
-  tempFile,
 
   title,
 
@@ -223,8 +219,8 @@ export default function DuetRecorder({
 
           try {
 
-            // BLOB
-            const blob =
+            // REACTION BLOB
+            const reactionBlob =
               new Blob(
 
                 chunksRef.current,
@@ -238,11 +234,11 @@ export default function DuetRecorder({
 
               );
 
-            // FILE
-            const file =
+            // REACTION FILE
+            const reactionFile =
               new File(
 
-                [blob],
+                [reactionBlob],
 
                 `reaction-${Date.now()}.webm`,
 
@@ -256,26 +252,57 @@ export default function DuetRecorder({
               );
 
             console.log(
-              file
+              reactionFile
             );
 
-            // FORM
+            // DOWNLOAD ORIGINAL VIDEO
+            const originalRes =
+              await fetch(
+
+                originalVideo
+
+              );
+
+            const originalBlob =
+              await originalRes.blob();
+
+            const originalFile =
+              new File(
+
+                [originalBlob],
+
+                `original-${Date.now()}.mp4`,
+
+                {
+
+                  type:
+                    "video/mp4",
+
+                }
+
+              );
+
+            console.log(
+              originalFile
+            );
+
+            // FORM DATA
             const formData =
               new FormData();
 
             formData.append(
 
-              "reaction",
+              "original",
 
-              file
+              originalFile
 
             );
 
             formData.append(
 
-              "tempFile",
+              "reaction",
 
-              tempFile
+              reactionFile
 
             );
 
@@ -376,7 +403,7 @@ export default function DuetRecorder({
 
 `${Date.now()}-${finalFile.name}`;
 
-            // UPLOAD FINAL
+            // UPLOAD FINAL VIDEO
             const {
               error:
                 uploadError,

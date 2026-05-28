@@ -10,10 +10,6 @@ const multer =
 const ffmpeg =
   require("fluent-ffmpeg");
 
-const ytdlp =
-  require(
-    "yt-dlp-exec"
-  );
 
 const path =
   require("path");
@@ -21,10 +17,6 @@ const path =
 const fs =
   require("fs");
 
-const { exec }
-  = require(
-    "child_process"
-  );
 
 require("dotenv")
   .config();
@@ -120,18 +112,12 @@ const rendersDir =
     "renders"
   );
 
-const tempDir =
-  path.join(
-    __dirname,
-    "temp"
-  );
 
 // CREATE FOLDERS
 [
   uploadsDir,
   rendersDir,
-  tempDir,
-].forEach(
+ ].forEach(
 
   (
     dir
@@ -183,9 +169,7 @@ app.use(
 
 );
 
-app.use(
 
-  "/temp",
 
   express.static(
     tempDir
@@ -253,41 +237,7 @@ app.get(
 
 );
 
-// PREPARE SONG
-app.post(
 
-  "/prepare-song",
-
-  async (
-    req,
-    res
-  ) => {
-
-    try {
-
-      console.log(
-        "PREPARE SONG"
-      );
-
-      const {
-        youtubeUrl,
-      } =
-        req.body;
-
-      if (
-        !youtubeUrl
-      ) {
-
-        return res
-          .status(400)
-          .json({
-
-            error:
-              "Missing youtubeUrl",
-
-          });
-
-      }
 
       // UNIQUE ID
       const id =
@@ -404,21 +354,6 @@ app.post(
 
 );
 
-// YOUTUBE IMPORT
-app.post(
-
-  "/import-youtube",
-
-  async (
-    req,
-    res
-  ) => {
-
-    try {
-
-      console.log(
-        "IMPORT YOUTUBE HIT"
-      );
 
       const {
         youtubeUrl,
@@ -592,9 +527,29 @@ app.post(
 
   "/render-duet",
 
-  upload.single(
-    "reaction"
-  ),
+  upload.fields([
+
+    {
+
+      name:
+        "original",
+
+      maxCount:
+        1,
+
+    },
+
+    {
+
+      name:
+        "reaction",
+
+      maxCount:
+        1,
+
+    },
+
+  ]),
 
   async (
     req,
@@ -607,17 +562,19 @@ app.post(
         "RENDER START"
       );
 
-      const reaction =
-        req.file;
+      const original =
+        req.files[
+          "original"
+        ]?.[0];
 
-      const {
-        tempFile,
-      } =
-        req.body;
+      const reaction =
+        req.files[
+          "reaction"
+        ]?.[0];
 
       if (
-        !reaction ||
-        !tempFile
+        !original ||
+        !reaction
       ) {
 
         return res
@@ -631,39 +588,8 @@ app.post(
 
       }
 
-      // ORIGINAL TEMP VIDEO
-      const originalPath =
-
-        path.join(
-
-          tempDir,
-
-          tempFile
-
-        );
-
-      // EXISTS?
-      if (
-
-        !fs.existsSync(
-          originalPath
-        )
-
-      ) {
-
-        return res
-          .status(404)
-          .json({
-
-            error:
-              "Temp video missing",
-
-          });
-
-      }
-
       console.log(
-        originalPath
+        original.path
       );
 
       console.log(
@@ -686,7 +612,7 @@ app.post(
       ffmpeg()
 
         .input(
-          originalPath
+          original.path
         )
 
         .input(
@@ -885,13 +811,12 @@ app.post(
 
             try {
 
-              // DELETE TEMP FILES
               fs.unlinkSync(
-                reaction.path
+                original.path
               );
 
               fs.unlinkSync(
-                originalPath
+                reaction.path
               );
 
             } catch (
@@ -963,23 +888,6 @@ app.post(
         });
 
     }
-
-  }
-
-);
-
-// START
-app.listen(
-
-  PORT,
-
-  () => {
-
-    console.log(
-
-      `Server running on ${PORT}`
-
-    );
 
   }
 

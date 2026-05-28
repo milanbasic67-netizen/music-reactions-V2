@@ -4,44 +4,45 @@ from "next/link";
 import { supabase }
 from "@/lib/supabase";
 
-export const dynamic =
-  "force-dynamic";
-
-export const revalidate =
-  0;
-
 export default async function SongsPage() {
 
   const {
-  data: songs,
-  error,
-} =
-  await supabase
+    data: songs,
+    error,
+  } =
+    await supabase
 
-    .from(
-      "songs"
-    )
+      .from(
+        "songs"
+      )
 
-    .select("*")
+      .select("*")
 
-    .order(
-      "created_at",
-      {
-        ascending:
-          false,
-      }
+      .order(
+        "created_at",
+        {
+
+          ascending:
+            false,
+
+        }
+
+      );
+
+  if (error) {
+
+    console.log(
+      error
     );
 
-  console.log(
-    error
-  );
+  }
 
   return (
 
-    <main className="min-h-screen bg-black text-white p-5">
+    <main className="min-h-screen bg-black text-white p-4">
 
       {/* HEADER */}
-      <div className="mb-10">
+      <div className="mb-8">
 
         <h1 className="text-4xl font-black">
 
@@ -51,42 +52,23 @@ export default async function SongsPage() {
 
         <p className="text-zinc-500 mt-2">
 
-          Choose a song to react to
+          Pick a song to react to
 
         </p>
 
       </div>
 
-      {/* EMPTY */}
-      {(!songs ||
-        songs.length === 0) && (
-
-        <div className="text-zinc-500 text-lg">
-
-          No songs uploaded
-
-        </div>
-
-      )}
-
       {/* SONGS */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-2 gap-4">
 
         {songs?.map(
-
           (
             song
           ) => {
 
-            
-
             const createUrl =
 
-              `/create?youtube=${encodeURIComponent(song.youtube_url)}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`;
-
-            console.log(
-              createUrl
-            );
+`/create?video=${encodeURIComponent(song.video_url || "")}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`;
 
             return (
 
@@ -100,57 +82,47 @@ export default async function SongsPage() {
                   createUrl
                 }
 
-                className="group"
+                className="block"
 
               >
 
-                {/* THUMB */}
-                <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900 relative">
+                <div className="rounded-3xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition">
 
-                  <img
+                  {/* THUMB */}
+                  <div className="aspect-[9/16] bg-black">
 
-                    src={
-                      song.thumbnail_url ||
-                      "/placeholder.jpg"
-                    }
+                    <img
 
-                    alt={
-                      song.title
-                    }
+                      src={
+                        song.thumbnail_url
+                      }
 
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      alt={
+                        song.title
+                      }
 
-                  />
+                      className="w-full h-full object-cover"
 
-                  {/* PLAY */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-
-                    <div className="w-20 h-20 rounded-full bg-black/60 backdrop-blur flex items-center justify-center text-white text-3xl">
-
-                      ▶
-
-                    </div>
+                    />
 
                   </div>
 
-                </div>
+                  {/* INFO */}
+                  <div className="p-4">
 
-                {/* INFO */}
-                <div className="mt-3">
+                    <h2 className="font-black text-lg line-clamp-1">
 
-                  <h2 className="font-black text-lg line-clamp-1">
+                      {song.title}
 
-                    {song.title ||
-                      "Untitled"}
+                    </h2>
 
-                  </h2>
+                    <p className="text-zinc-500 mt-1 line-clamp-1">
 
-                  <p className="text-zinc-500 text-sm">
+                      {song.artist}
 
-                    {song.artist ||
-                      "Unknown Artist"}
+                    </p>
 
-                  </p>
+                  </div>
 
                 </div>
 
