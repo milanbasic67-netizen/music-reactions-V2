@@ -26,12 +26,20 @@ export default function UploadSongPage() {
     setLoading] =
     useState(false);
 
+  const [youtubeLoading,
+    setYoutubeLoading] =
+    useState(false);
+
   const [title,
     setTitle] =
     useState("");
 
   const [artist,
     setArtist] =
+    useState("");
+
+  const [youtubeUrl,
+    setYoutubeUrl] =
     useState("");
 
   const [video,
@@ -45,6 +53,14 @@ export default function UploadSongPage() {
     useState<File | null>(
       null
     );
+
+  const [importedVideoUrl,
+    setImportedVideoUrl] =
+    useState("");
+
+  const [importedThumbUrl,
+    setImportedThumbUrl] =
+    useState("");
 
   // LOAD PROFILE
   useEffect(() => {
@@ -97,152 +113,288 @@ export default function UploadSongPage() {
 
   }
 
-  // UPLOAD
-  async function uploadSong() {
+  // IMPORT YOUTUBE
+  async function importYoutube() {
 
     try {
 
       if (
-        !video ||
-        !thumbnail
+        !youtubeUrl
       ) {
 
         alert(
-          "Missing files"
+          "Missing YouTube URL"
         );
 
         return;
 
       }
+
+      setYoutubeLoading(
+        true
+      );
+
+      const res =
+        await fetch(
+
+          `${process.env.NEXT_PUBLIC_API_URL}/import-youtube`,
+
+          {
+
+            method:
+              "POST",
+
+            headers:
+              {
+
+                "Content-Type":
+                  "application/json",
+
+              },
+
+            body:
+              JSON.stringify({
+
+                youtubeUrl,
+
+              }),
+
+          }
+
+        );
+
+      const data =
+        await res.json();
+
+      console.log(
+        data
+      );
+
+      if (
+        !data.success
+      ) {
+
+        alert(
+          data.error ||
+          "Import failed"
+        );
+
+        setYoutubeLoading(
+          false
+        );
+
+        return;
+
+      }
+
+      setImportedVideoUrl(
+        data.localVideo
+      );
+
+      setImportedThumbUrl(
+        data.localThumb
+      );
+
+      alert(
+        "YouTube imported!"
+      );
+
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
+      alert(
+        "Import failed"
+      );
+
+    }
+
+    setYoutubeLoading(
+      false
+    );
+
+  }
+
+  // UPLOAD SONG
+  async function uploadSong() {
+
+    try {
 
       setLoading(
         true
       );
 
-      // VIDEO NAME
-      const videoName =
-        `${Date.now()}-${video.name}`;
+      let finalVideoUrl =
+        "";
 
-      // THUMB NAME
-      const thumbName =
-        `${Date.now()}-${thumbnail.name}`;
+      let finalThumbUrl =
+        "";
 
-      // VIDEO UPLOAD
-      const {
-        error:
-          videoError,
-      } =
-        await supabase
-          .storage
-          .from(
-            "songs"
-          )
-          .upload(
-
-            videoName,
-
-            video,
-
-            {
-
-              contentType:
-                video.type,
-
-            }
-
-          );
-
+      // YOUTUBE IMPORT
       if (
-        videoError
+        importedVideoUrl
       ) {
 
-        console.log(
+        finalVideoUrl =
+          importedVideoUrl;
+
+        finalThumbUrl =
+          importedThumbUrl;
+
+      } else {
+
+        // NORMAL UPLOAD
+        if (
+          !video ||
+          !thumbnail
+        ) {
+
+          alert(
+            "Missing files"
+          );
+
+          setLoading(
+            false
+          );
+
+          return;
+
+        }
+
+        // VIDEO NAME
+        const videoName =
+          `${Date.now()}-${video.name}`;
+
+        // THUMB NAME
+        const thumbName =
+          `${Date.now()}-${thumbnail.name}`;
+
+        // VIDEO UPLOAD
+        const {
+          error:
+            videoError,
+        } =
+          await supabase
+            .storage
+            .from(
+              "songs"
+            )
+            .upload(
+
+              videoName,
+
+              video,
+
+              {
+
+                contentType:
+                  video.type,
+
+              }
+
+            );
+
+        if (
           videoError
-        );
+        ) {
 
-        alert(
-          videoError.message
-        );
-
-        setLoading(
-          false
-        );
-
-        return;
-
-      }
-
-      // THUMB UPLOAD
-      const {
-        error:
-          thumbError,
-      } =
-        await supabase
-          .storage
-          .from(
-            "thumbnails"
-          )
-          .upload(
-
-            thumbName,
-
-            thumbnail,
-
-            {
-
-              contentType:
-                thumbnail.type,
-
-            }
-
+          console.log(
+            videoError
           );
 
-      if (
-        thumbError
-      ) {
+          alert(
+            videoError.message
+          );
 
-        console.log(
+          setLoading(
+            false
+          );
+
+          return;
+
+        }
+
+        // THUMB UPLOAD
+        const {
+          error:
+            thumbError,
+        } =
+          await supabase
+            .storage
+            .from(
+              "thumbnails"
+            )
+            .upload(
+
+              thumbName,
+
+              thumbnail,
+
+              {
+
+                contentType:
+                  thumbnail.type,
+
+              }
+
+            );
+
+        if (
           thumbError
-        );
+        ) {
 
-        alert(
-          thumbError.message
-        );
+          console.log(
+            thumbError
+          );
 
-        setLoading(
-          false
-        );
+          alert(
+            thumbError.message
+          );
 
-        return;
+          setLoading(
+            false
+          );
+
+          return;
+
+        }
+
+        // PUBLIC URLS
+        const {
+          data:
+            videoPublic,
+        } =
+          supabase
+            .storage
+            .from(
+              "songs"
+            )
+            .getPublicUrl(
+              videoName
+            );
+
+        const {
+          data:
+            thumbPublic,
+        } =
+          supabase
+            .storage
+            .from(
+              "thumbnails"
+            )
+            .getPublicUrl(
+              thumbName
+            );
+
+        finalVideoUrl =
+          videoPublic.publicUrl;
+
+        finalThumbUrl =
+          thumbPublic.publicUrl;
 
       }
-
-      // PUBLIC URLS
-      const {
-        data:
-          videoPublic,
-      } =
-        supabase
-          .storage
-          .from(
-            "songs"
-          )
-          .getPublicUrl(
-            videoName
-          );
-
-      const {
-        data:
-          thumbPublic,
-      } =
-        supabase
-          .storage
-          .from(
-            "thumbnails"
-          )
-          .getPublicUrl(
-            thumbName
-          );
 
       // USER
       const {
@@ -270,10 +422,10 @@ export default function UploadSongPage() {
             artist,
 
             video_url:
-              videoPublic.publicUrl,
+              finalVideoUrl,
 
             thumbnail_url:
-              thumbPublic.publicUrl,
+              finalThumbUrl,
 
             uploaded_by:
               profile.username,
@@ -349,6 +501,56 @@ export default function UploadSongPage() {
 
       </div>
 
+      {/* YOUTUBE */}
+      <div className="mb-10 p-5 rounded-3xl border border-zinc-800 bg-zinc-950">
+
+        <h2 className="text-2xl font-black mb-4">
+
+          Import from YouTube
+
+        </h2>
+
+        <input
+
+          value={youtubeUrl}
+
+          onChange={
+            (
+              e
+            ) =>
+              setYoutubeUrl(
+                e.target.value
+              )
+          }
+
+          placeholder="https://youtube.com/..."
+
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 outline-none mb-4"
+
+        />
+
+        <button
+
+          onClick={
+            importYoutube
+          }
+
+          disabled={
+            youtubeLoading
+          }
+
+          className="w-full bg-red-600 hover:bg-red-500 transition py-4 rounded-2xl font-black"
+
+        >
+
+          {youtubeLoading
+            ? "Importing..."
+            : "Import YouTube"}
+
+        </button>
+
+      </div>
+
       {/* TITLE */}
       <div className="mb-5">
 
@@ -405,63 +607,90 @@ export default function UploadSongPage() {
 
       </div>
 
-      {/* VIDEO */}
-      <div className="mb-5">
+      {/* MANUAL VIDEO */}
+      {!importedVideoUrl && (
 
-        <label className="block mb-2 text-zinc-400">
+        <div className="mb-5">
 
-          Video
+          <label className="block mb-2 text-zinc-400">
 
-        </label>
+            Video
 
-        <input
+          </label>
 
-          type="file"
+          <input
 
-          accept="video/*"
+            type="file"
 
-          onChange={
-            (
-              e
-            ) =>
-              setVideo(
-                e.target.files?.[0] ||
-                null
-              )
-          }
+            accept="video/*"
 
-        />
+            onChange={
+              (
+                e
+              ) =>
+                setVideo(
+                  e.target.files?.[0] ||
+                  null
+                )
+            }
 
-      </div>
+          />
 
-      {/* THUMB */}
-      <div className="mb-8">
+        </div>
 
-        <label className="block mb-2 text-zinc-400">
+      )}
 
-          Thumbnail
+      {/* MANUAL THUMB */}
+      {!importedVideoUrl && (
 
-        </label>
+        <div className="mb-8">
 
-        <input
+          <label className="block mb-2 text-zinc-400">
 
-          type="file"
+            Thumbnail
 
-          accept="image/*"
+          </label>
 
-          onChange={
-            (
-              e
-            ) =>
-              setThumbnail(
-                e.target.files?.[0] ||
-                null
-              )
-          }
+          <input
 
-        />
+            type="file"
 
-      </div>
+            accept="image/*"
+
+            onChange={
+              (
+                e
+              ) =>
+                setThumbnail(
+                  e.target.files?.[0] ||
+                  null
+                )
+            }
+
+          />
+
+        </div>
+
+      )}
+
+      {/* IMPORTED PREVIEW */}
+      {importedThumbUrl && (
+
+        <div className="mb-8">
+
+          <img
+
+            src={
+              importedThumbUrl
+            }
+
+            className="rounded-3xl overflow-hidden"
+
+          />
+
+        </div>
+
+      )}
 
       {/* BUTTON */}
       <button

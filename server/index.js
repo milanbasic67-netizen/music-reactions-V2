@@ -10,6 +10,11 @@ const multer =
 const ffmpeg =
   require("fluent-ffmpeg");
 
+const ytdlp =
+  require(
+    "yt-dlp-exec"
+  );
+
 const path =
   require("path");
 
@@ -60,7 +65,10 @@ app.use(
 );
 
 app.use(
-  express.json()
+  express.json({
+    limit:
+      "50mb",
+  })
 );
 
 console.log(
@@ -153,6 +161,16 @@ app.use(
 
 );
 
+app.use(
+
+  "/uploads",
+
+  express.static(
+    uploadsDir
+  )
+
+);
+
 // MULTER
 const storage =
   multer.diskStorage({
@@ -208,6 +226,164 @@ app.get(
     res.send(
       "OK"
     );
+
+  }
+
+);
+
+// YOUTUBE IMPORT
+app.post(
+
+  "/import-youtube",
+
+  async (
+    req,
+    res
+  ) => {
+
+    try {
+
+      const {
+        youtubeUrl,
+      } = req.body;
+
+      if (
+        !youtubeUrl
+      ) {
+
+        return res
+          .status(400)
+          .json({
+
+            error:
+              "Missing URL",
+
+          });
+
+      }
+
+      const id =
+        Date.now();
+
+      const outputPath =
+        path.join(
+
+          uploadsDir,
+
+          `${id}.mp4`
+
+        );
+
+      console.log(
+        "DOWNLOADING..."
+      );
+
+      // DOWNLOAD VIDEO
+      await ytdlp(
+
+        youtubeUrl,
+
+        {
+
+          output:
+            outputPath,
+
+          format:
+            "mp4",
+
+        }
+
+      );
+
+      console.log(
+        "DOWNLOAD DONE"
+      );
+
+      // THUMBNAIL
+      const thumbPath =
+        path.join(
+
+          uploadsDir,
+
+          `${id}.jpg`
+
+        );
+
+      // GENERATE THUMB
+      await new Promise(
+
+        (
+          resolve,
+          reject
+        ) => {
+
+          ffmpeg(
+            outputPath
+          )
+
+            .screenshots({
+
+              timestamps:
+                ["1"],
+
+              filename:
+                `${id}.jpg`,
+
+              folder:
+                uploadsDir,
+
+              size:
+                "720x1280",
+
+            })
+
+            .on(
+              "end",
+              resolve
+            )
+
+            .on(
+              "error",
+              reject
+            );
+
+        }
+
+      );
+
+      console.log(
+        "THUMB DONE"
+      );
+
+      return res.json({
+
+        success:
+          true,
+
+        localVideo:
+          `${APP_URL}/uploads/${id}.mp4`,
+
+        localThumb:
+          `${APP_URL}/uploads/${id}.jpg`,
+
+      });
+
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            "Import failed",
+
+        });
+
+    }
 
   }
 
@@ -313,7 +489,6 @@ app.post(
           reaction.path
         )
 
-        // LIMIT
         .duration(
           15
         )
@@ -378,7 +553,7 @@ app.post(
               "smalloriginal",
           },
 
-          // ROUNDED CORNERS PREP
+          // ROUNDED
           {
             filter:
               "format",
@@ -393,7 +568,6 @@ app.post(
               "roundedprep",
           },
 
-          // ROUNDED MASK
           {
             filter:
               "geq",
@@ -435,7 +609,7 @@ app.post(
               "v",
           },
 
-          // LOWER ORIGINAL AUDIO
+          // SONG AUDIO
           {
             filter:
               "volume",
@@ -450,7 +624,7 @@ app.post(
               "songquiet",
           },
 
-          // BOOST MIC
+          // MIC AUDIO
           {
             filter:
               "volume",
@@ -465,7 +639,7 @@ app.post(
               "micboost",
           },
 
-          // MIX AUDIO
+          // MIX
           {
             filter:
               "amix",
@@ -533,10 +707,6 @@ app.post(
           ) => {
 
             console.log(
-              "FFMPEG COMMAND"
-            );
-
-            console.log(
               command
             );
 
@@ -553,7 +723,6 @@ app.post(
           ) => {
 
             console.log(
-              "PROGRESS:",
               progress.percent
             );
 
@@ -584,10 +753,9 @@ app.post(
           () => {
 
             console.log(
-              "FFMPEG DONE"
+              "DONE"
             );
 
-            // CLEANUP
             try {
 
               fs.unlinkSync(
@@ -631,10 +799,6 @@ app.post(
           ) => {
 
             console.log(
-              "FFMPEG ERROR"
-            );
-
-            console.log(
               err
             );
 
@@ -656,10 +820,6 @@ app.post(
         );
 
     } catch (err) {
-
-      console.log(
-        "SERVER ERROR"
-      );
 
       console.log(
         err
