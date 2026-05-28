@@ -36,21 +36,35 @@ export default function DuetRecorder({
 
 }: Props) {
 
-  const videoRef =
+  const cameraVideoRef =
     useRef<HTMLVideoElement>(
       null
     );
 
-  const mediaRecorderRef =
+  const cameraRecorderRef =
     useRef<any>(
       null
     );
 
-  const chunksRef =
+  const screenRecorderRef =
+    useRef<any>(
+      null
+    );
+
+  const cameraChunksRef =
     useRef<Blob[]>([]);
 
-  const [stream,
-    setStream] =
+  const screenChunksRef =
+    useRef<Blob[]>([]);
+
+  const [cameraStream,
+    setCameraStream] =
+    useState<MediaStream | null>(
+      null
+    );
+
+  const [screenStream,
+    setScreenStream] =
     useState<MediaStream | null>(
       null
     );
@@ -81,15 +95,15 @@ export default function DuetRecorder({
 
             });
 
-        setStream(
+        setCameraStream(
           media
         );
 
         if (
-          videoRef.current
+          cameraVideoRef.current
         ) {
 
-          videoRef.current.srcObject =
+          cameraVideoRef.current.srcObject =
             media;
 
         }
@@ -113,278 +127,508 @@ export default function DuetRecorder({
   }, []);
 
   // START
-  function startRecording() {
+  async function startRecording() {
 
-    if (!stream) return;
+    try {
 
-    chunksRef.current =
-      [];
+      if (!cameraStream)
+        return;
 
-    const recorder =
-      new MediaRecorder(
-        stream,
-        {
+      // SCREEN SHARE
+      const display =
+        await navigator
+          .mediaDevices
+          .getDisplayMedia({
 
-          mimeType:
-            "video/webm",
+            video: true,
 
-        }
+            audio: true,
+
+          });
+
+      setScreenStream(
+        display
       );
 
-    mediaRecorderRef.current =
-      recorder;
+      cameraChunksRef.current =
+        [];
 
-    recorder.ondataavailable =
-      (
-        e
-      ) => {
+      screenChunksRef.current =
+        [];
 
-        if (
-          e.data.size > 0
-        ) {
+      // CAMERA RECORDER
+      const cameraRecorder =
+        new MediaRecorder(
 
-          chunksRef.current.push(
-            e.data
-          );
+          cameraStream,
 
-        }
+          {
 
-      };
+            mimeType:
+              "video/webm",
 
-    recorder.start();
+          }
 
-    setRecording(
-      true
-    );
+        );
 
-    console.log(
-      "RECORDING"
-    );
+      // SCREEN RECORDER
+      const screenRecorder =
+        new MediaRecorder(
+
+          display,
+
+          {
+
+            mimeType:
+              "video/webm",
+
+          }
+
+        );
+
+      cameraRecorderRef.current =
+        cameraRecorder;
+
+      screenRecorderRef.current =
+        screenRecorder;
+
+      // CAMERA DATA
+      cameraRecorder.ondataavailable =
+        (
+          e
+        ) => {
+
+          if (
+            e.data.size > 0
+          ) {
+
+            cameraChunksRef.current.push(
+              e.data
+            );
+
+          }
+
+        };
+
+      // SCREEN DATA
+      screenRecorder.ondataavailable =
+        (
+          e
+        ) => {
+
+          if (
+            e.data.size > 0
+          ) {
+
+            screenChunksRef.current.push(
+              e.data
+            );
+
+          }
+
+        };
+
+      cameraRecorder.start();
+
+      screenRecorder.start();
+
+      setRecording(
+        true
+      );
+
+      console.log(
+        "RECORDING"
+      );
+
+    } catch (err) {
+
+      console.log(
+        err
+      );
+
+      alert(
+        "Screen share required"
+      );
+
+    }
 
   }
 
   // STOP
   async function stopRecording() {
 
-    if (
-      !mediaRecorderRef.current
-    ) return;
+    try {
 
-    setLoading(
-      true
-    );
+      if (
+        !cameraRecorderRef.current ||
+        !screenRecorderRef.current
+      ) {
 
-    mediaRecorderRef.current.stop();
+        return;
 
-    mediaRecorderRef.current.onstop =
-      async () => {
+      }
 
-        try {
+      setLoading(
+        true
+      );
 
-          const blob =
-            new Blob(
+      cameraRecorderRef.current.stop();
 
-              chunksRef.current,
+      screenRecorderRef.current.stop();
 
-              {
+      screenRecorder?.getTracks?.().forEach(
+        (
+          track: any
+        ) =>
+          track.stop()
+      );
 
-                type:
-                  "video/webm",
+      setTimeout(
 
-              }
+        async () => {
 
-            );
+          try {
 
-          console.log(
-            blob
-          );
+            // CAMERA FILE
+            const cameraBlob =
+              new Blob(
 
-          const file =
-            new File(
-
-              [blob],
-
-              `reaction-${Date.now()}.webm`,
-
-              {
-
-                type:
-                  "video/webm",
-
-              }
-
-            );
-
-          // USER
-          const {
-            data: {
-              user,
-            },
-          } =
-            await supabase
-              .auth
-              .getUser();
-
-          if (!user) {
-
-            alert(
-              "Login required"
-            );
-
-            setLoading(
-              false
-            );
-
-            return;
-
-          }
-
-          // PROFILE
-          const profile =
-            await getProfile();
-
-          // FILE NAME
-          const fileName =
-
-            `${Date.now()}-${file.name}`;
-
-          // UPLOAD
-          const {
-            error:
-              uploadError,
-          } =
-            await supabase
-              .storage
-              .from(
-                "videos"
-              )
-              .upload(
-
-                fileName,
-
-                file,
+                cameraChunksRef.current,
 
                 {
 
-                  contentType:
+                  type:
                     "video/webm",
 
                 }
 
               );
 
-          if (
-            uploadError
-          ) {
+            const cameraFile =
+              new File(
 
-            console.log(
-              uploadError
-            );
+                [cameraBlob],
 
-            alert(
-              uploadError.message
-            );
+                `reaction-${Date.now()}.webm`,
 
-            setLoading(
-              false
-            );
+                {
 
-            return;
+                  type:
+                    "video/webm",
 
-          }
+                }
 
-          // PUBLIC URL
-          const {
-            data:
-              publicData,
-          } =
-            supabase
-              .storage
-              .from(
-                "videos"
-              )
-              .getPublicUrl(
-                fileName
               );
 
-          // INSERT
-          const {
-            error:
-              insertError,
-          } =
-            await supabase
-              .from(
-                "reactions"
-              )
-              .insert({
+            // SCREEN FILE
+            const screenBlob =
+              new Blob(
 
-                username:
-                  profile?.username,
+                screenChunksRef.current,
 
-                user_id:
-                  user.id,
+                {
 
-                song:
-                  title,
+                  type:
+                    "video/webm",
 
-                artist,
+                }
 
-                youtube_url:
-                  youtubeUrl,
+              );
 
-                video_url:
-                  publicData.publicUrl,
+            const screenFile =
+              new File(
 
-              });
+                [screenBlob],
 
-          if (
-            insertError
-          ) {
+                `original-${Date.now()}.webm`,
+
+                {
+
+                  type:
+                    "video/webm",
+
+                }
+
+              );
 
             console.log(
+              cameraFile
+            );
+
+            console.log(
+              screenFile
+            );
+
+            // FORM DATA
+            const formData =
+              new FormData();
+
+            formData.append(
+
+              "original",
+
+              screenFile
+
+            );
+
+            formData.append(
+
+              "reaction",
+
+              cameraFile
+
+            );
+
+            // RENDER
+            const renderRes =
+              await fetch(
+
+                `${process.env.NEXT_PUBLIC_API_URL}/render-duet`,
+
+                {
+
+                  method:
+                    "POST",
+
+                  body:
+                    formData,
+
+                }
+
+              );
+
+            const renderData =
+              await renderRes.json();
+
+            console.log(
+              renderData
+            );
+
+            if (
+              !renderData.videoUrl
+            ) {
+
+              alert(
+                "Render failed"
+              );
+
+              setLoading(
+                false
+              );
+
+              return;
+
+            }
+
+            // DOWNLOAD FINAL VIDEO
+            const finalVideoRes =
+              await fetch(
+
+                renderData.videoUrl
+
+              );
+
+            const finalBlob =
+              await finalVideoRes.blob();
+
+            const finalFile =
+              new File(
+
+                [finalBlob],
+
+                `final-${Date.now()}.mp4`,
+
+                {
+
+                  type:
+                    "video/mp4",
+
+                }
+
+              );
+
+            // USER
+            const {
+              data: {
+                user,
+              },
+            } =
+              await supabase
+                .auth
+                .getUser();
+
+            if (!user) {
+
+              alert(
+                "Login required"
+              );
+
+              setLoading(
+                false
+              );
+
+              return;
+
+            }
+
+            // PROFILE
+            const profile =
+              await getProfile();
+
+            // STORAGE NAME
+            const finalName =
+
+              `${Date.now()}-${finalFile.name}`;
+
+            // UPLOAD FINAL VIDEO
+            const {
+              error:
+                uploadError,
+            } =
+              await supabase
+                .storage
+                .from(
+                  "videos"
+                )
+                .upload(
+
+                  finalName,
+
+                  finalFile,
+
+                  {
+
+                    contentType:
+                      "video/mp4",
+
+                  }
+
+                );
+
+            if (
+              uploadError
+            ) {
+
+              console.log(
+                uploadError
+              );
+
+              alert(
+                uploadError.message
+              );
+
+              setLoading(
+                false
+              );
+
+              return;
+
+            }
+
+            // PUBLIC URL
+            const {
+              data:
+                publicData,
+            } =
+              supabase
+                .storage
+                .from(
+                  "videos"
+                )
+                .getPublicUrl(
+                  finalName
+                );
+
+            // INSERT POST
+            const {
+              error:
+                insertError,
+            } =
+              await supabase
+                .from(
+                  "reactions"
+                )
+                .insert({
+
+                  username:
+                    profile?.username,
+
+                  user_id:
+                    user.id,
+
+                  song:
+                    title,
+
+                  artist,
+
+                  youtube_url:
+                    youtubeUrl,
+
+                  video_url:
+                    publicData.publicUrl,
+
+                });
+
+            if (
               insertError
+            ) {
+
+              console.log(
+                insertError
+              );
+
+              alert(
+                insertError.message
+              );
+
+              setLoading(
+                false
+              );
+
+              return;
+
+            }
+
+            alert(
+              "Reaction uploaded!"
+            );
+
+            window.location.href =
+              "/";
+
+          } catch (err) {
+
+            console.log(
+              err
             );
 
             alert(
-              insertError.message
+              "Upload failed"
             );
-
-            setLoading(
-              false
-            );
-
-            return;
 
           }
 
-          alert(
-            "Reaction uploaded!"
+          setLoading(
+            false
           );
 
-          window.location.href =
-            "/";
-
-        } catch (err) {
-
-          console.log(
-            err
+          setRecording(
+            false
           );
 
-          alert(
-            "Upload failed"
-          );
+        },
 
-        }
+        1500
 
-        setLoading(
-          false
-        );
+      );
 
-        setRecording(
-          false
-        );
+    } catch (err) {
 
-      };
+      console.log(
+        err
+      );
+
+    }
 
   }
 
@@ -397,7 +641,7 @@ export default function DuetRecorder({
 
         <video
 
-          ref={videoRef}
+          ref={cameraVideoRef}
 
           autoPlay
 
@@ -408,6 +652,15 @@ export default function DuetRecorder({
           className="w-full h-full object-cover"
 
         />
+
+      </div>
+
+      {/* INFO */}
+      <div className="mb-5 text-zinc-500 text-sm">
+
+        After clicking Start:
+        choose current tab with
+        YouTube audio enabled.
 
       </div>
 
@@ -455,7 +708,7 @@ export default function DuetRecorder({
 
         <div className="mt-5 text-center text-zinc-500">
 
-          Uploading...
+          Rendering duet...
 
         </div>
 
