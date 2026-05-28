@@ -16,6 +16,9 @@ const path =
 const fs =
   require("fs");
 
+const originalUrl =
+  req.body.originalUrl;
+
 require("dotenv")
   .config();
 
@@ -314,10 +317,7 @@ app.post(
         );
 
       ffmpeg()
-
-        .input(
-          original.path
-        )
+  .input(originalUrl)
 
         .input(
           reaction.path

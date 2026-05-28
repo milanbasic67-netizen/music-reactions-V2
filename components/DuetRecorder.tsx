@@ -255,49 +255,20 @@ export default function DuetRecorder({
               reactionFile
             );
 
-            // DOWNLOAD ORIGINAL VIDEO
-            const originalRes =
-              await fetch(
-
-                originalVideo
-
-              );
-
-            const originalBlob =
-              await originalRes.blob();
-
-            const originalFile =
-              new File(
-
-                [originalBlob],
-
-                `original-${Date.now()}.mp4`,
-
-                {
-
-                  type:
-                    "video/mp4",
-
-                }
-
-              );
-
-            console.log(
-              originalFile
-            );
-
             // FORM DATA
             const formData =
               new FormData();
 
+            // SEND ORIGINAL URL
             formData.append(
 
-              "original",
+              "originalUrl",
 
-              originalFile
+              originalVideo
 
             );
 
+            // SEND REACTION
             formData.append(
 
               "reaction",
@@ -543,8 +514,6 @@ export default function DuetRecorder({
   return (
 
     <div className="p-4">
-
-      
 
       {/* CAMERA */}
       <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] max-w-[110px] mx-auto border border-zinc-800 shadow-2xl">
