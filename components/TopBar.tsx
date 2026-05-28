@@ -8,10 +8,22 @@ import {
 import { supabase }
 from "@/lib/supabase";
 
+import { getProfile }
+from "@/lib/getProfile";
+
 export default function TopBar() {
 
-  const [user, setUser] =
-    useState<any>(null);
+  const [user,
+    setUser] =
+    useState<any>(
+      null
+    );
+
+  const [profile,
+    setProfile] =
+    useState<any>(
+      null
+    );
 
   // LOAD USER
   useEffect(() => {
@@ -33,7 +45,17 @@ export default function TopBar() {
 
       }
 
-      setUser(user);
+      setUser(
+        user
+      );
+
+      // PROFILE
+      const p =
+        await getProfile();
+
+      setProfile(
+        p
+      );
 
     }
 
@@ -57,11 +79,15 @@ export default function TopBar() {
   }
 
   const username =
+
+    profile?.username ||
+
     user.email?.split(
       "@"
     )[0];
 
   return (
+
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent">
 
       <div className="flex items-center justify-between px-5 py-4">
@@ -98,7 +124,8 @@ export default function TopBar() {
 
             <div className="text-zinc-400 text-xs">
 
-              online
+              {profile?.role ||
+                "user"}
 
             </div>
 
@@ -107,7 +134,8 @@ export default function TopBar() {
           {/* AVATAR */}
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white font-black text-lg shrink-0 border border-white/10 shadow-2xl">
 
-            {username?.[0]?.toUpperCase()}
+            {username?.[0]
+              ?.toUpperCase()}
 
           </div>
 
@@ -144,12 +172,32 @@ export default function TopBar() {
 
             </button>
 
+            {/* ADMIN UPLOAD */}
+            {profile?.role ===
+              "admin" && (
+
+              <button
+                onClick={() => {
+
+                  window.location.href =
+                    "/admin/upload-song";
+
+                }}
+                className="shrink-0 bg-yellow-400 hover:bg-yellow-300 transition px-4 py-2 rounded-full text-black text-xs font-black"
+              >
+
+                Upload
+
+              </button>
+
+            )}
+
             {/* PROFILE */}
             <button
               onClick={() => {
 
                 window.location.href =
-                  "/profile";
+                  `/u/${username}`;
 
               }}
               className="shrink-0 bg-red-600 hover:bg-red-500 transition px-4 py-2 rounded-full text-white text-xs font-black"
@@ -178,5 +226,7 @@ export default function TopBar() {
       </div>
 
     </div>
+
   );
+
 }
