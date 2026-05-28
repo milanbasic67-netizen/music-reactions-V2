@@ -1,80 +1,73 @@
-"use client";
-
-import {
-  Suspense,
-} from "react";
-
-import {
-  useSearchParams,
-} from "next/navigation";
-
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-function CreateContent() {
+type Props = {
+  searchParams: {
 
-  const searchParams =
-    useSearchParams();
+    video?: string;
+
+    title?: string;
+
+    artist?: string;
+
+  };
+};
+
+export default function CreatePage({
+  searchParams,
+}: Props) {
 
   const video =
-    searchParams.get(
-      "video"
-    );
+    searchParams.video;
 
   const title =
-    searchParams.get(
-      "title"
-    );
+    searchParams.title;
 
   const artist =
-    searchParams.get(
-      "artist"
-    );
+    searchParams.artist;
 
   if (!video) {
 
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center text-white text-2xl font-black">
 
-        No song selected
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
 
-      </div>
+        Missing video URL
+
+      </main>
+
     );
 
   }
 
   return (
-    <DuetRecorder
-      originalVideo={
-        video
-      }
-      title={
-        title || ""
-      }
-      artist={
-        artist || ""
-      }
-    />
-  );
 
-}
+    <main className="min-h-screen bg-black">
 
-export default function CreatePage() {
+      <DuetRecorder
 
-  return (
-    <Suspense
-      fallback={
-        <div className="fixed inset-0 bg-black flex items-center justify-center text-white text-2xl font-black">
+        originalVideo={
+          decodeURIComponent(
+            video
+          )
+        }
 
-          Loading...
+        title={
+          decodeURIComponent(
+            title || ""
+          )
+        }
 
-        </div>
-      }
-    >
+        artist={
+          decodeURIComponent(
+            artist || ""
+          )
+        }
 
-      <CreateContent />
+      />
 
-    </Suspense>
+    </main>
+
   );
 
 }

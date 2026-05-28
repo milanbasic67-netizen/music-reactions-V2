@@ -1,7 +1,15 @@
-import Link from "next/link";
+import Link
+from "next/link";
 
 import { supabase }
 from "@/lib/supabase";
+
+// NO CACHE
+export const dynamic =
+  "force-dynamic";
+
+export const revalidate =
+  0;
 
 export default async function SongsPage() {
 
@@ -10,10 +18,13 @@ export default async function SongsPage() {
     error,
   } =
     await supabase
+
       .from(
         "songs"
       )
+
       .select("*")
+
       .order(
         "created_at",
         {
@@ -22,127 +33,115 @@ export default async function SongsPage() {
         }
       );
 
+  console.log(
+    songs
+  );
+
+  console.log(
+    error
+  );
+
   return (
 
-    <main className="min-h-screen bg-black text-white pb-28">
+    <main className="min-h-screen bg-black text-white p-5">
 
       {/* HEADER */}
-      <div className="px-6 pt-16 pb-10">
+      <div className="mb-10">
 
-        <h1 className="text-5xl font-black">
+        <h1 className="text-4xl font-black">
 
           Songs
 
         </h1>
 
-        <p className="text-zinc-400 mt-4 text-lg">
+        <p className="text-zinc-500 mt-2">
 
-          Pick a song and create a reaction
+          Choose a song to react to
 
         </p>
 
       </div>
 
-      {/* ERROR */}
-      {error && (
+      {/* EMPTY */}
+      {(!songs ||
+        songs.length === 0) && (
 
-        <div className="px-6 text-red-500">
+        <div className="text-zinc-500">
 
-          Failed to load songs
+          No songs uploaded
 
         </div>
 
       )}
 
-      {/* EMPTY */}
-      {!songs ||
-        songs.length === 0 ? (
+      {/* SONGS */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
 
-        <div className="px-6 text-zinc-500 text-xl">
+        {songs?.map(
 
-          No songs uploaded yet.
+          (
+            song
+          ) => (
 
-        </div>
+            <Link
 
-      ) : (
+              key={
+                song.id
+              }
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 px-6">
+              href={
 
-          {songs.map(
-            (
-              song
-            ) => (
+                `/create?video=${encodeURIComponent(song.video_url)}&title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`
 
-              <div
-                key={
-                  song.id
-                }
-                className="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden"
-              >
+              }
 
-                {/* THUMB */}
+              className="group"
+
+            >
+
+              {/* THUMB */}
+              <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-zinc-900">
+
                 <img
+
                   src={
                     song.thumbnail_url
-                      ? song.thumbnail_url
-                      : "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f"
                   }
+
                   alt={
                     song.title
                   }
-                  className="w-full h-[420px] object-cover bg-black"
+
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+
                 />
-
-                {/* INFO */}
-                <div className="p-6">
-
-                  <h2 className="text-2xl font-black leading-tight">
-
-                    {
-                      song.title
-                    }
-
-                  </h2>
-
-                  <p className="text-zinc-400 mt-3 text-lg">
-
-                    {
-                      song.artist
-                    }
-
-                  </p>
-
-                  {/* BUTTON */}
-                  <Link
-                    href={`/create?video=${encodeURIComponent(
-                      song.video_url
-                    )}&title=${encodeURIComponent(
-                      song.title
-                    )}&artist=${encodeURIComponent(
-                      song.artist
-                    )}`}
-                  >
-
-                    <button
-                      className="mt-6 w-full bg-red-600 hover:bg-red-500 transition text-white font-black py-4 rounded-2xl"
-                    >
-
-                      React To This
-
-                    </button>
-
-                  </Link>
-
-                </div>
 
               </div>
 
-            )
-          )}
+              {/* INFO */}
+              <div className="mt-3">
 
-        </div>
+                <h2 className="font-black text-lg line-clamp-1">
 
-      )}
+                  {song.title}
+
+                </h2>
+
+                <p className="text-zinc-500 text-sm">
+
+                  {song.artist}
+
+                </p>
+
+              </div>
+
+            </Link>
+
+          )
+
+        )}
+
+      </div>
 
     </main>
 
