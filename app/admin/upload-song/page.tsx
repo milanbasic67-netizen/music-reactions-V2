@@ -91,54 +91,25 @@ export default function UploadSongPage() {
 
   // GET VIDEO ID
   function getYoutubeId(
-  url: string
-) {
+    url: string
+  ) {
 
-  try {
+    const regExp =
 
-    const parsed =
-      new URL(url);
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|shorts\/)([^#&?]*).*/;
 
-    // youtu.be
-    if (
-      parsed.hostname ===
-      "youtu.be"
-    ) {
-
-      return parsed.pathname.replace(
-        "/",
-        ""
+    const match =
+      url.match(
+        regExp
       );
 
-    }
-
-    // youtube shorts
-    if (
-      parsed.pathname.includes(
-        "/shorts/"
-      )
-    ) {
-
-      return parsed.pathname
-        .split(
-          "/shorts/"
-        )[1]
-        ?.split("?")[0];
-
-    }
-
-    // watch?v=
-    return parsed.searchParams.get(
-      "v"
-    );
-
-  } catch {
-
-    return null;
+    return
+      match &&
+      match[2].length === 11
+        ? match[2]
+        : null;
 
   }
-
-}
 
   // UPLOAD SONG
   async function uploadSong() {
@@ -166,6 +137,14 @@ export default function UploadSongPage() {
         getYoutubeId(
           youtubeUrl
         );
+
+      console.log({
+
+        youtubeUrl,
+
+        videoId,
+
+      });
 
       if (!videoId) {
 
@@ -201,14 +180,21 @@ export default function UploadSongPage() {
         error,
       } =
         await supabase
+
           .from(
             "songs"
           )
+
           .insert({
 
-            title,
+            title:
+              title || "Untitled",
 
-            artist,
+            artist:
+              artist || "Unknown",
+
+            youtube_url:
+              youtubeUrl,
 
             video_id:
               videoId,
