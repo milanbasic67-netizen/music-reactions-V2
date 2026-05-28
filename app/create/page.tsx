@@ -1,37 +1,70 @@
+"use client";
+
+import {
+
+  useEffect,
+
+  useState,
+
+} from "react";
+
+import {
+
+  useSearchParams,
+
+} from "next/navigation";
+
 import DuetRecorder
 from "@/components/DuetRecorder";
 
-type Props = {
+export default function CreatePage() {
 
-  searchParams: {
+  const searchParams =
+    useSearchParams();
 
-    youtube?: string;
+  const [mounted,
+    setMounted] =
+    useState(false);
 
-    title?: string;
+  useEffect(() => {
 
-    artist?: string;
+    setMounted(
+      true
+    );
 
-  };
+  }, []);
 
-};
+  if (!mounted) {
 
-export default function CreatePage({
-  searchParams,
-}: Props) {
+    return null;
+
+  }
 
   const youtube =
-    searchParams.youtube;
+
+    searchParams.get(
+      "youtube"
+    ) || "";
 
   const title =
-    searchParams.title;
+
+    searchParams.get(
+      "title"
+    ) || "";
 
   const artist =
-    searchParams.artist;
 
-  console.log(
-    searchParams
-  );
+    searchParams.get(
+      "artist"
+    ) || "";
 
+  console.log({
+    youtube,
+    title,
+    artist,
+  });
+
+  // MISSING
   if (!youtube) {
 
     return (
@@ -158,7 +191,7 @@ export default function CreatePage({
         <h1 className="text-3xl font-black">
 
           {decodeURIComponent(
-            title || ""
+            title
           )}
 
         </h1>
@@ -166,7 +199,7 @@ export default function CreatePage({
         <p className="text-zinc-500 mt-2">
 
           {decodeURIComponent(
-            artist || ""
+            artist
           )}
 
         </p>
@@ -184,13 +217,13 @@ export default function CreatePage({
 
         title={
           decodeURIComponent(
-            title || ""
+            title
           )
         }
 
         artist={
           decodeURIComponent(
-            artist || ""
+            artist
           )
         }
 
