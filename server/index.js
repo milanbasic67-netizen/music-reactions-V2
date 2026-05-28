@@ -16,7 +16,6 @@ const path =
 const fs =
   require("fs");
 
-
 require("dotenv")
   .config();
 
@@ -310,6 +309,7 @@ app.post(
 
         .complexFilter([
 
+          // MAIN REACTION
           {
             filter:
               "fps",
@@ -338,6 +338,7 @@ app.post(
               "reactionfull",
           },
 
+          // SMALL ORIGINAL
           {
             filter:
               "fps",
@@ -366,6 +367,7 @@ app.post(
               "smalloriginal",
           },
 
+          // OVERLAY
           {
             filter:
               "overlay",
@@ -392,6 +394,7 @@ app.post(
               "v",
           },
 
+          // SONG AUDIO
           {
             filter:
               "volume",
@@ -406,6 +409,7 @@ app.post(
               "songquiet",
           },
 
+          // MIC AUDIO
           {
             filter:
               "volume",
@@ -420,6 +424,7 @@ app.post(
               "micboost",
           },
 
+          // MIX AUDIO
           {
             filter:
               "amix",
@@ -480,6 +485,54 @@ app.post(
 
         .on(
 
+          "start",
+
+          (
+            command
+          ) => {
+
+            console.log(
+              command
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "progress",
+
+          (
+            progress
+          ) => {
+
+            console.log(
+              progress.percent
+            );
+
+          }
+
+        )
+
+        .on(
+
+          "stderr",
+
+          (
+            line
+          ) => {
+
+            console.log(
+              line
+            );
+
+          }
+
+        )
+
+        .on(
+
           "end",
 
           () => {
@@ -490,6 +543,7 @@ app.post(
 
             try {
 
+              // DELETE REACTION FILE
               fs.unlinkSync(
                 reaction.path
               );
@@ -563,6 +617,23 @@ app.post(
         });
 
     }
+
+  }
+
+);
+
+// START
+app.listen(
+
+  PORT,
+
+  () => {
+
+    console.log(
+
+      `Server running on ${PORT}`
+
+    );
 
   }
 
