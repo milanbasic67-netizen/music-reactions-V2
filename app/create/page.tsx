@@ -180,7 +180,7 @@ function CreateContent() {
 
           src={`https://www.youtube.com/embed/${videoId}`}
 
-          className="w-full h-full"
+          className="w-full h-[220px] md:h-[320px]"
 
           allow="autoplay"
 
