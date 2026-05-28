@@ -637,7 +637,7 @@ export default function DuetRecorder({
     <div className="p-5">
 
       {/* CAMERA */}
-      <div className="rounded-3xl overflow-hidden bg-black mb-5 aspect-[9/16]">
+      <div className="rounded-3xl overflow-hidden bg-black mb-5 h-[280px] max-w-[180px] mx-auto border border-zinc-800 shadow-2xl">
 
         <video
 

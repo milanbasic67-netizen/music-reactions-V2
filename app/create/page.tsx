@@ -174,7 +174,7 @@ function CreateContent() {
     <main className="min-h-screen bg-black text-white">
 
       {/* PLAYER */}
-      <div className="w-full aspect-video bg-black sticky top-0 z-40">
+      <div className="w-full h-[220px] md:h-[320px] bg-black sticky top-0 z-40 rounded-b-3xl overflow-hidden">
 
         <iframe
 
