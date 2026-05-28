@@ -293,8 +293,10 @@ app.post(
             outputPath,
 
           format:
-            "mp4",
+            "bestvideo+bestaudio/best",
 
+          mergeOutputFormat:
+             "mp4",
         }
 
       );
