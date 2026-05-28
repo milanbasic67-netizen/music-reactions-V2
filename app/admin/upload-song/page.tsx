@@ -91,25 +91,54 @@ export default function UploadSongPage() {
 
   // GET VIDEO ID
   function getYoutubeId(
-    url: string
-  ) {
+  url: string
+) {
 
-    try {
+  try {
 
-      const parsed =
-        new URL(url);
+    const parsed =
+      new URL(url);
 
-      return parsed
-        .searchParams
-        .get("v");
+    // youtu.be
+    if (
+      parsed.hostname ===
+      "youtu.be"
+    ) {
 
-    } catch {
-
-      return null;
+      return parsed.pathname.replace(
+        "/",
+        ""
+      );
 
     }
 
+    // youtube shorts
+    if (
+      parsed.pathname.includes(
+        "/shorts/"
+      )
+    ) {
+
+      return parsed.pathname
+        .split(
+          "/shorts/"
+        )[1]
+        ?.split("?")[0];
+
+    }
+
+    // watch?v=
+    return parsed.searchParams.get(
+      "v"
+    );
+
+  } catch {
+
+    return null;
+
   }
+
+}
 
   // UPLOAD SONG
   async function uploadSong() {
