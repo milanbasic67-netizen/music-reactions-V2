@@ -313,20 +313,101 @@ app.post(
           reaction.path
         )
 
-        // HARD LIMIT
         .duration(
           15
         )
 
         .complexFilter([
 
-          "[0:v]fps=30,scale=540:960[left]",
+          {
+            filter:
+              "fps",
 
-          "[1:v]fps=30,scale=540:960[right]",
+            options:
+              30,
 
-          "[left][right]hstack=inputs=2[v]",
+            inputs:
+              "0:v",
 
-          "[0:a][1:a]amix=inputs=2:duration=shortest[a]"
+            outputs:
+              "leftfps",
+          },
+
+          {
+            filter:
+              "scale",
+
+            options:
+              "540:960",
+
+            inputs:
+              "leftfps",
+
+            outputs:
+              "left",
+          },
+
+          {
+            filter:
+              "fps",
+
+            options:
+              30,
+
+            inputs:
+              "1:v",
+
+            outputs:
+              "rightfps",
+          },
+
+          {
+            filter:
+              "scale",
+
+            options:
+              "540:960",
+
+            inputs:
+              "rightfps",
+
+            outputs:
+              "right",
+          },
+
+          {
+            filter:
+              "hstack",
+
+            options:
+              {
+                inputs: 2,
+              },
+
+            inputs:
+              ["left", "right"],
+
+            outputs:
+              "v",
+          },
+
+          {
+            filter:
+              "amix",
+
+            options:
+              {
+                inputs: 2,
+                duration:
+                  "shortest",
+              },
+
+            inputs:
+              ["0:a", "1:a"],
+
+            outputs:
+              "a",
+          },
 
         ])
 
@@ -334,27 +415,25 @@ app.post(
 
           "-map [v]",
 
-  "-map [v]",
+          "-map [a]",
 
-  "-map [a]",
+          "-c:v libx264",
 
-  "-c:v libx264",
+          "-c:a aac",
 
-  "-c:a aac",
+          "-preset ultrafast",
 
-  "-preset ultrafast",
+          "-crf 35",
 
-  "-crf 35",
+          "-r 30",
 
-  "-r 30",
+          "-vsync 2",
 
-  "-vsync 2",
+          "-t 15",
 
-  "-t 15",
+          "-threads 2",
 
-  "-threads 2",
-
-  "-movflags +faststart",
+          "-movflags +faststart",
 
         ])
 
