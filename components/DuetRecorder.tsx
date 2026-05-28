@@ -167,18 +167,7 @@ export default function DuetRecorder({
         "RECORDING"
       );
 
-      // AUTO STOP
-      setTimeout(
-
-        () => {
-
-          stopRecording();
-
-        },
-
-        15000
-
-      );
+      
 
     } catch (err) {
 
@@ -552,23 +541,23 @@ console.log({
       </div>
 
       {/* BUTTON */}
-      {!recording && !loading && (
+      {recording && (
 
-        <button
+  <button
 
-          onClick={
-            startRecording
-          }
+    onClick={
+      stopRecording
+    }
 
-          className="w-full bg-red-600 hover:bg-red-500 transition py-3 rounded-2xl font-black text-lg"
+    className="w-full bg-zinc-800 hover:bg-zinc-700 transition py-3 rounded-2xl font-black text-lg"
 
-        >
+  >
 
-          Start Recording
+    Stop Recording
 
-        </button>
+  </button>
 
-      )}
+)}
 
       {/* RECORDING */}
       {recording && (
