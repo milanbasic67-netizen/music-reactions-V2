@@ -296,7 +296,7 @@ app.post(
 
           const duration =
   Number(
-    req.body.reactionDuration
+    req.body.duration
   ) || 15;
 
 console.log(
@@ -587,34 +587,34 @@ console.log(
 
             .on(
 
-              "error",
+  "error",
 
-              (
-                err
-              ) => {
+  (
+    err
+  ) => {
 
-                console.log(
-                  err
-                );
+    console.log(
+      err
+    );
 
-                return res
-                  .status(500)
-                  .json({
+    return res
+      .status(500)
+      .json({
 
-                    error:
-                      "Render failed",
+        error:
+          "Render failed",
 
-                  });
+      });
 
-              
-                  }) 
-            .save(
-              outputPath
-            );
+  }
 
-        }
+)
 
-      );
+.save(
+  outputPath
+);
+
+       
 
     } catch (err) {
 
