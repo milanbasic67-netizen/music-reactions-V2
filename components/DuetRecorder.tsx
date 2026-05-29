@@ -369,97 +369,10 @@ if (
 
 }
 
-            console.log(
-              renderData
-            );
-
-            if (
-              !renderData.videoUrl
-            ) {
-
-              alert(
-                "Render failed"
-              );
-
-              setLoading(
-                false
-              );
-
-              return;
-
-            }
+            
 
             // DOWNLOAD FINAL VIDEO
-            const finalVideoRes =
-              await fetch(
-
-                renderData.videoUrl
-
-              );
-
-            const finalBlob =
-              await finalVideoRes.blob();
-
-            const finalFile =
-              new File(
-
-                [finalBlob],
-
-                `final-${Date.now()}.mp4`,
-
-                {
-
-                  type:
-                    "video/mp4",
-
-                }
-
-              );
-
-            // USER
-            const {
-              data: {
-                user,
-              },
-            } =
-              await supabase
-                .auth
-                .getUser();
-
-            if (!user) {
-
-              alert(
-                "Login required"
-              );
-
-              return;
-
-            }
-
-            // PROFILE
-            const profile =
-              await getProfile();
-
-            // FILE NAME
-            const fileName =
-
-`${Date.now()}-${finalFile.name}`;
-
-            // UPLOAD FINAL VIDEO
-
-            // PUBLIC URL
-            const {
-              data:
-                publicData,
-            } =
-              supabase
-                .storage
-                .from(
-                  "videos"
-                )
-                .getPublicUrl(
-                  fileName
-                );
+            
 
             // INSERT REACTION
             const {
