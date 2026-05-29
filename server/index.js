@@ -340,11 +340,11 @@ app.post(
             .input(
               reaction.path
             )
+            .complexFilter(...)
+
 
             // LIMIT TO REACTION LENGTH
-            .duration(
-              duration
-            )
+            
 
             .complexFilter([
 
@@ -512,7 +512,7 @@ app.post(
 
               "-r 30",
 
-              "-vsync 2",
+              "-shortest",
 
               "-threads 2",
 
