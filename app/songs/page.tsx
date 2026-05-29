@@ -116,7 +116,7 @@ export default async function SongsPage() {
                 <div className="rounded-3xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition">
 
                   {/* THUMB */}
-                  <div className="aspect-[9/16] bg-black">
+                  <div className="aspect-video bg-black">
 
                     {song.thumbnail_url ? (
 
