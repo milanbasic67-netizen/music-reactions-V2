@@ -340,7 +340,7 @@ app.post(
             .input(
               reaction.path
             )
-            .complexFilter(...)
+            
 
 
             // LIMIT TO REACTION LENGTH
