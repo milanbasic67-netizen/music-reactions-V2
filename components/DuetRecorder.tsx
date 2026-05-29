@@ -369,8 +369,27 @@ if (
 
 }
 
-            
+ const {
+  data: {
+    user,
+  },
+} =
+  await supabase
+    .auth
+    .getUser();
 
+if (!user) {
+
+  alert(
+    "Login required"
+  );
+
+  return;
+
+}
+
+const profile =
+  await getProfile();
             // DOWNLOAD FINAL VIDEO
             
 
