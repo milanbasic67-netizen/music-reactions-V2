@@ -624,6 +624,16 @@ console.log(
             storageName
           );
 
+console.log(
+  "STORAGE NAME:",
+  storageName
+);
+
+console.log(
+  "RETURN URL:",
+  publicData.publicUrl
+);
+
       try {
 
         fs.unlinkSync(
