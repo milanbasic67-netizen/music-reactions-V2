@@ -373,14 +373,28 @@ export default function VideoCard({
         storagePath
       ) {
 
-        await supabase
-          .storage
-          .from(
-            "videos"
-          )
-          .remove([
-            storagePath,
-          ]);
+        const {
+  data,
+  error: storageError,
+} =
+  await supabase
+    .storage
+    .from(
+      "videos"
+    )
+    .remove([
+      storagePath,
+    ]);
+
+console.log(
+  "DELETE STORAGE",
+  data
+);
+
+console.log(
+  "DELETE ERROR",
+  storageError
+);
 
       }
 
