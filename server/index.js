@@ -606,9 +606,7 @@ console.log(
 
                   });
 
-              }
-
-            )
+              
 
             .save(
               outputPath
