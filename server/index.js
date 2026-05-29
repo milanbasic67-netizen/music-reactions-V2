@@ -546,44 +546,132 @@ console.log(
 
             .on(
 
-              "end",
+  "end",
 
-              () => {
+  async () => {
 
-                console.log(
-                  "DONE"
-                );
+    try {
 
-                try {
+      console.log(
+        "DONE"
+      );
 
-                  // DELETE REACTION FILE
-                  fs.unlinkSync(
-                    reaction.path
-                  );
+      const fileBuffer =
+        fs.readFileSync(
+          outputPath
+        );
 
-                } catch (
-                  cleanupErr
-                ) {
+      const storageName =
 
-                  console.log(
-                    cleanupErr
-                  );
+        `duets/${Date.now()}.mp4`;
 
-                }
+      const {
+        error:
+          uploadError,
+      } =
+        await supabase
+          .storage
+          .from(
+            "videos"
+          )
+          .upload(
 
-                return res.json({
+            storageName,
 
-                  success:
-                    true,
+            fileBuffer,
 
-                  videoUrl:
-`${APP_URL}/renders/${outputName}`,
+            {
 
-                });
+              contentType:
+                "video/mp4",
 
-              }
+              upsert:
+                false,
 
-            )
+            }
+
+          );
+
+      if (
+        uploadError
+      ) {
+
+        console.log(
+          uploadError
+        );
+
+        return res
+          .status(500)
+          .json({
+
+            error:
+              uploadError.message,
+
+          });
+
+      }
+
+      const {
+        data:
+          publicData,
+      } =
+        supabase
+          .storage
+          .from(
+            "videos"
+          )
+          .getPublicUrl(
+            storageName
+          );
+
+      try {
+
+        fs.unlinkSync(
+          reaction.path
+        );
+
+      } catch {}
+
+      try {
+
+        fs.unlinkSync(
+          outputPath
+        );
+
+      } catch {}
+
+      return res.json({
+
+        success:
+          true,
+
+        videoUrl:
+          publicData.publicUrl,
+
+      });
+
+    } catch (
+      err
+    ) {
+
+      console.log(
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+
+          error:
+            "Upload failed",
+
+        });
+
+    }
+
+  }
+
+)
 
             .on(
 

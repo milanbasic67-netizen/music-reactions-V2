@@ -357,6 +357,17 @@ formData.append(
 
             const renderData =
               await renderRes.json();
+if (
+  !renderData.videoUrl
+) {
+
+  alert(
+    "Render failed"
+  );
+
+  return;
+
+}
 
             console.log(
               renderData
@@ -435,45 +446,6 @@ formData.append(
 `${Date.now()}-${finalFile.name}`;
 
             // UPLOAD FINAL VIDEO
-            const {
-              error:
-                uploadError,
-            } =
-              await supabase
-                .storage
-                .from(
-                  "videos"
-                )
-                .upload(
-
-                  fileName,
-
-                  finalFile,
-
-                  {
-
-                    contentType:
-                      "video/mp4",
-
-                  }
-
-                );
-
-            if (
-              uploadError
-            ) {
-
-              console.log(
-                uploadError
-              );
-
-              alert(
-                uploadError.message
-              );
-
-              return;
-
-            }
 
             // PUBLIC URL
             const {
@@ -512,7 +484,7 @@ formData.append(
                     profile?.username,
 
                   video_url:
-                    publicData.publicUrl,
+                    renderData.videoUrl,
 
                 });
 
