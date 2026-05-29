@@ -121,18 +121,14 @@ export default async function SongsPage() {
                     {song.thumbnail_url ? (
 
                       <img
-
-                        src={
-                          song.thumbnail_url
-                        }
-
-                        alt={
-                          song.title
-                        }
-
-                        className="w-full h-full object-cover"
-
-                      />
+  src={song.thumbnail_url}
+  alt={song.title}
+  style={{
+    width: "100%",
+    height: "300px",
+    border: "3px solid red"
+  }}
+/>
 
                     ) : (
 
