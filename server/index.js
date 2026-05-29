@@ -344,7 +344,7 @@ console.log(
                   "scale",
 
                 options:
-                  "1080:1920",
+                  "720:1280",
 
                 inputs:
                   "reactionfps",
