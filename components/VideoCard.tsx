@@ -100,6 +100,8 @@ export default function VideoCard({
     if (!video)
       return;
 
+video.muted=true;
+
     const observer =
       new IntersectionObserver(
 
