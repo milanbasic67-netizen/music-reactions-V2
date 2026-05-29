@@ -71,7 +71,7 @@ export default function VideoCard({
 
   const [muted,
     setMuted] =
-    useState(false);
+    useState(true);
 
   // LOAD PROFILE
   useEffect(() => {
@@ -380,7 +380,7 @@ export default function VideoCard({
   await supabase
     .storage
     .from(
-      "videos"
+      "videos/"
     )
     .remove([
       storagePath,
@@ -460,19 +460,19 @@ console.log(
       {/* FINAL DUET VIDEO */}
       <video
 
-        ref={videoRef}
+  ref={videoRef}
 
-        src={
-          reaction.video_url
-        }
+  src={
+    reaction.video_url
+  }
 
-        autoPlay
+  loop
 
-        loop
+  playsInline
 
-        playsInline
+  muted
 
-        muted={muted}
+  preload="metadata"
 
         className="absolute inset-0 w-full h-full object-contain bg-black"
 
