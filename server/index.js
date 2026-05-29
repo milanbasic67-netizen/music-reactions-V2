@@ -450,9 +450,7 @@ ffmpeg()
               outputPath
             );
 
-        }
-
-      );
+       
 
     } catch (err) {
 
