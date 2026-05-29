@@ -292,233 +292,45 @@ app.post(
         );
 
       // GET REACTION DURATION
-      ffmpeg.ffprobe(
+ffmpeg()
 
-        reaction.path,
+  .input(
+    originalUrl
+  )
 
-        (
-          err,
-          metadata
-        ) => {
+  .input(
+    reaction.path
+  )
 
-          if (err) {
+  .complexFilter([
+    ...
+  ])
 
-            console.log(
-              err
-            );
+  .outputOptions([
 
-            return res
-              .status(500)
-              .json({
+    "-map [v]",
 
-                error:
-                  "ffprobe failed",
+    "-map [a]",
 
-              });
+    "-c:v libx264",
 
-          }
+    "-c:a aac",
 
-          const duration =
+    "-preset ultrafast",
 
-            metadata.format
-              .duration || 15;
+    "-crf 35",
 
-          console.log(
-            "REACTION DURATION:",
-            duration
-          );
+    "-r 30",
 
-          // START FFMPEG
-          ffmpeg()
+    "-vsync 2",
 
-            // ORIGINAL SONG
-            .input(
-              originalUrl
-            )
+    "-shortest",
 
-            // REACTION
-            .input(
-              reaction.path
-            )
+    "-threads 2",
 
-            // LIMIT TO REACTION LENGTH
-            .duration(
-              duration
-            )
+    "-movflags +faststart",
 
-            .complexFilter([
-
-              // MAIN REACTION
-              {
-                filter:
-                  "fps",
-
-                options:
-                  30,
-
-                inputs:
-                  "1:v",
-
-                outputs:
-                  "reactionfps",
-              },
-
-              {
-                filter:
-                  "scale",
-
-                options:
-                  "1080:1920",
-
-                inputs:
-                  "reactionfps",
-
-                outputs:
-                  "reactionfull",
-              },
-
-              // SMALL ORIGINAL
-              {
-                filter:
-                  "fps",
-
-                options:
-                  30,
-
-                inputs:
-                  "0:v",
-
-                outputs:
-                  "originalfps",
-              },
-
-              {
-                filter:
-                  "scale",
-
-                options:
-                  "320:568",
-
-                inputs:
-                  "originalfps",
-
-                outputs:
-                  "smalloriginal",
-              },
-
-              // OVERLAY
-              {
-                filter:
-                  "overlay",
-
-                options:
-                  {
-
-                    x: 40,
-
-                    y: 40,
-
-                  },
-
-                inputs:
-                  [
-
-                    "reactionfull",
-
-                    "smalloriginal",
-
-                  ],
-
-                outputs:
-                  "v",
-              },
-
-              // SONG AUDIO
-              {
-                filter:
-                  "volume",
-
-                options:
-                  "0.3",
-
-                inputs:
-                  "0:a",
-
-                outputs:
-                  "songquiet",
-              },
-
-              // MIC AUDIO
-              {
-                filter:
-                  "volume",
-
-                options:
-                  "4",
-
-                inputs:
-                  "1:a",
-
-                outputs:
-                  "micboost",
-              },
-
-              // MIX AUDIO
-              {
-                filter:
-                  "amix",
-
-                options:
-                  {
-
-                    inputs: 2,
-
-                    duration:
-                      "shortest",
-
-                    dropout_transition:
-                      0,
-
-                  },
-
-                inputs:
-                  [
-
-                    "songquiet",
-
-                    "micboost",
-
-                  ],
-
-                outputs:
-                  "a",
-              },
-
-            ])
-
-            .outputOptions([
-
-              "-map [v]",
-
-              "-map [a]",
-
-              "-c:v libx264",
-
-              "-c:a aac",
-
-              "-preset ultrafast",
-
-              "-crf 35",
-
-              "-r 30",
-
-              "-vsync 2",
-
-              "-threads 2",
-
-              "-movflags +faststart",
-
-            ])
+  ])
 
             .on(
 
