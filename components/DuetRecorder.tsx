@@ -73,15 +73,21 @@ const startTimeRef =
       try {
 
         const media =
-          await navigator
-            .mediaDevices
-            .getUserMedia({
+  await navigator.mediaDevices.getUserMedia({
 
-              video: true,
+    video: true,
 
-              audio: true,
+    audio: {
 
-            });
+      echoCancellation: true,
+
+      noiseSuppression: true,
+
+      autoGainControl: true,
+
+    },
+
+  });
 
         setStream(
           media
