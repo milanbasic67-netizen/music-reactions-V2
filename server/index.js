@@ -292,41 +292,17 @@ app.post(
         );
 
       // GET REACTION DURATION
-      ffmpeg.ffprobe(
-
-        reaction.path,
-
-        (
-          err,
-          metadata
-        ) => {
-
-          if (err) {
-
-            console.log(
-              err
-            );
-
-            return res
-              .status(500)
-              .json({
-
-                error:
-                  "ffprobe failed",
-
-              });
-
-          }
+      
 
           const duration =
+  Number(
+    req.body.reactionDuration
+  ) || 15;
 
-            metadata.format
-              .duration || 15;
-
-          console.log(
-            "REACTION DURATION:",
-            duration
-          );
+console.log(
+  "REACTION DURATION:",
+  duration
+);
 
           // START FFMPEG
           ffmpeg()
@@ -339,9 +315,9 @@ app.post(
             // REACTION
             .input(
               reaction.path
-            )
+            )            
             
-
+             .duration(duration)
 
             // LIMIT TO REACTION LENGTH
             

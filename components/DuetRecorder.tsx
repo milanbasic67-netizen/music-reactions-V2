@@ -48,6 +48,8 @@ export default function DuetRecorder({
 
   const chunksRef =
     useRef<Blob[]>([]);
+const startTimeRef =
+  useRef(0);
 
   const [stream,
     setStream] =
@@ -175,6 +177,9 @@ export default function DuetRecorder({
 
         };
 
+startTimeRef.current =
+  Date.now();
+
       recorder.start();
 
       setRecording(
@@ -272,8 +277,29 @@ export default function DuetRecorder({
                 }
 
               );
+const durationSeconds =
+  Math.max(
 
-            // FORM DATA
+    1,
+
+    Math.floor(
+
+      (
+        Date.now() -
+        startTimeRef.current
+      ) / 1000
+
+    )
+
+  );
+
+console.log(
+  "DURATION",
+  durationSeconds
+);
+            
+
+// FORM DATA
             const formData =
               new FormData();
 
@@ -285,6 +311,16 @@ export default function DuetRecorder({
               originalVideo
 
             );
+
+formData.append(
+
+  "duration",
+
+  String(
+    durationSeconds
+  )
+
+);
 
             // REACTION FILE
             formData.append(
