@@ -79,7 +79,7 @@ export default function UploadSongPage() {
           );
 
         video.currentTime =
-          1000;
+          55;
 
         video.muted =
           true;
