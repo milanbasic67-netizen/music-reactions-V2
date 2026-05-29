@@ -475,24 +475,28 @@ console.log(
             .outputOptions([
 
               "-map [v]",
+  "-map [a]",
 
-              "-map [a]",
+  "-c:v libx264",
+  "-c:a aac",
 
-              "-c:v libx264",
+  "-pix_fmt yuv420p",
 
-              "-c:a aac",
+  "-profile:v baseline",
 
-              "-preset ultrafast",
+  "-level 3.0",
 
-              "-crf 35",
+  "-preset ultrafast",
 
-              "-r 30",
+  "-crf 35",
 
-              "-shortest",
+  "-r 30",
 
-              "-threads 2",
+  "-shortest",
 
-              "-movflags +faststart",
+  "-threads 2",
+
+  "-movflags +faststart",
 
             ])
 
