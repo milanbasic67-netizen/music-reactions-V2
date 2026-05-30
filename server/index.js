@@ -254,6 +254,16 @@ app.post(
       const originalUrl =
         req.body.originalUrl;
 
+const queryDuration =
+  Number(
+    req.query.duration
+  );
+
+console.log(
+  "Q###UERY DURATION:",
+  queryDuration
+);
+
       // REACTION FILE
       const reaction =
         req.file;
@@ -321,17 +331,19 @@ console.log(
     }
 
     let duration =
-  metadata.format.duration;
+  Number(
+    metadata?.format?.duration
+  );
 
 if (
   !duration ||
-  duration === "N/A"
+  Number.isNaN(
+    duration
+  )
 ) {
 
   duration =
-    Number(
-      req.body.duration
-    );
+    queryDuration;
 
 }
 
