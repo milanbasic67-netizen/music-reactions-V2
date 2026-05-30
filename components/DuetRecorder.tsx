@@ -217,6 +217,9 @@ startTimeRef.current =
   }
 
   // STOP RECORDING
+
+alert("1");
+
   async function stopRecording() {
 
     try {
@@ -247,7 +250,7 @@ startTimeRef.current =
 
       // STOP CAMERA RECORDING
       mediaRecorderRef.current.stop();
-
+alert("2");
       setRecording(
         false
       );
@@ -289,6 +292,8 @@ startTimeRef.current =
                 }
 
               );
+
+alert("3");
 const durationSeconds =
 
   (
@@ -408,6 +413,7 @@ alert(
   renderUrl
 );
 
+alert("4");
 const renderRes =
   await fetch(
 
