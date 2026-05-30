@@ -347,13 +347,10 @@ console.log(
 
 if (
   !duration ||
-  Number.isNaN(
-    duration
-  )
+  Number.isNaN(duration)
 ) {
 
-  duration =
-    queryDuration;
+  duration = 60;
 
 }
 
