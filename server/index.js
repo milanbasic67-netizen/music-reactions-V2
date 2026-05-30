@@ -437,7 +437,7 @@ console.log(
                   "volume",
 
                 options:
-                  "2.0",
+                  "3.0",
 
                 inputs:
                   "micdelayed",
