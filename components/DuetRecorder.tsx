@@ -244,9 +244,17 @@ alert("1");
 
       if (songVideo) {
 
-        songVideo.pause();
+  const stopPosition =
+    songVideo.currentTime || 0;
 
-      }
+  console.log(
+    "STOP POSITION:",
+    stopPosition
+  );
+
+  songVideo.pause();
+
+}
 
       // STOP CAMERA RECORDING
       mediaRecorderRef.current.stop();
@@ -255,7 +263,10 @@ alert("2");
         false
       );
 
-      setTimeout(
+ const finalDuration =
+  stopPosition;     
+
+setTimeout(
 
         async () => {
 
@@ -294,14 +305,12 @@ alert("2");
               );
 
 alert("3");
-const songVideo =
-  document.getElementById(
-    "song-video"
-  ) as HTMLVideoElement;
-
 const durationSeconds =
-  songVideo?.currentTime || 0;
-
+  finalDuration;
+alert(
+  "STOP=" +
+  durationSeconds
+);
 
 alert(
   "DURATION=" +
