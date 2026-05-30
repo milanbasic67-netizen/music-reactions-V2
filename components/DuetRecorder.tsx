@@ -314,6 +314,11 @@ console.log(
 
             );
 
+console.log(
+  "DURATION",
+  durationSeconds
+);
+
 formData.append(
 
   "duration",
@@ -321,9 +326,7 @@ formData.append(
   String(
     durationSeconds
   )
-alert(
-  "DURATION=" +
-  durationSeconds
+
 );
             // REACTION FILE
             formData.append(
