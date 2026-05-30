@@ -345,13 +345,23 @@ console.log(
   duration
 );
 
-          // START FFMPEG
-          
+          /// START FFMPEG
 
-            // LIMIT TO REACTION LENGTH
-            
+ffmpeg()
 
-            .complexFilter([
+  .input(
+    originalUrl
+  )
+
+  .input(
+    reaction.path
+  )
+
+  .duration(
+    duration + 0.5
+  )
+
+  .complexFilter([
 
               // MAIN REACTION
               {
@@ -751,9 +761,10 @@ console.log(
 )
 
 .save(
-  outputPath;
-});
+  outputPath
+);
 
+});
        
 
     } catch (err) {
