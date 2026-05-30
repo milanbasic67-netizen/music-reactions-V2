@@ -397,13 +397,6 @@ const entries =
     formData.entries()
   );
 
-alert(
-  JSON.stringify(
-    entries,
-    null,
-    2
-  )
-);
 
 // RENDER
 
@@ -418,7 +411,7 @@ alert(
 const renderRes =
   await fetch(
 
-    renderUrl,
+    `${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}`,
 
     {
 
