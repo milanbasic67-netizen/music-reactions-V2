@@ -303,24 +303,21 @@ console.log(
       
 
           const duration =
-  Number(
-    req.body.duration
-  ) || 15;
+  ffmpeg.ffprobe(
+  reaction.path,
+  (
+    err,
+    metadata
+  ) => {
 
-console.log(
-  "REQ DURATION RAW:",
-  req.body.duration
-);
+    const duration =
+      metadata.format.duration;
 
-console.log(
-  "PARSED DURATION:",
-  duration
-);
+    console.log(
+      "REAL DURATION:",
+      duration
+    );
 
-console.log(
-  "REACTION DURATION:",
-  duration
-);
 
           // START FFMPEG
           ffmpeg()
