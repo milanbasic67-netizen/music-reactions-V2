@@ -350,10 +350,19 @@ if (
   Number.isNaN(duration)
 ) {
 
-  duration = 60;
+  duration =
+    queryDuration;
 
 }
 
+if (
+  !duration ||
+  Number.isNaN(duration)
+) {
+
+  duration = 60;
+
+}
 console.log(
   "FINAL DURATION:",
   duration

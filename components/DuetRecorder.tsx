@@ -294,12 +294,13 @@ alert("2");
               );
 
 alert("3");
-const durationSeconds =
+const songVideo =
+  document.getElementById(
+    "song-video"
+  ) as HTMLVideoElement;
 
-  (
-    Date.now() -
-    startTimeRef.current
-  ) / 1000;
+const durationSeconds =
+  songVideo?.currentTime || 0;
 
 
 alert(
