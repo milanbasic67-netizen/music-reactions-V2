@@ -319,6 +319,29 @@ console.log(
   duration
 );
 
+ffmpeg.ffprobe(
+  reaction.path,
+  (err, metadata) => {
+
+    if (
+      !err &&
+      metadata?.format?.duration
+    ) {
+
+      duration =
+        metadata.format.duration;
+
+      console.log(
+        "REAL DURATION:",
+        duration
+      );
+
+    }
+
+  }
+);
+
+
           // START FFMPEG
           ffmpeg()
 
