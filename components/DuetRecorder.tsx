@@ -349,14 +349,18 @@ for (
 
 }
 
+const entries =
+  Array.from(
+    formData.entries()
+  );
+
 alert(
   JSON.stringify(
-    Array.from(
-      formData.entries()
-    )
+    entries,
+    null,
+    2
   )
 );
-
 
             // RENDER
             const renderRes =
