@@ -302,22 +302,22 @@ console.log(
       // GET REACTION DURATION
       
 
-          const duration =
-  ffmpeg.ffprobe(
-  reaction.path,
-  (
-    err,
-    metadata
-  ) => {
+          const duration = 30;
 
-    const duration =
-      metadata.format.duration;
+console.log(
+  "REQ DURATION RAW:",
+  req.body.duration
+);
 
-    console.log(
-      "REAL DURATION:",
-      duration
-    );
+console.log(
+  "PARSED DURATION:",
+  duration
+);
 
+console.log(
+  "REACTION DURATION:",
+  duration
+);
 
           // START FFMPEG
           ffmpeg()
