@@ -617,7 +617,7 @@ const profile =
 
         >
 
-          Start Recording Test
+          Start
 
         </button>
 
