@@ -302,7 +302,45 @@ console.log(
       // GET REACTION DURATION
       
 
-          const duration = 30;
+          ffmpeg.ffprobe(
+
+  reaction.path,
+
+  (err, metadata) => {
+
+    if (err) {
+
+      console.log(err);
+
+      return res
+        .status(500)
+        .json({
+          error: "ffprobe failed",
+        });
+
+    }
+
+    const duration =
+      metadata.format.duration;
+
+    console.log(
+      "REAL DURATION:",
+      duration
+    );
+
+    ffmpeg()
+
+      .input(
+        originalUrl
+      )
+
+      .input(
+        reaction.path
+      )
+
+      .duration(
+        duration + 0.5
+      )
 
 console.log(
   "REQ DURATION RAW:",
