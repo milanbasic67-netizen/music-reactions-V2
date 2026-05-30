@@ -260,6 +260,11 @@ const queryDuration =
   );
 
 console.log(
+  "QUERY:",
+  req.query
+);
+
+console.log(
   "Q###UERY DURATION:",
   queryDuration
 );
