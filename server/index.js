@@ -328,19 +328,7 @@ console.log(
       duration
     );
 
-    ffmpeg()
 
-      .input(
-        originalUrl
-      )
-
-      .input(
-        reaction.path
-      )
-
-      .duration(
-        duration + 0.5
-      )
 
 console.log(
   "REQ DURATION RAW:",
@@ -357,23 +345,8 @@ console.log(
   duration
 );
 
-
-
-
           // START FFMPEG
-          ffmpeg()
-
-            // ORIGINAL SONG
-            .input(
-              originalUrl
-            )
-
-            // REACTION
-            .input(
-              reaction.path
-            )            
-            
-             .duration(duration + 0.5)
+          
 
             // LIMIT TO REACTION LENGTH
             
@@ -778,8 +751,8 @@ console.log(
 )
 
 .save(
-  outputPath
-);
+  outputPath;
+});
 
        
 
