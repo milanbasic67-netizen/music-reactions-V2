@@ -227,6 +227,19 @@ app.get(
 );
 
 // RENDER DUET
+console.log(
+  "BODY:",
+  req.body
+);
+
+console.log(
+  "FILE:",
+  !!req.file
+);
+
+
+
+
 app.post(
 
   "/render-duet",
@@ -253,6 +266,23 @@ app.post(
       // REACTION FILE
       const reaction =
         req.file;
+console.log(
+  "BODY:",
+  req.body
+);
+
+console.log(
+  "BODY KEYS:",
+  Object.keys(
+    req.body
+  )
+);
+
+console.log(
+  "FILE:",
+  !!req.file
+);
+
 
       if (
         !originalUrl ||
