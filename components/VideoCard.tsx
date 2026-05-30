@@ -472,7 +472,7 @@ console.log(
 
   playsInline
 
-  muted
+  muted={muted}
 
   preload="metadata"
 
