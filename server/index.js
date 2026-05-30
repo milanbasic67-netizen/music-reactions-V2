@@ -437,10 +437,11 @@ console.log(
                   "volume",
 
                 options:
-                  "1",
+                  "1.0",
 
                 inputs:
-                  "1:a",
+                  "micdelayed",
+
 
                 outputs:
                   "micboost",
