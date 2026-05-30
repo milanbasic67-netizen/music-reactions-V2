@@ -1,11 +1,5 @@
 "use client";
 
-return (
-  <div>
-    BUILD TEST 999
-  </div>
-)
-
 
 
 export const dynamic =
