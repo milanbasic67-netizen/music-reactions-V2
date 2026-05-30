@@ -1,4 +1,5 @@
 "use client";
+
 console.log(
   "DUET RECORDER BUILD 777"
 );
@@ -616,7 +617,7 @@ const profile =
 
         >
 
-          Start Recording
+          Start Recording Test
 
         </button>
 
