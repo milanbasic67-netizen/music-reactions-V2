@@ -254,6 +254,17 @@ app.post(
       const originalUrl =
         req.body.originalUrl;
 
+console.log(
+  "ORIGINAL URL:",
+  req.originalUrl
+);
+
+console.log(
+  "URL:",
+  req.url
+);
+
+
 const queryDuration =
   Number(
     req.query.duration
