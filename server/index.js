@@ -454,7 +454,7 @@ ffmpeg()
                   "volume",
 
                 options:
-                  "0.5",
+                  "0.15",
 
                 inputs:
                   "0:a",
@@ -476,7 +476,7 @@ ffmpeg()
                   "volume",
 
                 options:
-                  "3.0",
+                  "1.2",
 
                 inputs:
                   "micdelayed",
