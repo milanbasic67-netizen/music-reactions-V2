@@ -222,7 +222,15 @@ alert("1");
 
   async function stopRecording() {
 
-    try {
+  console.log(
+    "STOP FUNCTION CALLED"
+  );
+
+  throw new Error(
+    "STOP TEST"
+  );
+
+  try {
 
       if (
         !mediaRecorderRef.current
