@@ -382,7 +382,7 @@ alert(
             const renderRes =
               await fetch(
 
-`${process.env.NEXT_PUBLIC_API_URL}/render-duet`,
+`${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}`,
 
                 {
 
