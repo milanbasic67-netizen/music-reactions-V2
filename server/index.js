@@ -284,6 +284,18 @@ console.log(
       const reaction =
         req.file;
 console.log(
+  "BODY KEYS:",
+  Object.keys(req.body)
+);
+
+console.log(
+  "BODY DURATION:",
+  req.body.duration
+);
+
+
+
+console.log(
   "BODY FULL:",
   JSON.stringify(req.body)
 );
