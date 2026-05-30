@@ -351,6 +351,22 @@ formData.append(
 
               );
 
+console.log(
+  "SEND DURATION:",
+  durationSeconds
+);
+
+for (
+  const pair of formData.entries()
+) {
+
+  console.log(
+    pair[0],
+    pair[1]
+  );
+
+}
+
             const renderData =
               await renderRes.json();
 if (
