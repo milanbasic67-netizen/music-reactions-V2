@@ -399,23 +399,32 @@ alert(
   )
 );
 
-            // RENDER
-            const renderRes =
-              await fetch(
+// RENDER
 
-`${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}&start=${startTimeRef.current}`,
+const renderUrl =
 
-                {
+`${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}`;
 
-                  method:
-                    "POST",
+alert(
+  renderUrl
+);
 
-                  body:
-                    formData,
+const renderRes =
+  await fetch(
 
-                }
+    renderUrl,
 
-              );
+    {
+
+      method:
+        "POST",
+
+      body:
+        formData,
+
+    }
+
+  );
 
 
             const renderData =
