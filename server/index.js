@@ -415,7 +415,7 @@ console.log(
                   "volume",
 
                 options:
-                  "0.8",
+                  "0.5",
 
                 inputs:
                   "0:a",

@@ -290,26 +290,16 @@ startTimeRef.current =
 
               );
 const durationSeconds =
-  Math.max(
 
-    1,
-
-    Math.floor(
-
-      (
-        Date.now() -
-        startTimeRef.current
-      ) / 1000
-
-    )
-
-  );
+  (
+    Date.now() -
+    startTimeRef.current
+  ) / 1000;
 
 console.log(
   "DURATION",
   durationSeconds
-);
-            
+);            
 
 // FORM DATA
             const formData =
