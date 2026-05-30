@@ -300,6 +300,16 @@ app.post(
   ) || 15;
 
 console.log(
+  "REQ DURATION RAW:",
+  req.body.duration
+);
+
+console.log(
+  "PARSED DURATION:",
+  duration
+);
+
+console.log(
   "REACTION DURATION:",
   duration
 );
