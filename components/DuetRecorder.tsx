@@ -267,8 +267,7 @@ alert("2");
         false
       );
 
- const finalDuration =
-  stopPosition;     
+    
 
 setTimeout(
 
