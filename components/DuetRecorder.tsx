@@ -296,6 +296,12 @@ const durationSeconds =
     startTimeRef.current
   ) / 1000;
 
+
+alert(
+  "DURATION=" +
+  durationSeconds
+);
+
 const debugDuration =
   JSON.stringify({
 
