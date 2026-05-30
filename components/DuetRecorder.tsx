@@ -242,19 +242,23 @@ alert("1");
           "song-video"
         ) as HTMLVideoElement;
 
-      if (songVideo) {
+      let finalDuration = 0;
 
-  const stopPosition =
+if (songVideo) {
+
+  finalDuration =
     songVideo.currentTime || 0;
 
   console.log(
     "STOP POSITION:",
-    stopPosition
+    finalDuration
   );
 
   songVideo.pause();
 
 }
+
+
 
       // STOP CAMERA RECORDING
       mediaRecorderRef.current.stop();
