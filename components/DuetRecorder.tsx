@@ -157,7 +157,13 @@ const startTimeRef =
           {
 
             mimeType:
-              "video/webm",
+        "video/webm;codecs=vp8,opus",
+
+      audioBitsPerSecond:
+        128000,
+
+      videoBitsPerSecond:
+        2500000,
 
           }
 
