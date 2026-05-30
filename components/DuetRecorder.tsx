@@ -297,6 +297,16 @@ const durationSeconds =
   ) / 1000;
 
 console.log(
+  "START REF:",
+  startTimeRef.current
+);
+
+console.log(
+  "NOW:",
+  Date.now()
+);
+
+console.log(
   "DURATION",
   durationSeconds
 );            
