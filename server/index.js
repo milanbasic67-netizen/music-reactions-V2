@@ -320,8 +320,25 @@ console.log(
 
     }
 
-    const duration =
-      metadata.format.duration;
+    let duration =
+  metadata.format.duration;
+
+if (
+  !duration ||
+  duration === "N/A"
+) {
+
+  duration =
+    Number(
+      req.body.duration
+    );
+
+}
+
+console.log(
+  "FINAL DURATION:",
+  duration
+);
 
     console.log(
       "REAL DURATION:",

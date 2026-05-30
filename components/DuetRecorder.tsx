@@ -321,9 +321,10 @@ formData.append(
   String(
     durationSeconds
   )
-
+alert(
+  "DURATION=" +
+  durationSeconds
 );
-
             // REACTION FILE
             formData.append(
 
