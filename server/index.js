@@ -272,6 +272,11 @@ console.log(
   JSON.stringify(req.body)
 );
 
+console.log(
+  "DEBUG DURATION:",
+  req.body.debugDuration
+);
+
       if (
         !originalUrl ||
         !reaction

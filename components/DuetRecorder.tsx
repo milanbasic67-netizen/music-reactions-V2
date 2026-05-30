@@ -296,21 +296,24 @@ const durationSeconds =
     startTimeRef.current
   ) / 1000;
 
-console.log(
-  "START REF:",
-  startTimeRef.current
-);
+const debugDuration =
+  JSON.stringify({
 
-console.log(
-  "NOW:",
-  Date.now()
-);
+    start:
+      startTimeRef.current,
+
+    now:
+      Date.now(),
+
+    duration:
+      durationSeconds,
+
+  });
 
 console.log(
   "DURATION",
   durationSeconds
-);            
-
+);
 // FORM DATA
             const formData =
               new FormData();
@@ -336,6 +339,14 @@ formData.append(
   String(
     durationSeconds
   )
+
+);
+
+formData.append(
+
+  "debugDuration",
+
+  debugDuration
 
 );
             // REACTION FILE
