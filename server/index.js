@@ -415,7 +415,7 @@ console.log(
                   "volume",
 
                 options:
-                  "0.2",
+                  "0.5",
 
                 inputs:
                   "0:a",
@@ -424,13 +424,20 @@ console.log(
                   "songquiet",
               },
 
+// MIC DELAY
+{
+  filter: "adelay",
+  options: "250|250",
+  inputs: "1:a",
+  outputs: "micdelayed",
+},
               // MIC AUDIO
               {
                 filter:
                   "volume",
 
                 options:
-                  "2",
+                  "1",
 
                 inputs:
                   "1:a",
@@ -451,9 +458,10 @@ console.log(
 
                     duration:
                       "shortest",
+                    normalize: 1,
 
                     dropout_transition:
-                      0,
+                      2,
 
                   },
 
