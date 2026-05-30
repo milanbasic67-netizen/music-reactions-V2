@@ -257,6 +257,10 @@ app.post(
       // REACTION FILE
       const reaction =
         req.file;
+console.log(
+  "BODY FULL:",
+  JSON.stringify(req.body)
+);
 
       if (
         !originalUrl ||
