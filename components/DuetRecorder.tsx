@@ -349,6 +349,13 @@ for (
 
 }
 
+alert(
+  JSON.stringify(
+    Array.from(
+      formData.entries()
+    )
+  )
+);
 
 
             // RENDER
