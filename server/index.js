@@ -317,7 +317,7 @@ console.log(
               reaction.path
             )            
             
-             .duration(duration)
+             
 
             // LIMIT TO REACTION LENGTH
             
