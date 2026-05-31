@@ -71,7 +71,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     console.log("Pokrećem FFmpeg...");
     
     ffmpeg()
-        .input(originalUrl)
+        .input(localMp4Path)
         .input(reactionFile.path)
         .duration(finalDuration + 0.5) // Mala margina
         .complexFilter([
