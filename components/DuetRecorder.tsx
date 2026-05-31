@@ -1,660 +1,136 @@
 "use client";
 
-console.log(
-  "DUET RECORDER BUILD 777"
-);
-
-import {
-
-  useEffect,
-
-  useRef,
-
-  useState,
-
-} from "react";
-
-import { supabase }
-from "@/lib/supabase";
-
-import { getProfile }
-from "@/lib/getProfile";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { getProfile } from "@/lib/getProfile";
 
 type Props = {
-
   originalVideo: string;
-
   title: string;
-
   artist: string;
-
 };
 
-export default function DuetRecorder({
+export default function DuetRecorder({ originalVideo, title, artist }: Props) {
+  const cameraRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  originalVideo,
-
-  title,
-
-  artist,
-
-}: Props) {
-
-  const cameraRef =
-    useRef<HTMLVideoElement>(
-      null
-    );
-
-  const mediaRecorderRef =
-    useRef<any>(
-      null
-    );
-
-  const chunksRef =
-    useRef<Blob[]>([]);
-const startTimeRef =
-  useRef(0);
-
-  const [stream,
-    setStream] =
-    useState<MediaStream | null>(
-      null
-    );
-
-  const [recording,
-    setRecording] =
-    useState(false);
-
-  const [loading,
-    setLoading] =
-    useState(false);
-
-  // CAMERA
   useEffect(() => {
-
     async function setup() {
-
       try {
-
-        const media =
-  await navigator.mediaDevices.getUserMedia({
-
-    video: true,
-
-    audio: {
-
-      echoCancellation: true,
-
-      noiseSuppression: true,
-
-      autoGainControl: true,
-
-    },
-
-  });
-
-        setStream(
-          media
-        );
-
-        if (
-          cameraRef.current
-        ) {
-
-          cameraRef.current.srcObject =
-            media;
-
-        }
-
+        const media = await navigator.mediaDevices.getUserMedia({
+          video: { width: 720, height: 1280 },
+          audio: { echoCancellation: true, noiseSuppression: true }
+        });
+        setStream(media);
+        if (cameraRef.current) cameraRef.current.srcObject = media;
       } catch (err) {
-
-        console.log(
-          err
-        );
-
-        alert(
-          "Camera error"
-        );
-
+        console.error("Camera error:", err);
       }
-
     }
-
     setup();
-
+    return () => stream?.getTracks().forEach(track => track.stop());
   }, []);
 
-  // START RECORDING
   async function startRecording() {
+    if (!stream) return;
+    chunksRef.current = [];
+    const songVideo = document.getElementById("song-video") as HTMLVideoElement;
 
-    try {
-
-      if (!stream)
-        return;
-
-      // RESET CHUNKS
-      chunksRef.current =
-        [];
-
-      // SONG VIDEO
-      const songVideo =
-        document.getElementById(
-          "song-video"
-        ) as HTMLVideoElement;
-
-      // START SONG FROM BEGINNING
-      if (songVideo) {
-
-        songVideo.currentTime =
-          0;
-
-        await songVideo.play();
-
-      }
-
-      // RECORDER
-      const recorder =
-        new MediaRecorder(
-
-          stream,
-
-          {
-
-            mimeType:
-        "video/webm;codecs=vp8,opus",
-
-      audioBitsPerSecond:
-        128000,
-
-      videoBitsPerSecond:
-        2500000,
-
-          }
-
-        );
-
-      mediaRecorderRef.current =
-        recorder;
-
-      recorder.ondataavailable =
-        (
-          e
-        ) => {
-
-          if (
-            e.data.size > 0
-          ) {
-
-            chunksRef.current.push(
-              e.data
-            );
-
-          }
-
-        };
-
-startTimeRef.current =
-  Date.now();
-
-      recorder.start();
-
-      setRecording(
-        true
-      );
-
-      console.log(
-        "RECORDING"
-      );
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Recording failed"
-      );
-
+    if (songVideo) {
+      songVideo.currentTime = 0;
+      await songVideo.play();
     }
 
+    const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8,opus" });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      await handleUpload(songVideo?.currentTime || 0);
+    };
+
+    recorder.start();
+    setRecording(true);
   }
 
-  // STOP RECORDING
-
-alert("1");
-
-  async function stopRecording() {
-
-  console.log(
-    "STOP FUNCTION CALLED"
-  );
-
-  throw new Error(
-    "STOP TEST"
-  );
-
-  try {
-
-      if (
-        !mediaRecorderRef.current
-      ) {
-
-        return;
-
-      }
-
-      setLoading(
-        true
-      );
-
-      // PAUSE SONG
-      const songVideo =
-        document.getElementById(
-          "song-video"
-        ) as HTMLVideoElement;
-
-      let finalDuration = 0;
-
-if (songVideo) {
-
-  finalDuration =
-    songVideo.currentTime || 0;
-
-  console.log(
-    "STOP POSITION:",
-    finalDuration
-  );
-
-  songVideo.pause();
-
-}
-
-
-
-      // STOP CAMERA RECORDING
+  function stopRecording() {
+    if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
-alert("2");
-      setRecording(
-        false
-      );
-
-    
-
-setTimeout(
-
-        async () => {
-
-          try {
-
-            // REACTION BLOB
-            const reactionBlob =
-              new Blob(
-
-                chunksRef.current,
-
-                {
-
-                  type:
-                    "video/webm",
-
-                }
-
-              );
-
-            // REACTION FILE
-            const reactionFile =
-              new File(
-
-                [reactionBlob],
-
-                `reaction-${Date.now()}.webm`,
-
-                {
-
-                  type:
-                    "video/webm",
-
-                }
-
-              );
-
-alert("3");
-const durationSeconds =
-  finalDuration;
-alert(
-  "STOP=" +
-  durationSeconds
-);
-
-alert(
-  "DURATION=" +
-  durationSeconds
-);
-
-const debugDuration =
-  JSON.stringify({
-
-    start:
-      startTimeRef.current,
-
-    now:
-      Date.now(),
-
-    duration:
-      durationSeconds,
-
-  });
-
-console.log(
-  "DURATION",
-  durationSeconds
-);
-// FORM DATA
-            const formData =
-              new FormData();
-
-            // ORIGINAL VIDEO URL
-            formData.append(
-
-              "originalUrl",
-
-              originalVideo
-
-            );
-
-console.log(
-  "DURATION",
-  durationSeconds
-);
-
-formData.append(
-
-  "duration",
-
-  String(
-    durationSeconds
-  )
-
-);
-
-formData.append(
-
-  "debugDuration",
-
-  debugDuration
-
-);
-            // REACTION FILE
-            formData.append(
-
-              "reaction",
-
-              reactionFile
-
-            );
-
-console.log(
-  "SEND DURATION:",
-  durationSeconds
-);
-
-for (
-  const [key, value]
-  of formData.entries()
-) {
-
-  console.log(
-    key,
-    value
-  );
-
-}
-
-for (
-  const pair of formData.entries()
-) {
-
-  console.log(
-    pair[0],
-    pair[1]
-  );
-
-}
-
-const entries =
-  Array.from(
-    formData.entries()
-  );
-
-
-// RENDER
-
-const renderUrl =
-
-`${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}`;
-
-alert(
-  renderUrl
-);
-
-alert("4");
-const renderRes =
-  await fetch(
-
-    `${process.env.NEXT_PUBLIC_API_URL}/render-duet?duration=${durationSeconds}`,
-
-    {
-
-      method:
-        "POST",
-
-      body:
-        formData,
-
+      const songVideo = document.getElementById("song-video") as HTMLVideoElement;
+      if (songVideo) songVideo.pause();
+      setRecording(false);
     }
+  }
 
-  );
+  async function handleUpload(duration: number) {
+    setLoading(true);
+    try {
+      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      const file = new File([blob], `reaction-${Date.now()}.webm`, { type: "video/webm" });
 
+      const formData = new FormData();
+      formData.append("originalUrl", originalVideo);
+      formData.append("reaction", file);
+      formData.append("duration", duration.toString());
 
-            const renderData =
-              await renderRes.json();
-if (
-  !renderData.videoUrl
-) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
+        method: "POST",
+        body: formData,
+      });
 
-  alert(
-    "Render failed"
-  );
+      const renderData = await res.json();
+      if (!renderData.videoUrl) throw new Error("Render failed");
 
-  return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
 
-}
+      const profile = await getProfile();
+      
+      const { error: insertError } = await supabase.from("reactions").insert({
+        song: title,
+        artist,
+        user_id: user.id,
+        username: profile?.username,
+        video_url: renderData.videoUrl,
+      });
 
- const {
-  data: {
-    user,
-  },
-} =
-  await supabase
-    .auth
-    .getUser();
+      if (insertError) throw insertError;
 
-if (!user) {
-
-  alert(
-    "Login required"
-  );
-
-  return;
-
-}
-
-const profile =
-  await getProfile();
-            // DOWNLOAD FINAL VIDEO
-            
-
-            // INSERT REACTION
-            const {
-              error:
-                insertError,
-            } =
-              await supabase
-                .from(
-                  "reactions"
-                )
-                .insert({
-
-                  song:
-                    title,
-
-                  artist,
-
-                  user_id:
-                    user.id,
-
-                  username:
-                    profile?.username,
-
-                  video_url:
-                    renderData.videoUrl,
-
-                });
-
-            if (
-              insertError
-            ) {
-
-              console.log(
-                insertError
-              );
-
-              alert(
-
-                JSON.stringify(
-                  insertError
-                )
-
-              );
-
-              return;
-
-            }
-
-            alert(
-              "Reaction uploaded!"
-            );
-
-            window.location.href =
-              "/";
-
-          } catch (err) {
-
-            console.log(
-              err
-            );
-
-            alert(
-              "Upload failed"
-            );
-
-          }
-
-          setLoading(
-            false
-          );
-
-        },
-
-        1000
-
-      );
-
+      window.location.href = "/";
     } catch (err) {
-
-      console.log(
-        err
-      );
-
+      console.error(err);
+      alert("Something went wrong during upload/render.");
+    } finally {
+      setLoading(false);
     }
-
   }
 
   return (
-
-    <div className="p-4">
-
-      {/* CAMERA */}
-      <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] max-w-[110px] mx-auto border border-zinc-800 shadow-2xl">
-
-        <video
-
-          ref={cameraRef}
-
-          autoPlay
-
-          muted
-
-          playsInline
-
-          className="w-full h-full object-cover"
-
-        />
-
+    <div className="p-4 flex flex-col items-center">
+      <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] w-[110px] border border-zinc-800 shadow-2xl">
+        <video ref={cameraRef} autoPlay muted playsInline className="w-full h-full object-cover" />
       </div>
 
-      {/* START BUTTON */}
       {!recording && !loading && (
-
-        <button
-
-          onClick={
-            startRecording
-          }
-
-          className="w-full bg-red-600 hover:bg-red-500 transition py-3 rounded-2xl font-black text-lg"
-
-        >
-
-          Start
-
+        <button onClick={startRecording} className="w-full max-w-xs bg-red-600 hover:bg-red-500 py-3 rounded-2xl font-black text-lg text-white">
+          Start Duet
         </button>
-
       )}
 
-      {/* STOP BUTTON */}
       {recording && (
-
-        <button
-
-          onClick={
-            stopRecording
-          }
-
-          className="w-full bg-zinc-800 hover:bg-zinc-700 transition py-3 rounded-2xl font-black text-lg"
-
-        >
-
+        <button onClick={stopRecording} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black text-lg">
           Stop Recording
-
         </button>
-
       )}
 
-      {/* LOADING */}
-      {loading && (
-
-        <div className="text-center text-zinc-400 font-black mt-4">
-
-          Rendering duet...
-
-        </div>
-
-      )}
-
+      {loading && <div className="text-center text-zinc-400 font-black mt-4 animate-pulse">Mixing your duet...</div>}
     </div>
-
   );
-
 }
