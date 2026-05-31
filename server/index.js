@@ -10,7 +10,7 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. CORS PODEŠAVANJA
+// 1. CORS PODEŠAVANJA za
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST"],
