@@ -74,7 +74,7 @@ function CreateContent() {
       {/* PLAYER */}
       <div className="px-3 pt-3">
 
-        <div className="relative w-full h-[140px] rounded-2xl overflow-hidden bg-black">
+        <div className="w-full rounded-2xl overflow-hidden bg-black mb-4 border border-zinc-800">
 
           <video
 
