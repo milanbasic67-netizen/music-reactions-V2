@@ -74,7 +74,7 @@ function CreateContent() {
       {/* PLAYER */}
       <div className="px-3 pt-3">
 
-        <div className="relative w-full h-[280px] rounded-2xl overflow-hidden bg-black">
+        <div className="relative w-full h-[260px] rounded-2xl overflow-hidden bg-black">
 
           <video
 
@@ -82,7 +82,7 @@ function CreateContent() {
 
             src={videoUrl}
 
-            autoPlay
+            
 
             controls
 
