@@ -121,19 +121,19 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
   }
 
   return (
-    <div className="p-4 flex flex-col items-center">
-      <div className="rounded-2xl overflow-hidden bg-black mb-4 h-[160px] w-[110px] border border-zinc-800 shadow-2xl">
+    <div className="p-4 flex flex-col h-full">
+      <div className="w-full flex-1 rounded-2xl overflow-hidden bg-black mb-4 border border-zinc-800">
         <video ref={cameraRef} autoPlay muted playsInline className="w-full h-full object-cover" />
       </div>
 
       {!recording && !loading && (
-        <button onClick={startRecording} className="w-full max-w-xs bg-red-600 hover:bg-red-500 py-3 rounded-2xl font-black text-lg text-white">
+        <button onClick={startRecording} className="w-full bg-red-600 hover:bg-red-500 py-3 rounded-2xl font-black text-lg text-white mb-2">
           Start Duet
         </button>
       )}
 
       {recording && (
-        <button onClick={stopRecording} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black text-lg">
+        <button onClick={stopRecording} className="w-full bg-white text-black py-3 rounded-2xl font-black text-lg mb-2">
           Stop Recording
         </button>
       )}
