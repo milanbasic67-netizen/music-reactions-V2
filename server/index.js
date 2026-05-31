@@ -115,10 +115,11 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         .on("start", (cmd) => {
             console.log("FFmpeg komanda pokrenuta!");
         })
-        .on("progress", (progress) => {
-            if (progress.percent) {
-                console.log(`Rendering: ${Math.round(progress.percent)}%`);
-            }
+        .on("progress", (p) => {
+  console.log("FPS:",
+    p.currentFps,
+    "PERCENT:",
+    p.percent);
         })
         .on("error", (err) => {
             console.error("FFmpeg Error:", err.message);
