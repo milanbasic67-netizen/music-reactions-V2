@@ -79,13 +79,13 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             {
                 filter: "scale",
                 options: "540:960:force_original_aspect_ratio=increase,crop=540:576",
-                inputs: "1:v", outputs: "v1"
+                inputs: "1:v", outputs: "reaction"
             },
             // 2. Skaliranje originalnog videa (Overlay prozor - npr. širina 320)
             {
                 filter: "scale",
                 options: "540:384:force_original_aspect_ratio=increase,crop=540:384",
-                inputs: "0:v", outputs: "v0"
+                inputs: "0:v", outputs: "original"
             },
             // 3. Postavljanje originala preko reakcije (x=40, y=40 od gornjeg levog ugla)
             {
