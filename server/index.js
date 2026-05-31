@@ -49,6 +49,8 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
     
     const { originalUrl, duration } = req.body;
+    console.log("BODY:", req.body);
+    console.log("DURATION:", duration);
     const reactionFile = req.file;
 
     if (!originalUrl || !reactionFile) {
@@ -103,8 +105,9 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             "-map [afinal]",
             "-c:v libx264",
             "-preset ultrafast", // Najbrže enkodovanje, bitno za slabije servere
-            "-crf 28",           // Solidan kvalitet uz manji fajl
+            "-crf 32",           // Solidan kvalitet uz manji fajl
             "-pix_fmt yuv420p",
+            "-threads 2",
             "-movflags +faststart"
         ])
         .on("start", (cmd) => {
