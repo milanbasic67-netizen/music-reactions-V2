@@ -47,7 +47,9 @@ const upload = multer({ storage });
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
-    
+
+    console.log("CONTENT TYPE:",req.headers["content-type"]
+);
     const { originalUrl, duration } = req.body;
     console.log("BODY:", req.body);
     console.log("DURATION:", duration);
