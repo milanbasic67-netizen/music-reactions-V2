@@ -87,7 +87,7 @@ for (const [key, value] of formData.entries()) {
     value
   );
 }
-
+throw new Error("FETCH TEST");
       
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
