@@ -105,7 +105,7 @@ const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
       const { error: insertError } = await supabase.from("reactions").insert({
         song: title,
         artist,
-        user_id: user.id,
+        user_id: user!.id,
         username: profile?.username,
         video_url: renderData.videoUrl,
       });
