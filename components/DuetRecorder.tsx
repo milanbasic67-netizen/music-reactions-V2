@@ -80,7 +80,35 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       formData.append("reaction", file);
       formData.append("duration", duration.toString());
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
+for (const [key, value] of formData.entries()) {
+  console.log(
+    "FORMDATA",
+    key,
+    value
+  );
+}
+console.log(
+  "ORIGINAL VIDEO:",
+  originalVideo
+);
+
+console.log(
+  "DURATION:",
+  durationSeconds
+);
+
+for (const [key, value] of formData.entries()) {
+
+  console.log(
+    "FORMDATA:",
+    key,
+    value
+  );
+
+}
+
+      
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
         body: formData,
       });
