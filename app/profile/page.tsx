@@ -122,7 +122,15 @@ export default async function UserPage({
         "follower_id",
         profile?.id
       );
+console.log(
+  "PROFILE:",
+  profile
+);
 
+console.log(
+  "PARAMS:",
+  params
+);
   if (!profile) {
 
     return (
