@@ -62,38 +62,7 @@ export default function BottomNav() {
 
         </button>
 
-        {/* SONGS */}
-        <button
-          onClick={() =>
-            router.push(
-              "/songs"
-            )
-          }
-          className="flex flex-col items-center justify-center gap-1"
-        >
-
-          <Music2
-            size={24}
-            className={
-              pathname === "/songs"
-                ? "text-white"
-                : "text-zinc-500"
-            }
-          />
-
-          <span
-            className={
-              pathname === "/songs"
-                ? "text-white text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Songs
-
-          </span>
-
-        </button>
+        
 
         {/* SEARCH */}
         <button
@@ -206,7 +175,7 @@ export default function BottomNav() {
         <button
           onClick={() =>
             router.push(
-              "/create"
+              "/songs"
             )
           }
           className="flex items-center justify-center"
