@@ -111,22 +111,7 @@ function CreateContent() {
 
       </div>
 
-      {/* INFO */}
-      <div className="p-4">
-
-        <h1 className="text-2xl font-black">
-
-          {title}
-
-        </h1>
-
-        <p className="text-zinc-500 mt-1">
-
-          {artist}
-
-        </p>
-
-      </div>
+     
 
       {/* RECORDER */}
       <DuetRecorder
