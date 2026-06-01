@@ -178,6 +178,15 @@ export default async function UserPage({
           <div>
 
             {/* USERNAME */}
+<div>
+
+  {/* USERNAME */}
+  <h1 className="text-2xl font-black">
+
+    @{profile.username}
+
+  </h1>
+
 <div className="flex gap-6 mt-2 text-sm">
 
   <div>
