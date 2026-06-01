@@ -212,7 +212,7 @@ export default async function UserPage({
 
   </div>
 
-</div>
+
 
   <div>
 
