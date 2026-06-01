@@ -7,15 +7,6 @@ from "@/components/VideoCard";
 import FollowButton
 from "@/components/FollowButton";
 
-type Props = {
-
-  params: {
-
-    username: string;
-
-  };
-
-};
 
 export const dynamic =
   "force-dynamic";
@@ -23,28 +14,40 @@ export const dynamic =
 export const revalidate =
   0;
 
-export default async function UserPage({
-  params,
-}: Props) {
+{
 
   // PROFILE
   const {
-    data: profile,
-  } =
-    await supabase
+  data: {
+    user,
+  },
+} =
+  await supabase.auth.getUser();
 
-      .from(
-        "profiles"
-      )
+if (!user) {
 
-      .select("*")
+  return (
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
 
-      .eq(
-        "username",
-        params.username
-      )
+      Login required
 
-      .single();
+    </main>
+  );
+
+}
+
+const {
+  data: profile,
+} =
+  await supabase
+
+    .from("profiles")
+
+    .select("*")
+
+    .eq("id", user.id)
+
+    .single();
 
   // REACTIONS
   const {
@@ -60,7 +63,7 @@ export default async function UserPage({
 
       .eq(
         "username",
-        params.username
+        
       )
 
       .order(
