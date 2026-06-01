@@ -228,6 +228,29 @@ export default function BottomNav() {
 
         </button>
 
+{/* ACCOUNT */}
+<button
+  onClick={() =>
+    router.push("/profile")
+  }
+  className="flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition"
+>
+
+  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white font-black text-sm">
+
+    U
+
+  </div>
+
+  <span className="text-[10px]">
+
+    Account
+
+  </span>
+
+</button>
+
+
       </div>
 
     </div>
