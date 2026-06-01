@@ -29,7 +29,7 @@ export default function BottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-2xl border-t border-white/10">
 
-      <div className="grid grid-cols-7 h-20">
+      <div className="grid grid-cols-5 h-20">
 
         {/* HOME */}
         <button
@@ -94,6 +94,26 @@ export default function BottomNav() {
             Search
 
           </span>
+
+        </button>
+ {/* CREATE */}
+        <button
+          onClick={() =>
+            router.push(
+              "/songs"
+            )
+          }
+          className="flex items-center justify-center"
+        >
+
+          <div className="w-16 h-16 rounded-2xl bg-red-600 flex items-center justify-center shadow-[0_0_30px_rgba(255,0,0,0.5)]">
+
+            <PlusSquare
+              size={32}
+              className="text-white"
+            />
+
+          </div>
 
         </button>
 
@@ -171,26 +191,7 @@ export default function BottomNav() {
 
         </button>
 
-        {/* CREATE */}
-        <button
-          onClick={() =>
-            router.push(
-              "/songs"
-            )
-          }
-          className="flex items-center justify-center"
-        >
-
-          <div className="w-14 h-14 rounded-2xl bg-red-600 flex items-center justify-center shadow-[0_0_30px_rgba(255,0,0,0.5)]">
-
-            <PlusSquare
-              size={28}
-              className="text-white"
-            />
-
-          </div>
-
-        </button>
+       
 
         {/* PROFILE */}
         <button
