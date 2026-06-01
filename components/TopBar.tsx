@@ -90,22 +90,18 @@ export default function TopBar() {
 
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent">
 
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex items-center justify-between px-5 py-2">
 
         {/* LEFT */}
         <div>
 
-          <h1 className="text-white text-3xl font-black tracking-tight">
+          <h1 className="text-white text-2xl font-black tracking-tight">
 
             DUET
 
           </h1>
 
-          <p className="text-zinc-400 text-xs mt-1">
-
-            Music Reaction Platform
-
-          </p>
+          
 
         </div>
 
@@ -142,20 +138,7 @@ export default function TopBar() {
           {/* BUTTONS */}
           <div className="flex items-center gap-2 overflow-x-auto">
 
-            {/* SONGS */}
-            <button
-              onClick={() => {
-
-                window.location.href =
-                  "/songs";
-
-              }}
-              className="shrink-0 bg-blue-600 hover:bg-blue-500 transition px-4 py-2 rounded-full text-white text-xs font-black"
-            >
-
-              Songs
-
-            </button>
+            
 
             
 
@@ -179,20 +162,7 @@ export default function TopBar() {
 
             )}
 
-            {/* PROFILE */}
-            <button
-              onClick={() => {
-
-                window.location.href =
-                  `/u/${username}`;
-
-              }}
-              className="shrink-0 bg-red-600 hover:bg-red-500 transition px-4 py-2 rounded-full text-white text-xs font-black"
-            >
-
-              Profile
-
-            </button>
+            
 
             {/* LOGOUT */}
             <button
