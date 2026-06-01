@@ -11,11 +11,9 @@ from "@/components/FollowButton";
 export const dynamic =
   "force-dynamic";
 
-export const revalidate =
-  0;
+export const revalidate = 0;
 
-{
-
+export default async function UserPage() {
   // PROFILE
   const {
   data: {
@@ -50,21 +48,26 @@ const {
     .single();
 
   // REACTIONS
-  const {
-    data: reactions,
-  } =
-    await supabase
+const {
+  data: reactions,
+} =
+  await supabase
 
-      .from(
-        "reactions"
-      )
+    .from("reactions")
 
-      .select("*")
+    .select("*")
 
-      .eq(
-        "username",
-        
-      )
+    .eq(
+      "user_id",
+      user.id
+    )
+
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
 
       .order(
         "created_at",
@@ -130,10 +133,6 @@ console.log(
   profile
 );
 
-console.log(
-  "PARAMS:",
-  params
-);
   if (!profile) {
 
     return (
@@ -243,11 +242,7 @@ console.log(
 
 </div>
 
-            <h1 className="text-2xl font-black">
-
-  @{profile.username}
-
-            </h1>
+            
 
             
 
