@@ -180,29 +180,39 @@ export default async function UserPage({
            
 
   {/* USERNAME */}
-  <h1 className="text-2xl font-black">
+<h1 className="text-2xl font-black">
 
-    @{profile.username}
+  @{profile.username}
 
-  </h1>
+</h1>
 
 <div className="flex gap-6 mt-2 text-sm">
 
   <div>
 
-    <span className="font-black text-white">
-
+    <span className="font-black">
       {reactions?.length || 0}
-
     </span>
 
     <span className="text-zinc-500 ml-1">
-
       Duets
-
     </span>
 
   </div>
+
+  <div>
+
+    <span className="font-black">
+      0
+    </span>
+
+    <span className="text-zinc-500 ml-1">
+      Likes
+    </span>
+
+  </div>
+
+</div>
 
   <div>
 
