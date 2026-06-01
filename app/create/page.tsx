@@ -70,9 +70,24 @@ function CreateContent() {
   return (
 
     <main className="min-h-screen bg-black text-white">
+<div className="sticky top-0 z-50 bg-black/80 backdrop-blur">
+
+  <div className="flex justify-center gap-8 py-3 text-white font-bold">
+
+    <button className="text-zinc-500">
+      Following
+    </button>
+
+    <button>
+      For You
+    </button>
+
+  </div>
+
+</div>
 
       {/* PLAYER */}
-      <div className="px-3 pt-3">
+      <div className="min-h-screen bg-black text-white">
 
         <div className="relative w-full h-[260px] rounded-2xl overflow-hidden bg-black">
 
