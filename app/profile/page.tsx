@@ -177,8 +177,7 @@ export default async function UserPage({
           {/* INFO */}
           <div>
 
-            {/* USERNAME */}
-<div>
+           
 
   {/* USERNAME */}
   <h1 className="text-2xl font-black">
