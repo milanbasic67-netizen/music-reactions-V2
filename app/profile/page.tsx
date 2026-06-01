@@ -1,5 +1,12 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { supabase }
 from "@/lib/supabase";
+
+import { getProfile }
+from "@/lib/getProfile";
 
 import VideoCard
 from "@/components/VideoCard";
@@ -7,131 +14,57 @@ from "@/components/VideoCard";
 import FollowButton
 from "@/components/FollowButton";
 
+export default function UserPage() {
 
-export const dynamic =
-  "force-dynamic";
+  const [profile, setProfile] =
+    useState<any>(null);
 
-export const revalidate = 0;
+  const [loading, setLoading] =
+    useState(true);
 
-export default async function UserPage() {
-  // PROFILE
-  const {
-  data: {
-    user,
-  },
-} =
-  await supabase.auth.getUser();
+  useEffect(() => {
 
-console.log(
-  "USER:",
-  user
-);
+    async function loadProfile() {
 
+      const p =
+        await getProfile();
 
-if (!user) {
+      setProfile(p);
+
+      setLoading(false);
+
+    }
+
+    loadProfile();
+
+  }, []);
+if (loading) {
 
   return (
+
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
+
+      Loading...
+
+    </main>
+
+  );
+
+}
+
+if (!profile) {
+
+  return (
+
     <main className="min-h-screen bg-black text-white flex items-center justify-center">
 
       Login required
 
     </main>
+
   );
 
 }
-
-const {
-  data: profile,
-} =
-  await supabase
-
-    .from("profiles")
-
-    .select("*")
-
-    .eq("id", user.id)
-
-    .single();
-
-  // REACTIONS
-const {
-  data: reactions,
-} =
-  await supabase
-
-    .from("reactions")
-
-    .select("*")
-
-    .eq(
-      "user_id",
-      user.id
-    )
-
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    );
-  // FOLLOWERS COUNT
-  const {
-    count: followersCount,
-  } =
-    await supabase
-
-      .from(
-        "followers"
-      )
-
-      .select(
-        "*",
-        {
-          count:
-            "exact",
-
-          head:
-            true,
-        }
-      )
-
-      .eq(
-        "following_id",
-        profile?.id
-      );
-
-  // FOLLOWING COUNT
-  const {
-    count: followingCount,
-  } =
-    await supabase
-
-      .from(
-        "followers"
-      )
-
-      .select(
-        "*",
-        {
-          count:
-            "exact",
-
-          head:
-            true,
-        }
-      )
-
-      .eq(
-        "follower_id",
-        profile?.id
-      );
-console.log(
-  "PROFILE:",
-  profile
-);
-
-  if (!profile) {
-
     return (
 
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
