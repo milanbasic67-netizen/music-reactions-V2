@@ -87,7 +87,7 @@ function CreateContent() {
 </div>
 
       {/* PLAYER */}
-      <div className="min-h-screen bg-black text-white">
+      <div className="bg-black text-white">
 
         <div className="relative w-full h-[260px] rounded-2xl overflow-hidden bg-black">
 
