@@ -2,14 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { supabase }
-from "@/lib/supabase";
-
 import { getProfile }
 from "@/lib/getProfile";
-
-import VideoCard
-from "@/components/VideoCard";
 
 import FollowButton
 from "@/components/FollowButton";
@@ -38,38 +32,28 @@ export default function UserPage() {
     loadProfile();
 
   }, []);
-if (loading) {
 
-  return (
+  if (loading) {
 
-    <main className="min-h-screen bg-black text-white flex items-center justify-center">
-
-      Loading...
-
-    </main>
-
-  );
-
-}
-
-if (!profile) {
-
-  return (
-
-    <main className="min-h-screen bg-black text-white flex items-center justify-center">
-
-      Login required
-
-    </main>
-
-  );
-
-}
     return (
 
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
 
-        User not found
+        Loading...
+
+      </main>
+
+    );
+
+  }
+
+  if (!profile) {
+
+    return (
+
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+
+        Login required
 
       </main>
 
@@ -81,32 +65,25 @@ if (!profile) {
 
     <main className="min-h-screen bg-black text-white">
 
-      {/* HEADER */}
       <div className="p-6 border-b border-zinc-900">
 
         <div className="flex items-center gap-5">
 
-          {/* AVATAR */}
           <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-900">
 
             {profile.avatar_url ? (
 
               <img
-
-                src={
-                  profile.avatar_url
-                }
-
+                src={profile.avatar_url}
+                alt=""
                 className="w-full h-full object-cover"
-
               />
 
             ) : (
 
               <div className="w-full h-full flex items-center justify-center text-3xl font-black">
 
-                {profile.username?.[0]
-                  ?.toUpperCase()}
+                {profile.username?.[0]?.toUpperCase()}
 
               </div>
 
@@ -114,105 +91,73 @@ if (!profile) {
 
           </div>
 
-          {/* INFO */}
           <div>
 
-           
+            <h1 className="text-2xl font-black">
 
-  {/* USERNAME */}
-<h1 className="text-2xl font-black">
+              @{profile.username}
 
-  @{profile.username}
+            </h1>
 
-</h1>
-
-<div className="flex gap-6 mt-2 text-sm">
-
-  <div>
-
-    <span className="font-black">
-      {reactions?.length || 0}
-    </span>
-
-    <span className="text-zinc-500 ml-1">
-      Duets
-    </span>
-
-  </div>
-
-  <div>
-
-    <span className="font-black">
-      0
-    </span>
-
-    <span className="text-zinc-500 ml-1">
-      Likes
-    </span>
-
-  </div>
-
-
-
-  <div>
-
-    <span className="font-black text-white">
-
-      0
-
-    </span>
-
-    <span className="text-zinc-500 ml-1">
-
-      Likes
-
-    </span>
-
-  </div>
-
-</div>
-
-            
-
-            
-
-            {/* FOLLOW STATS */}
-            <div className="flex gap-6 mt-4 text-sm text-zinc-400">
+            <div className="flex gap-6 mt-3 text-sm">
 
               <div>
 
-                <span className="font-black text-white">
+                <span className="font-black">
 
-                  {followersCount || 0}
+                  0
 
                 </span>
 
-                {" "}
-                followers
+                <span className="text-zinc-500 ml-1">
+
+                  Duets
+
+                </span>
 
               </div>
 
               <div>
 
-                <span className="font-black text-white">
+                <span className="font-black">
 
-                  {followingCount || 0}
+                  0
 
                 </span>
 
-                {" "}
-                following
+                <span className="text-zinc-500 ml-1">
+
+                  Followers
+
+                </span>
+
+              </div>
+
+              <div>
+
+                <span className="font-black">
+
+                  0
+
+                </span>
+
+                <span className="text-zinc-500 ml-1">
+
+                  Following
+
+                </span>
 
               </div>
 
             </div>
 
-            {/* FOLLOW BUTTON */}
-            <FollowButton
-              profileId={
-                profile.id
-              }
-            />
+            <div className="mt-4">
+
+              <FollowButton
+                profileId={profile.id}
+              />
+
+            </div>
 
           </div>
 
@@ -220,42 +165,9 @@ if (!profile) {
 
       </div>
 
-      {/* EMPTY */}
-      {(!reactions ||
-        reactions.length === 0) && (
+      <div className="flex items-center justify-center h-[60vh] text-zinc-500">
 
-        <div className="flex items-center justify-center h-[60vh] text-zinc-500 text-xl">
-
-          No reactions yet
-
-        </div>
-
-      )}
-
-      {/* VIDEOS */}
-      <div className="snap-y snap-mandatory overflow-y-scroll h-[calc(100vh-140px)]">
-
-        {reactions?.map(
-
-          (
-            reaction
-          ) => (
-
-            <VideoCard
-
-              key={
-                reaction.id
-              }
-
-              reaction={
-                reaction
-              }
-
-            />
-
-          )
-
-        )}
+        Profile ready
 
       </div>
 
