@@ -127,13 +127,7 @@ export default function TopBar() {
 
           </div>
 
-          {/* AVATAR */}
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white font-black text-lg shrink-0 border border-white/10 shadow-2xl">
-
-            {username?.[0]
-              ?.toUpperCase()}
-
-          </div>
+          
 
           {/* BUTTONS */}
           <div className="flex items-center gap-2 overflow-x-auto">
