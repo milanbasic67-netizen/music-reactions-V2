@@ -147,7 +147,7 @@ export default async function UserPage({
         <div className="flex items-center gap-5">
 
           {/* AVATAR */}
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-900">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-900">
 
             {profile.avatar_url ? (
 
@@ -178,19 +178,36 @@ export default async function UserPage({
           <div>
 
             {/* USERNAME */}
-            <h1 className="text-4xl font-black">
+            <h1 className="text-2xl font-black">
+<div className="flex gap-6 mt-2 text-sm">
+
+  <div>
+    <span className="font-black">
+      0
+    </span>
+    <span className="text-zinc-500 ml-1">
+      Duets
+    </span>
+  </div>
+
+  <div>
+    <span className="font-black">
+      0
+    </span>
+    <span className="text-zinc-500 ml-1">
+      Likes
+    </span>
+  </div>
+
+</div>
+
 
               @
               {profile.username}
 
             </h1>
 
-            {/* ROLE */}
-            <p className="text-zinc-500 mt-2">
-
-              {profile.role}
-
-            </p>
+            
 
             {/* FOLLOW STATS */}
             <div className="flex gap-6 mt-4 text-sm text-zinc-400">
