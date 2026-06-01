@@ -20,8 +20,6 @@ from "./NotificationsBadge";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-const [username, setUsername] =
-  useState("");
 
 export default function BottomNav() {
 
