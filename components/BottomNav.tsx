@@ -29,11 +29,36 @@ export default function BottomNav() {
   const router =
     useRouter();
 
-  const [username, setUsername] =
-    useState("");
+  const [profile, setProfile] =
+    useState<any>(null);
 
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-2xl border-t border-white/10">
+  useEffect(() => {
+
+    async function loadProfile() {
+
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data } =
+        await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+      setProfile(data);
+
+    }
+
+    loadProfile();
+
+  }, []);
+
+  return (    <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-2xl border-t border-white/10">
 
       <div className="grid grid-cols-7 h-20">
 
@@ -242,11 +267,27 @@ export default function BottomNav() {
   className="flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition"
 >
 
-  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white font-black text-sm">
+  <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
 
-    U
+  {profile?.avatar_url ? (
 
-  </div>
+    <img
+      src={profile.avatar_url}
+      alt="Avatar"
+      className="w-full h-full object-cover"
+    />
+
+  ) : (
+
+    <span className="text-white font-black text-sm">
+
+      {profile?.username?.[0]?.toUpperCase() || "?"}
+
+    </span>
+
+  )}
+
+</div>
 
   <span className="text-[10px]">
 
