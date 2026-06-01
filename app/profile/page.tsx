@@ -68,15 +68,6 @@ const {
         ascending: false,
       }
     );
-
-      .order(
-        "created_at",
-        {
-          ascending:
-            false,
-        }
-      );
-
   // FOLLOWERS COUNT
   const {
     count: followersCount,
