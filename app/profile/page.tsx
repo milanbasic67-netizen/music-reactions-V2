@@ -22,6 +22,12 @@ export default async function UserPage() {
 } =
   await supabase.auth.getUser();
 
+console.log(
+  "USER:",
+  user
+);
+
+
 if (!user) {
 
   return (
