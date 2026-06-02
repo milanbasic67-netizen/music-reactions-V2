@@ -67,9 +67,11 @@ app.post(
         req.body.url,
 
     });
+ }
+);
 
-
-);app.post("/render-duet", upload.single("reaction"), async (req, res) => {
+);
+app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
 
