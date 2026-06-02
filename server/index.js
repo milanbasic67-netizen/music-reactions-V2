@@ -4,7 +4,10 @@ const multer = require("multer");
 const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
-const { createClient } = require("@supabase/supabase-js");
+const { createClient } = 
+const { execSync } =
+  require("child_process");
+require("@supabase/supabase-js");
 require("dotenv").config();
 
 const app = express();
@@ -62,9 +65,8 @@ app.post(
 
     });
 
-  }
-);
-app.post("/render-duet", upload.single("reaction"), async (req, res) => {
+
+);app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
 
