@@ -4,12 +4,10 @@ const multer = require("multer");
 const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
-
+const ytdlp = require("yt-dlp-exec");
 const { createClient } =
   require("@supabase/supabase-js");
 
-const { execSync } =
-  require("child_process");
 
 require("dotenv").config();
 
@@ -60,10 +58,13 @@ app.post(
     );
 
     
-const { url } = req.body;
-  execSync(
-    `yt-dlp -J "${url}"`
-  ).toString();
+const info =
+  await ytdlp(
+    url,
+    {
+      dumpSingleJson: true,
+    }
+  );
 
 const video =
   JSON.parse(output);
