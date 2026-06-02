@@ -58,14 +58,13 @@ app.post(
     );
 
     
-const info =
+const video =
   await ytdlp(
     url,
     {
       dumpSingleJson: true,
     }
   );
-
 const video =
   JSON.parse(output);
 
