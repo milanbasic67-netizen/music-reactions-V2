@@ -40,6 +40,10 @@ export default function UploadSongPage() {
       null
     );
 
+const [youtubeUrl,
+  setYoutubeUrl] =
+  useState("");
+
   // LOAD PROFILE
   useEffect(() => {
 
@@ -552,6 +556,35 @@ export default function UploadSongPage() {
         />
 
       </div>
+
+
+{/* YOUTUBE URL */}
+<div className="mb-8">
+
+  <label className="block mb-2 text-zinc-400">
+
+    YouTube URL
+
+  </label>
+
+  <input
+
+    value={youtubeUrl}
+
+    onChange={
+      (e) =>
+        setYoutubeUrl(
+          e.target.value
+        )
+    }
+
+    placeholder="https://youtube.com/watch?v=..."
+
+    className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 outline-none"
+
+  />
+
+</div>
 
       {/* VIDEO */}
       <div className="mb-8">
