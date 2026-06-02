@@ -203,11 +203,55 @@ const [youtubeUrl,
   }
 
   // UPLOAD SONG
+
 async function importYoutube() {
 
-  alert(
-    youtubeUrl
-  );
+  try {
+
+    const res =
+      await fetch(
+
+        `${process.env.NEXT_PUBLIC_API_URL}/import-youtube`,
+
+        {
+
+          method: "POST",
+
+          headers: {
+
+            "Content-Type":
+              "application/json",
+
+          },
+
+          body:
+            JSON.stringify({
+
+              url:
+                youtubeUrl,
+
+            }),
+
+        }
+
+      );
+
+    const data =
+      await res.json();
+
+    alert(
+      JSON.stringify(data)
+    );
+
+  } catch (err) {
+
+    console.log(err);
+
+    alert(
+      "Import failed"
+    );
+
+  }
 
 }
 
