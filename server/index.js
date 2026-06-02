@@ -59,7 +59,7 @@ app.post(
       req.body
     );
 
-    const output =
+    
 const { url } = req.body;
   execSync(
     `yt-dlp -J "${url}"`
