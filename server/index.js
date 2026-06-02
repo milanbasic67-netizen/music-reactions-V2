@@ -60,6 +60,7 @@ app.post(
     );
 
     const output =
+const { url } = req.body;
   execSync(
     `yt-dlp -J "${url}"`
   ).toString();
