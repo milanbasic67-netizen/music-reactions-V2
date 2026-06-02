@@ -203,6 +203,14 @@ const [youtubeUrl,
   }
 
   // UPLOAD SONG
+async function importYoutube() {
+
+  alert(
+    youtubeUrl
+  );
+
+}
+
   async function uploadSong() {
 
     try {
@@ -586,6 +594,22 @@ const [youtubeUrl,
 
 </div>
 
+
+<button
+
+  type="button"
+
+  onClick={importYoutube}
+
+  disabled={loading}
+
+  className="w-full mb-8 bg-zinc-800 hover:bg-zinc-700 transition py-4 rounded-2xl font-black"
+
+>
+
+  Import YouTube
+
+</button>
       {/* VIDEO */}
       <div className="mb-8">
 
