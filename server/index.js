@@ -51,11 +51,11 @@ const upload = multer({ storage });
 app.post(
   "/import-youtube",
   async (req, res) => {
+try {
 
-    console.log(
-      "IMPORT YOUTUBE:",
-      req.body
-    );
+      const { url } =
+        req.body;
+    
 const video =
   await ytdlp(
     url,
