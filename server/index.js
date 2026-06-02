@@ -4,10 +4,13 @@ const multer = require("multer");
 const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
-const { createClient } = 
-const { execSync } = 
+
+const { createClient } =
+  require("@supabase/supabase-js");
+
+const { execSync } =
   require("child_process");
-require("@supabase/supabase-js");
+
 require("dotenv").config();
 
 const app = express();
