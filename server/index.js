@@ -59,14 +59,28 @@ app.post(
       req.body
     );
 
-    res.json({
+    const output =
+  execSync(
+    `yt-dlp -J "${url}"`
+  ).toString();
 
-      ok: true,
+const video =
+  JSON.parse(output);
 
-      url:
-        req.body.url,
+res.json({
 
-    });
+  ok: true,
+
+  title:
+    video.title,
+
+  artist:
+    video.uploader,
+
+  duration:
+    video.duration,
+
+});
  }
 );
 
