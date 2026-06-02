@@ -56,8 +56,6 @@ app.post(
       "IMPORT YOUTUBE:",
       req.body
     );
-
-    
 const video =
   await ytdlp(
     url,
@@ -65,8 +63,6 @@ const video =
       dumpSingleJson: true,
     }
   );
-const video =
-  JSON.parse(output);
 
 res.json({
 
