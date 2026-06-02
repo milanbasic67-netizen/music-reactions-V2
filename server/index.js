@@ -5,7 +5,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs");
 const { createClient } = 
-const { execSync } =
+const { execSync } = 
   require("child_process");
 require("@supabase/supabase-js");
 require("dotenv").config();
