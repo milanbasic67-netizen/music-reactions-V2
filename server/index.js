@@ -44,6 +44,26 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // 5. RUTA ZA RENDER
+app.post(
+  "/import-youtube",
+  async (req, res) => {
+
+    console.log(
+      "IMPORT YOUTUBE:",
+      req.body
+    );
+
+    res.json({
+
+      ok: true,
+
+      url:
+        req.body.url,
+
+    });
+
+  }
+);
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
