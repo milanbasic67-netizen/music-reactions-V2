@@ -48,41 +48,60 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // 5. RUTA ZA RENDER
-app.post(
+  app.post(
   "/import-youtube",
   async (req, res) => {
-try {
+
+    try {
 
       const { url } =
         req.body;
-    
-const video =
-  await ytdlp(
-    url,
-    {
-      dumpSingleJson: true,
+
+      const video =
+        await ytdlp(
+          url,
+          {
+            dumpSingleJson: true,
+          }
+        );
+
+      res.json({
+
+        ok: true,
+
+        title:
+          video.title,
+
+        artist:
+          video.uploader,
+
+        duration:
+          video.duration,
+
+      });
+
+    } catch (err) {
+
+      console.log(err);
+
+      res.status(500).json({
+
+        ok: false,
+
+        error:
+          err.toString(),
+
+      });
+
     }
-  );
 
-res.json({
-
-  ok: true,
-
-  title:
-    video.title,
-
-  artist:
-    video.uploader,
-
-  duration:
-    video.duration,
-
-});
- }
+  }
 );
 
-
-app.post("/render-duet", upload.single("reaction"), async (req, res) => {
+app.post(
+  "/render-duet",
+  upload.single("reaction"),
+  async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
 
