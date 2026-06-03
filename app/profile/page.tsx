@@ -134,7 +134,7 @@ const [reactions, setReactions] =
 
                 <span className="font-black">
 
-                  0
+                  {reactions.length}
 
                 </span>
 
