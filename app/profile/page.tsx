@@ -73,10 +73,9 @@ const {
     })
 
     .eq(
-      "following_id",
-      p.id
+      "following_username",
+      p.username
     );
-
 setFollowsCount(
   follows || 0
 );
@@ -93,10 +92,9 @@ const {
     })
 
     .eq(
-      "follower_id",
-      p.id
+      "follower_username",
+      p.username
     );
-
 setFollowingCount(
   following || 0
 );
