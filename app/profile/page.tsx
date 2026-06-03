@@ -18,6 +18,12 @@ export default function UserPage() {
     useState<any>(null);
 const [reactions, setReactions] =
   useState<any[]>([]);
+
+const [followsCount, setFollowsCount] =
+  useState(0);
+
+const [followingCount, setFollowingCount] =
+  useState(0);
   const [loading, setLoading] =
     useState(true);
 
@@ -54,6 +60,46 @@ const [reactions, setReactions] =
       data || []
     );
 
+const {
+  count: follows,
+} =
+  await supabase
+
+    .from("follows")
+
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+
+    .eq(
+      "following_id",
+      p.id
+    );
+
+setFollowsCount(
+  follows || 0
+);
+const {
+  count: following,
+} =
+  await supabase
+
+    .from("follows")
+
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+
+    .eq(
+      "follower_id",
+      p.id
+    );
+
+setFollowingCount(
+  following || 0
+);
     setLoading(false);
 
   }
@@ -150,13 +196,13 @@ const [reactions, setReactions] =
 
                 <span className="font-black">
 
-                  0
+                {followsCount}
 
                 </span>
 
                 <span className="text-zinc-500 ml-1">
 
-                  Followers
+                  Follows
 
                 </span>
 
@@ -166,7 +212,7 @@ const [reactions, setReactions] =
 
                 <span className="font-black">
 
-                  0
+                {followingCount}
 
                 </span>
 
