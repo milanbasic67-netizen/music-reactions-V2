@@ -170,7 +170,11 @@ app.post(
             "-movflags +faststart"
         ])
         .on("start", (cmd) => {
-            console.log("FFmpeg komanda pokrenuta!");
+
+  console.log(
+    "CMD:",
+    cmd
+  );
         })
         .on("progress", (p) => {
   console.log("FPS:",
