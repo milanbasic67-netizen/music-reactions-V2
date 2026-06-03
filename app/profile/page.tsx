@@ -23,43 +23,44 @@ const [reactions, setReactions] =
 
   useEffect(() => {
 
-    async function loadProfile() {
+  async function loadProfile() {
 
-      const p =
-        await getProfile();
+    const p =
+      await getProfile();
 
-      setProfile(p);
+    setProfile(p);
 
-      setLoading(false);
+    const { data } =
+      await supabase
 
-    }
+        .from("reactions")
 
-    loadProfile();
-const { data } =
-  await supabase
+        .select("*")
 
-    .from("reactions")
+        .eq(
+          "user_id",
+          p.id
+        )
 
-    .select("*")
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        );
 
-    .eq(
-      "user_id",
-      p.id
-    )
-
-    .order(
-      "created_at",
-      {
-        ascending:
-          false,
-      }
+    setReactions(
+      data || []
     );
 
-setReactions(
-  data || []
-);
+    setLoading(false);
 
-  }, []);
+  }
+
+  loadProfile();
+
+}, []);
 
   if (loading) {
 
