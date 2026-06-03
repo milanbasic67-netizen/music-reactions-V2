@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import VideoCard
+from "@/components/VideoCard";
 
+import { supabase }
+from "@/lib/supabase";
 import { getProfile }
 from "@/lib/getProfile";
 
@@ -12,7 +16,8 @@ export default function UserPage() {
 
   const [profile, setProfile] =
     useState<any>(null);
-
+const [reactions, setReactions] =
+  useState<any[]>([]);
   const [loading, setLoading] =
     useState(true);
 
@@ -30,6 +35,29 @@ export default function UserPage() {
     }
 
     loadProfile();
+const { data } =
+  await supabase
+
+    .from("reactions")
+
+    .select("*")
+
+    .eq(
+      "user_id",
+      p.id
+    )
+
+    .order(
+      "created_at",
+      {
+        ascending:
+          false,
+      }
+    );
+
+setReactions(
+  data || []
+);
 
   }, []);
 
@@ -165,11 +193,29 @@ export default function UserPage() {
 
       </div>
 
-      <div className="flex items-center justify-center h-[60vh] text-zinc-500">
+      <div className="snap-y snap-mandatory overflow-y-scroll h-[calc(100vh-180px)]">
 
-        Profile ready
+  {reactions?.map(
+    (
+      reaction
+    ) => (
 
-      </div>
+      <VideoCard
+
+        key={
+          reaction.id
+        }
+
+        reaction={
+          reaction
+        }
+
+      />
+
+    )
+  )}
+
+</div>
 
     </main>
 
