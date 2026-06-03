@@ -194,29 +194,48 @@ const [reactions, setReactions] =
 
       </div>
 
-      <div className="snap-y snap-mandatory overflow-y-scroll h-[calc(100vh-180px)]">
+      {reactions.length === 0 ? (
 
-  {reactions?.map(
-    (
-      reaction
-    ) => (
+  <div className="flex flex-col items-center justify-center h-[50vh] text-zinc-500">
 
-      <VideoCard
+    <div className="text-6xl mb-4">
 
-        key={
-          reaction.id
-        }
+      🎤
 
-        reaction={
-          reaction
-        }
+    </div>
 
-      />
+    <div className="text-xl font-bold">
 
-    )
-  )}
+      No duets yet
 
-</div>
+    </div>
+
+    <div className="text-sm mt-2">
+
+      Create your first reaction
+
+    </div>
+
+  </div>
+
+) : (
+
+  <div className="snap-y snap-mandatory overflow-y-scroll h-[calc(100vh-180px)]">
+
+    {reactions.map(
+      (reaction) => (
+
+        <VideoCard
+          key={reaction.id}
+          reaction={reaction}
+        />
+
+      )
+    )}
+
+  </div>
+
+)}
 
     </main>
 
