@@ -126,7 +126,7 @@ app.post(
 
     // FFmpeg PROCES
     console.log("Pokrećem FFmpeg...");
-    
+    console.time("TOTAL_RENDER");
     ffmpeg()
         .input(originalUrl)
         .input(reactionFile.path)
@@ -186,7 +186,7 @@ app.post(
         })
         .on("end", async () => {
             console.log("Render završen lokalno. Krećem upload na Supabase...");
-
+console.timeEnd("FFMPEG");
             try {
                 const storageName = `duets/${path.basename(outputPath)}`;
                 const fileStream = fs.createReadStream(outputPath);
@@ -211,7 +211,7 @@ app.post(
                 // ČIŠĆENJE: Obavezno brišemo privremene fajlove da ne prepunimo disk na Renderu
                 fs.unlink(reactionFile.path, (err) => { if (err) console.error("Greška pri brisanju raw fajla"); });
                 fs.unlink(outputPath, (err) => { if (err) console.error("Greška pri brisanju rendera"); });
-
+console.timeEnd("TOTAL_RENDER");
                 res.json({
                     success: true,
                     videoUrl: publicUrl
