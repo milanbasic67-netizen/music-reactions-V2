@@ -94,7 +94,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
   filter: "vstack",
   inputs: ["top", "bottom"],
   outputs: "vfinal"
-}
+},
             // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
             { filter: "volume", options: "0.2", inputs: "0:a", outputs: "a0" },
             { filter: "volume", options: "1.5", inputs: "1:a", outputs: "a1" },
