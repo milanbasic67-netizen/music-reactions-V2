@@ -15,12 +15,14 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
 [uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
 const upload = multer({ dest: uploadsDir });
 
+// Funkcija za preuzimanje originala pre rendera (ubrzava proces 10x)
 async function downloadFile(url, targetPath) {
     const writer = fs.createWriteStream(targetPath);
     const response = await axios({ url, method: 'GET', responseType: 'stream' });
@@ -32,13 +34,13 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- TIKTOK STYLE RENDER (9:16) ---");
+    console.log("\n--- TIKTOK DUET RENDER START ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
-    const finalDuration = parseFloat(duration) || 15;
+    const finalDuration = parseFloat(duration) || 10;
 
     try {
         await downloadFile(originalUrl, localOriginal);
@@ -48,20 +50,13 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // TIKTOK LOGIKA:
-                // Ciljamo ukupnu rezoluciju 540x960 (9:16 vertikalno).
-                // Svaki video (original i reakcija) mora biti 540x480.
-                
-                // 1. ORIGINAL (Gornji deo): Skaliraj da popuni 540x480, kropuj višak, resetuj SAR
+                // 1. ORIGINAL (Gornji deo) - 540x480 (pola od 540x960)
                 `[0:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v0]`,
-                
-                // 2. REAKCIJA (Donji deo): Skaliraj da popuni 540x480, kropuj višak, resetuj SAR
+                // 2. REAKCIJA (Donji deo) - 540x480
                 `[1:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v1]`,
-                
-                // 3. Spajanje (vstack) -> Rezultat je 540x960
+                // 3. Spajanje u vertikalni TikTok 9:16 format
                 `[v0][v1]vstack=inputs=2[v_final]`,
-                
-                // 4. Audio Mix (Stereo 44.1kHz)
+                // 4. Audio Mix (Normalizovan za telefon)
                 `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.4[a0]`,
                 `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
@@ -71,19 +66,19 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-map [a_final]",
                 "-c:v libx264",
                 "-preset ultrafast",
-                "-crf 26",           // Bolji kvalitet za TikTok izgled
-                "-threads 1",
+                "-crf 28",
+                "-threads 1", // Bitno za Starter Plan
                 "-pix_fmt yuv420p",
-                "-movflags +faststart" // Omogućava da video krene odmah na mobilnom
+                "-movflags +faststart"
             ])
-            .on("progress", (p) => process.stdout.write(`Vreme: ${p.timemark} \r`))
+            .on("progress", (p) => process.stdout.write(`Status: ${p.timemark} \r`))
             .on("error", (err) => {
                 console.error("FFmpeg Error:", err.message);
                 cleanup();
                 res.status(500).json({ error: "Render failed" });
             })
             .on("end", async () => {
-                console.log("\nRender završen (TikTok Format).");
+                console.log("\nRender uspešan. Šaljem na Supabase...");
                 try {
                     const storageName = `duets/tiktok-${Date.now()}.mp4`;
                     const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
@@ -109,4 +104,110 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`TikTok-Style Render Server na portu ${PORT}`));
+app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const ffmpeg = require("fluent-ffmpeg");
+const path = require("path");
+const fs = require("fs");
+const axios = require("axios");
+const { createClient } = require("@supabase/supabase-js");
+require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors({ origin: "*" }));
+app.use(express.json());
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const uploadsDir = path.join(__dirname, "uploads");
+const rendersDir = path.join(__dirname, "renders");
+[uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
+
+const upload = multer({ dest: uploadsDir });
+
+// Funkcija za preuzimanje originala pre rendera (ubrzava proces 10x)
+async function downloadFile(url, targetPath) {
+    const writer = fs.createWriteStream(targetPath);
+    const response = await axios({ url, method: 'GET', responseType: 'stream' });
+    return new Promise((resolve, reject) => {
+        response.data.pipe(writer);
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+    });
+}
+
+app.post("/render-duet", upload.single("reaction"), async (req, res) => {
+    console.log("\n--- TIKTOK DUET RENDER START ---");
+    const { originalUrl, duration } = req.body;
+    const reactionFile = req.file;
+
+    const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
+    const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
+    const finalDuration = parseFloat(duration) || 10;
+
+    try {
+        await downloadFile(originalUrl, localOriginal);
+
+        ffmpeg()
+            .input(localOriginal)
+            .input(reactionFile.path)
+            .duration(finalDuration)
+            .complexFilter([
+                // 1. ORIGINAL (Gornji deo) - 540x480 (pola od 540x960)
+                `[0:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v0]`,
+                // 2. REAKCIJA (Donji deo) - 540x480
+                `[1:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v1]`,
+                // 3. Spajanje u vertikalni TikTok 9:16 format
+                `[v0][v1]vstack=inputs=2[v_final]`,
+                // 4. Audio Mix (Normalizovan za telefon)
+                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.4[a0]`,
+                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
+                `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
+            ])
+            .outputOptions([
+                "-map [v_final]",
+                "-map [a_final]",
+                "-c:v libx264",
+                "-preset ultrafast",
+                "-crf 28",
+                "-threads 1", // Bitno za Starter Plan
+                "-pix_fmt yuv420p",
+                "-movflags +faststart"
+            ])
+            .on("progress", (p) => process.stdout.write(`Status: ${p.timemark} \r`))
+            .on("error", (err) => {
+                console.error("FFmpeg Error:", err.message);
+                cleanup();
+                res.status(500).json({ error: "Render failed" });
+            })
+            .on("end", async () => {
+                console.log("\nRender uspešan. Šaljem na Supabase...");
+                try {
+                    const storageName = `duets/tiktok-${Date.now()}.mp4`;
+                    const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
+                    if (upErr) throw upErr;
+                    const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
+                    cleanup();
+                    res.json({ success: true, videoUrl: publicUrl });
+                } catch (err) {
+                    cleanup();
+                    res.status(500).json({ error: "Upload failed" });
+                }
+            })
+            .save(outputPath);
+
+    } catch (err) {
+        console.error(err);
+        cleanup();
+        res.status(500).json({ error: "Server error" });
+    }
+
+    function cleanup() {
+        [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
+    }
+});
+
+app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));
