@@ -69,7 +69,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 // REAKCIJA (Dole): Tvoj 16:9 snimak se skalira da popuni 540x480.
                 // Pošto je tvoj snimak širok (16:9), FFmpeg će odseći levu i desnu stranu
                 // tako da ti ostaneš u sredini vertikalnog TikTok prozora.
-                `[1:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v1]`,
+                `[1:v]fps=25,scale=540:360:force_original_aspect_ratio=increase,crop=540:360,setsar=1[v1]`,
                 
                 // Spajanje u vertikalni TikTok 9:16 (540x960)
                 `[v0][v1]vstack=inputs=2[v_final]`,
