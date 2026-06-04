@@ -2,25 +2,15 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath =
-  require("ffmpeg-static");
-
-ffmpeg.setFfmpegPath(
-  ffmpegPath
-);
 const path = require("path");
 const fs = require("fs");
-const ytdlp = require("yt-dlp-exec");
-const { createClient } =
-  require("@supabase/supabase-js");
-
-
+const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. CORS PODEŠAVANJA za
+// 1. CORS PODEŠAVANJA
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST"],
@@ -54,68 +44,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // 5. RUTA ZA RENDER
-  app.post(
-  "/import-youtube",
-  async (req, res) => {
-
-    try {
-
-      const { url } =
-        req.body;
-
-      const video =
-        await ytdlp(
-          url,
-          {
-            dumpSingleJson: true,
-          }
-        );
-
-      res.json({
-
-        ok: true,
-
-        title:
-          video.title,
-
-        artist:
-          video.uploader,
-
-        duration:
-          video.duration,
-
-      });
-
-    } catch (err) {
-
-      console.log(err);
-
-      res.status(500).json({
-
-        ok: false,
-
-        error:
-          err.toString(),
-
-      });
-
-    }
-
-  }
-);
-
-app.post(
-  "/render-duet",
-  upload.single("reaction"),
-  async (req, res) => {
+app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
-
-    console.log("CONTENT TYPE:",req.headers["content-type"]
-);
+    
     const { originalUrl, duration } = req.body;
-    console.log("BODY:", req.body);
-    console.log("DURATION:", duration);
     const reactionFile = req.file;
 
     if (!originalUrl || !reactionFile) {
@@ -132,7 +65,7 @@ app.post(
 
     // FFmpeg PROCES
     console.log("Pokrećem FFmpeg...");
-    console.time("TOTAL_RENDER");
+    
     ffmpeg()
         .input(originalUrl)
         .input(reactionFile.path)
@@ -141,24 +74,24 @@ app.post(
             // 1. Skaliranje reakcije (Pozadina - 720x1280)
             {
                 filter: "scale",
-                options: "540:960:force_original_aspect_ratio=increase,crop=540:576",
-                inputs: "1:v", outputs: "reaction"
+                options: "720:1280:force_original_aspect_ratio=increase,crop=720:1280",
+                inputs: "1:v", outputs: "v1"
             },
             // 2. Skaliranje originalnog videa (Overlay prozor - npr. širina 320)
             {
                 filter: "scale",
-                options: "540:384:force_original_aspect_ratio=increase,crop=540:384",
-                inputs: "0:v", outputs: "original"
+                options: "320:-1",
+                inputs: "0:v", outputs: "v0"
             },
             // 3. Postavljanje originala preko reakcije (x=40, y=40 od gornjeg levog ugla)
             {
-    filter: "vstack",
-    inputs: ["original", "reaction"],
-    outputs: "vfinal"
-},
+                filter: "overlay",
+                options: { x: 40, y: 40 },
+                inputs: ["v1", "v0"], outputs: "vfinal"
+            },
             // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
-            { filter: "volume", options: "0.15", inputs: "0:a", outputs: "a0" },
-            { filter: "volume", options: "1.8", inputs: "1:a", outputs: "a1" },
+            { filter: "volume", options: "0.2", inputs: "0:a", outputs: "a0" },
+            { filter: "volume", options: "1.5", inputs: "1:a", outputs: "a1" },
             { 
                 filter: "amix", 
                 options: { inputs: 2, duration: "first", dropout_transition: 2 }, 
@@ -170,23 +103,17 @@ app.post(
             "-map [afinal]",
             "-c:v libx264",
             "-preset ultrafast", // Najbrže enkodovanje, bitno za slabije servere
-            "-crf 32",           // Solidan kvalitet uz manji fajl
+            "-crf 28",           // Solidan kvalitet uz manji fajl
             "-pix_fmt yuv420p",
-            "-threads 2",
             "-movflags +faststart"
         ])
         .on("start", (cmd) => {
-
-  console.log(
-    "CMD:",
-    cmd
-  );
+            console.log("FFmpeg komanda pokrenuta!");
         })
-        .on("progress", (p) => {
-  console.log("FPS:",
-    p.currentFps,
-    "PERCENT:",
-    p.percent);
+        .on("progress", (progress) => {
+            if (progress.percent) {
+                console.log(`Rendering: ${Math.round(progress.percent)}%`);
+            }
         })
         .on("error", (err) => {
             console.error("FFmpeg Error:", err.message);
@@ -196,7 +123,7 @@ app.post(
         })
         .on("end", async () => {
             console.log("Render završen lokalno. Krećem upload na Supabase...");
-console.timeEnd("FFMPEG");
+
             try {
                 const storageName = `duets/${path.basename(outputPath)}`;
                 const fileStream = fs.createReadStream(outputPath);
@@ -221,7 +148,7 @@ console.timeEnd("FFMPEG");
                 // ČIŠĆENJE: Obavezno brišemo privremene fajlove da ne prepunimo disk na Renderu
                 fs.unlink(reactionFile.path, (err) => { if (err) console.error("Greška pri brisanju raw fajla"); });
                 fs.unlink(outputPath, (err) => { if (err) console.error("Greška pri brisanju rendera"); });
-console.timeEnd("TOTAL_RENDER");
+
                 res.json({
                     success: true,
                     videoUrl: publicUrl
