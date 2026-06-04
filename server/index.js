@@ -151,17 +151,11 @@ app.post(
     outputs: "vfinal"
 },
             // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
-            { filter: "volume", options: "0.15", inputs: "0:a", outputs: "a0" },
-            { filter: "volume", options: "1.8", inputs: "1:a", outputs: "a1" },
-            { 
-                filter: "amix", 
-                options: { inputs: 2, duration: "first", dropout_transition: 2 }, 
-                inputs: ["a0", "a1"], outputs: "afinal" 
-            }
+            
         ])
         .outputOptions([
-            "-map [vfinal]",
-            "-map [afinal]",
+            "-an [vfinal]",
+            
             "-c:v libx264",
             "-preset ultrafast", // Najbrže enkodovanje, bitno za slabije servere
             "-crf 32",           // Solidan kvalitet uz manji fajl
