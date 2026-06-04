@@ -15,7 +15,6 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
 [uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
@@ -33,7 +32,7 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- RENDER START (ANTI-STRETCH MODE) ---");
+    console.log("\n--- NO-STRETCH DUET RENDER ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
@@ -49,23 +48,24 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // ORIGINAL (Gornji video):
-                // 1. Povećavamo na 720x1280 (9:16) bez rastezanja (force_original_aspect_ratio=increase)
-                // 2. Sečemo tačno na pola visine (720x640)
-                // 3. setsar=1 resetuje oblik piksela na savršen kvadrat (rešava izduživanje)
-                // 4. Skaliramo na finalnih 360x320
-                `[0:v]fps=25,scale=720:1280:force_original_aspect_ratio=increase,crop=720:640,scale=360:320,setsar=1[v0]`,
+                // LOGIKA:
+                // 1. Skaliraj video tako da POPUNI boks 720x640 (pola 9:16 ekrana)
+                // 2. force_original_aspect_ratio=increase garantuje da nema rastezanja
+                // 3. crop=720:640 odseca delove koji vire van boksa (centar)
+                // 4. setsar=1 resetuje metapodatke o pikselima
                 
-                // REAKCIJA (Donji video):
-                // Ista procedura koja garantuje da će i snimak sa kamere biti ispravan
-                `[1:v]fps=25,scale=720:1280:force_original_aspect_ratio=increase,crop=720:640,scale=360:320,setsar=1[v1]`,
+                // [0:v] ORIGINAL (Gornja polovina)
+                `[0:v]fps=25,scale=720:640:force_original_aspect_ratio=increase,crop=720:640,setsar=1[v0]`,
                 
-                // Audio normalizacija i miks
+                // [1:v] REAKCIJA (Donja polovina)
+                `[1:v]fps=25,scale=720:640:force_original_aspect_ratio=increase,crop=720:640,setsar=1[v1]`,
+                
+                // Spajanje u vertikalni video (720x1280 ukupno)
+                `[v0][v1]vstack=inputs=2[v_final]`,
+                
+                // Audio miks (stabilizacija sample rate-a)
                 `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.3[a0]`,
                 `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
-                
-                // Spajanje
-                `[v0][v1]vstack=inputs=2[v_final]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
             ])
             .outputOptions([
@@ -78,13 +78,14 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-pix_fmt yuv420p",
                 "-movflags +faststart"
             ])
+            .on("progress", (p) => process.stdout.write(`Status: ${p.timemark} \r`))
             .on("error", (err) => {
                 console.error("FFmpeg Error:", err.message);
                 cleanup();
                 res.status(500).json({ error: "Render failed" });
             })
             .on("end", async () => {
-                console.log("Render uspešan. Šaljem...");
+                console.log("\nRender uspešan bez rastezanja slike.");
                 try {
                     const storageName = `duets/final-${Date.now()}.mp4`;
                     const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
@@ -94,7 +95,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                     res.json({ success: true, videoUrl: publicUrl });
                 } catch (err) {
                     cleanup();
-                    res.status(500).send("Upload failed");
+                    res.status(500).json({ error: "Upload failed" });
                 }
             })
             .save(outputPath);
@@ -102,7 +103,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) {
         console.error(err);
         cleanup();
-        res.status(500).send("Server error");
+        res.status(500).json({ error: "Server error" });
     }
 
     function cleanup() {
@@ -110,4 +111,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Anti-Stretch Server na ${PORT}`));
+app.listen(PORT, () => console.log(`Server aktivan na ${PORT}`));
