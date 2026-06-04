@@ -190,7 +190,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
             onClick={startRecording}
             className="w-full bg-red-600 hover:bg-red-500 text-white py-5 rounded-2xl font-black text-xl shadow-lg transition active:scale-95"
           >
-            ZAPOČNI REAKCIJU
+            RECORD
           </button>
         )}
 
@@ -199,7 +199,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
             onClick={stopRecording}
             className="w-full bg-white hover:bg-zinc-200 text-black py-5 rounded-2xl font-black text-xl shadow-lg transition active:scale-95"
           >
-            ZAVRŠI I OBJAVI
+            PUBLISH
           </button>
         )}
 
@@ -207,7 +207,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-zinc-800 border-t-red-600 rounded-full animate-spin" />
             <p className="text-zinc-400 font-bold animate-pulse text-sm">
-              Renderovanje i slanje dueta...
+              WORKING...
             </p>
           </div>
         )}
