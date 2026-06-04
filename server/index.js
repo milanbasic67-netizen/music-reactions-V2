@@ -154,7 +154,7 @@ app.post(
             
         ])
         .outputOptions([
-            "-an [vfinal]",
+            "-map [vfinal]",
             
             "-c:v libx264",
             "-preset ultrafast", // Najbrže enkodovanje, bitno za slabije servere
