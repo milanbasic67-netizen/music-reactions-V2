@@ -67,38 +67,46 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     console.log("Pokrećem FFmpeg...");
     
     ffmpeg()
-        .input(originalUrl)
-        .input(reactionFile.path)
-        .duration(finalDuration + 0.5) // Mala margina
-        .complexFilter([
-            // 1. Skaliranje reakcije (Pozadina - 720x1280)
-            {
-  filter: "scale",
-  options: "540:640:force_original_aspect_ratio=increase,crop=540:640",
-  inputs: "1:v",
-  outputs: "v1"
-},
-{
-  filter: "scale",
-  options: "540:640:force_original_aspect_ratio=increase,crop=540:640",
-  inputs: "0:v",
-  outputs: "v0"
-},
-{
-  filter: "overlay",
-  options: { x: 0, y: 320 },
-  inputs: ["v1", "v0"],
-  outputs: "vfinal"
-},
-            // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
-            { filter: "volume", options: "0.2", inputs: "0:a", outputs: "a0" },
-            { filter: "volume", options: "1.5", inputs: "1:a", outputs: "a1" },
-            { 
-                filter: "amix", 
-                options: { inputs: 2, duration: "first", dropout_transition: 2 }, 
-                inputs: ["a0", "a1"], outputs: "afinal" 
-            }
-        ])
+    .input(originalUrl)
+    .input(reactionFile.path)
+    .duration(finalDuration + 0.5)
+    .complexFilter([
+        // 1. Skaliranje i kropovanje prvog videa (Gornja polovina - 720x640)
+        {
+            filter: "scale",
+            options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
+            inputs: "0:v",
+            outputs: "top"
+        },
+        // 2. Skaliranje i kropovanje drugog videa (Donja polovina - 720x640)
+        {
+            filter: "scale",
+            options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
+            inputs: "1:v",
+            outputs: "bottom"
+        },
+        // 3. Vertikalno slaganje (Stack) - stavlja 'top' iznad 'bottom'
+        {
+            filter: "vstack",
+            inputs: ["top", "bottom"],
+            outputs: "vfinal"
+        },
+        // 4. Miksovanje audia (da se čuju oba videa istovremeno)
+        {
+            filter: "amix",
+            options: { inputs: 2, duration: "longest" },
+            inputs: ["0:a", "1:a"],
+            outputs: "afinal"
+        }
+    ])
+    .map("vfinal") // Koristi finalni video stream
+    .map("afinal") // Koristi finalni audio stream
+    .videoCodec("libx264")
+    .outputOptions([
+        "-preset veryfast",
+        "-crf 23",
+        "-movflags +faststart"
+    ])
         .outputOptions([
             "-map [vfinal]",
             "-map [afinal]",
