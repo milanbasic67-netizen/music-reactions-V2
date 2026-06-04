@@ -24,29 +24,32 @@ export default function VideoCard({ reaction }: Props) {
   const [likesCount, setLikesCount] = useState(reaction.likes_count || 0);
   const [muted, setMuted] = useState(true);
 
-  // LOAD PROFILE & CHECK IF LIKED
+  // 1. UCITAVANJE PROFILA I PROVERA LAJKA
   useEffect(() => {
     async function load() {
       const p = await getProfile();
       setProfile(p);
 
       if (p) {
-        const { data } = await supabase
+        const { data: existing } = await supabase
           .from("likes")
           .select("*")
           .eq("reaction_id", reaction.id)
           .eq("user_id", p.id)
           .single();
-        if (data) setLiked(true);
+
+        if (existing) setLiked(true);
       }
     }
     load();
   }, [reaction.id]);
 
-  // AUTOPLAY & INTERSECTION OBSERVER
+  // 2. AUTOPLAY LOGIKA (TikTok stil)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    video.muted = true; // Forsiramo mute za autoplay
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -56,103 +59,82 @@ export default function VideoCard({ reaction }: Props) {
           video.pause();
         }
       },
-      { threshold: 0.6 }
+      { threshold: 0.7 }
     );
 
     observer.observe(video);
     return () => observer.disconnect();
   }, []);
 
-  // TOGGLE SOUND
+  // 3. TOGGLE SOUND
   function toggleSound() {
     if (!videoRef.current) return;
-    videoRef.current.muted = !muted;
-    setMuted(!muted);
+    const newState = !muted;
+    videoRef.current.muted = newState;
+    setMuted(newState);
   }
 
-  // LIKE LOGIC
+  // 4. LIKE LOGIC
   async function toggleLike() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return alert("Login required");
 
     if (liked) {
       await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
-      setLikesCount((prev: number) => prev - 1);
       setLiked(false);
+      setLikesCount((prev: number) => prev - 1);
     } else {
       await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
-      setLikesCount((prev: number) => prev + 1);
       setLiked(true);
+      setLikesCount((prev: number) => prev + 1);
     }
   }
 
-  // SHARE
+  // 5. SHARE
   async function shareVideo() {
     await navigator.clipboard.writeText(`${window.location.origin}/reaction/${reaction.id}`);
     alert("Link copied!");
   }
 
-    // DELETE REACTION
+  // 6. ADMIN DELETE (Briše bazu i Storage fajl)
   async function deleteReaction() {
+    // Provera da li je ulogovan admin
+    if (profile?.role !== "admin") {
+      alert("Samo administrator može brisati objave.");
+      return;
+    }
+
+    const confirmed = confirm("Da li sigurno želiš da obrišeš ovaj duet i trajno ukloniš video?");
+    if (!confirmed) return;
+
     try {
-      // 1. Provera admin statusa iz profila koji smo već učitali u useEffect-u
-      if (profile?.role !== "admin") {
-        alert("Samo admin može brisati reakcije.");
-        return;
-      }
-
-      const confirmed = confirm("Da li ste sigurni da želite da obrišete ovaj duet i video fajl?");
-      if (!confirmed) return;
-
-      // 2. Izdvajanje putanje fajla iz URL-a
-      // URL format: .../storage/v1/object/public/videos/duets/tiktok-123.mp4
-      // Nama treba samo: "duets/tiktok-123.mp4"
+      // Putanja do fajla u storage-u (buket: videos, folder: duets)
+      // Primer URL-a: .../videos/duets/tiktok-123.mp4 -> uzimamo "duets/tiktok-123.mp4"
       const videoUrl = reaction.video_url;
-      const pathParts = videoUrl.split("/videos/");
-      const storagePath = pathParts[1]; 
+      const storagePath = videoUrl.split("/videos/")[1];
 
       if (storagePath) {
-        console.log("Brišem fajl iz storage-a:", storagePath);
-        const { error: storageError } = await supabase.storage
-          .from("videos")
-          .remove([storagePath]);
-
-        if (storageError) {
-          console.error("Greška pri brisanju fajla:", storageError.message);
-          // Nastavljamo dalje čak i ako fajl nije nađen, da bismo očistili bazu
-        }
+        await supabase.storage.from("videos").remove([storagePath]);
       }
 
-      // 3. Brisanje povezanih lajkova (zbog Foreign Key ograničenja)
-      await supabase
-        .from("likes")
-        .delete()
-        .eq("reaction_id", reaction.id);
+      // Brišemo lajkove pa reakciju
+      await supabase.from("likes").delete().eq("reaction_id", reaction.id);
+      const { error } = await supabase.from("reactions").delete().eq("id", reaction.id);
 
-      // 4. Brisanje zapisa iz tabele 'reactions'
-      const { error: dbError } = await supabase
-        .from("reactions")
-        .delete()
-        .eq("id", reaction.id);
+      if (error) throw error;
 
-      if (dbError) {
-        alert("Greška pri brisanju iz baze: " + dbError.message);
-        return;
-      }
-
-      alert("Duet je uspešno obrisan.");
+      alert("Obrisano!");
       window.location.reload();
-
     } catch (err) {
-      console.error("System Error:", err);
-      alert("Došlo je do greške prilikom brisanja.");
+      console.error(err);
+      alert("Greška pri brisanju.");
     }
   }
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-black snap-start flex items-center justify-center">
+    <div className="relative h-[100dvh] w-screen overflow-hidden bg-black snap-start flex items-center justify-center">
       
-      {/* VIDEO ELEMENT - OPTIMIZOVAN ZA 9:16 */}
+      {/* VIDEO - 9:16 TikTok Format */}
       <video
         ref={videoRef}
         src={reaction.video_url}
@@ -160,62 +142,43 @@ export default function VideoCard({ reaction }: Props) {
         playsInline
         muted={muted}
         preload="metadata"
-        className="w-full h-full object-cover shadow-2xl"
+        className="w-full h-full object-cover z-0"
       />
 
-      {/* DARK GRADIENT OVERLAY (Samo pri dnu radi bolje čitljivosti teksta) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 z-10" />
-
-      {/* UI CONTROLS */}
-      <div className="absolute inset-0 z-20 flex flex-col justify-end p-5 pb-24">
+      {/* OVERLAY ZA KONTROLE */}
+      <div className="absolute inset-0 z-10 flex">
         
-        <div className="flex justify-between items-end">
-          
-          {/* LEFT: INFO */}
-          <div className="flex-1 text-white">
-            <Link href={`/u/${reaction.username}`} className="font-black text-xl hover:underline">
-              @{reaction.username}
-            </Link>
-            <h2 className="text-lg font-bold mt-2 truncate w-[70vw]">{reaction.song}</h2>
-            <p className="text-zinc-300 text-sm">{reaction.artist}</p>
-          </div>
-
-          {/* RIGHT: BUTTONS */}
-          <div className="flex flex-col items-center gap-6 mb-2">
-            
-            {/* LIKE */}
-            <button onClick={toggleLike} className="group">
-              <div className={`p-3 rounded-full bg-black/20 backdrop-blur-sm transition ${liked ? 'text-red-500' : 'text-white'}`}>
-                <Heart className={`w-7 h-7 ${liked ? 'fill-current' : ''}`} />
-              </div>
-              <span className="text-white text-xs font-bold mt-1 block text-center">{likesCount}</span>
-            </button>
-
-            {/* SHARE */}
-            <button onClick={shareVideo}>
-              <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
-                <Share className="w-7 h-7" />
-              </div>
-            </button>
-
-            {/* SOUND */}
-            <button onClick={toggleSound}>
-              <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
-                {muted ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
-              </div>
-            </button>
-
-            {/* DELETE (Show only for owner/admin) */}
-            {(profile?.id === reaction.user_id || profile?.role === "admin") && (
-              <button onClick={deleteReaction} className="text-zinc-500 hover:text-red-500 transition">
-                <Trash2 className="w-6 h-6" />
-              </button>
-            )}
-
-          </div>
+        {/* LEVA STRANA - INFO O PESMI */}
+        <div className="flex-1 flex flex-col justify-end p-6 mb-20">
+          <Link href={`/u/${reaction.username}`} className="font-black text-2xl text-white hover:underline">
+            @{reaction.username}
+          </Link>
+          <h2 className="text-lg mt-3 font-bold text-white truncate w-[70%]">
+            {reaction.song}
+          </h2>
+          <p className="text-zinc-300 mt-1">{reaction.artist}</p>
         </div>
-      </div>
 
-    </div>
-  );
-}
+        {/* DESNA STRANA - DUGMIĆI */}
+        <div className="w-24 flex flex-col items-center justify-end gap-6 pb-32 pr-2">
+          
+          {/* LIKE */}
+          <button onClick={toggleLike} className="flex flex-col items-center group">
+            <div className={`p-3 rounded-full bg-black/20 backdrop-blur-sm transition ${liked ? 'text-red-500' : 'text-white'}`}>
+                <Heart className={`w-8 h-8 ${liked ? 'fill-current' : ''}`} />
+            </div>
+            <span className="text-white text-xs mt-1 font-bold">{likesCount}</span>
+          </button>
+
+          {/* SHARE */}
+          <button onClick={shareVideo}>
+            <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+                <Share className="w-8 h-8" />
+            </div>
+          </button>
+
+          {/* SOUND */}
+          <button onClick={toggleSound}>
+            <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+                {muted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
+            </div>
