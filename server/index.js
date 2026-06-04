@@ -34,7 +34,7 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- RENDER START (STABLE MODE) ---");
+    console.log("\n--- RENDER START (BRUTE FORCE MODE) ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
@@ -45,46 +45,52 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     try {
         await downloadFile(originalUrl, localOriginal);
 
+        console.log("Pokrećem FFmpeg sa pojačanom stabilnošću...");
+        
         ffmpeg()
             .input(localOriginal)
             .input(reactionFile.path)
+            .inputOptions([
+                "-analyzeduration 10M", // Dajemo više vremena za analizu fajla
+                "-probesize 10M"
+            ])
             .duration(finalDuration)
             .complexFilter([
-                // ORIGINAL: Skaliraj na 360 širinu, osiguraj parnu visinu, kropuj centar 360x320
-                `[0:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v0]`,
-                // REAKCIJA: Ista logika
-                `[1:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v1]`,
+                // ORIGINAL: Forsiramo tačno 360x320 bez kompleksne matematike
+                // scale=360:320:force_original_aspect_ratio=increase,crop=360:320 je "Cover" metod
+                `[0:v]fps=25,scale=360:320:force_original_aspect_ratio=increase,crop=360:320,setsar=1[v0]`,
                 
-                // Spajanje videa
-                `[v0][v1]vstack=inputs=2[v_stacked]`,
-
-                // AUDIO: amix može da pukne ako ulazi nisu isti. 
-                // Dodajemo aresample=44100 da ih izjednačimo pre miksa.
-                `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.3[a0]`,
-                `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.2[a1]`,
-                `[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[afinal]`
+                // REAKCIJA (Kamera): Isto kao original
+                `[1:v]fps=25,scale=360:320:force_original_aspect_ratio=increase,crop=360:320,setsar=1[v1]`,
+                
+                // AUDIO: Forsiramo resample na 44100 i stereo da bi se amix lakše snašao
+                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.3[a0]`,
+                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
+                
+                // SPAJANJE: vstack i amix
+                `[v0][v1]vstack=inputs=2[v_final]`,
+                `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
             ])
             .outputOptions([
-                "-map [v_stacked]",
-                "-map [afinal]",
+                "-map [v_final]",
+                "-map [a_final]",
                 "-c:v libx264",
                 "-preset ultrafast",
-                "-crf 28",
+                "-crf 30",
                 "-threads 1",
                 "-pix_fmt yuv420p",
                 "-movflags +faststart"
             ])
-            .on("start", (cmd) => console.log("FFmpeg započeo..."))
-            .on("progress", (p) => process.stdout.write(`Progres: ${p.timemark} \r`))
+            .on("start", (cmd) => console.log("Komanda pokrenuta."))
+            .on("progress", (p) => process.stdout.write(`Vreme: ${p.timemark} \r`))
             .on("error", (err) => {
                 console.error("\nFFmpeg Error:", err.message);
-                // Ako amix pukne, pokušavamo render BEZ audio miksa (samo sa originalnim zvukom)
-                console.log("Pokušavam fallback render (samo originalni audio)...");
-                fallbackRender(localOriginal, reactionFile.path, outputPath, finalDuration, res);
+                // FINALNI FALLBACK: Ako amix i dalje pravi problem, uzimamo samo zvuk originala
+                fallbackRenderSimple(localOriginal, reactionFile.path, outputPath, finalDuration, res);
             })
             .on("end", async () => {
-                console.log("\nRender uspešan.");
-                await handleSupabaseUpload(outputPath, res);
+                console.log("\nRender uspešan!");
+                await uploadToSupabase(outputPath, res);
             })
             .save(outputPath);
 
@@ -93,15 +99,15 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 
-    // --- POMOĆNE FUNKCIJE UNUTAR RUTE ---
+    // --- POMOĆNE FUNKCIJE ---
 
-    async function handleSupabaseUpload(filePath, response) {
+    async function uploadToSupabase(filePath, response) {
         try {
-            const storageName = `duets/final-${Date.now()}.mp4`;
-            const fileStream = fs.createReadStream(filePath);
-            const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fileStream);
-            if (upErr) throw upErr;
-            const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
+            const stream = fs.createReadStream(filePath);
+            const name = `duets/duet-${Date.now()}.mp4`;
+            const { error } = await supabase.storage.from("videos").upload(name, stream);
+            if (error) throw error;
+            const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(name);
             cleanup();
             response.json({ success: true, videoUrl: publicUrl });
         } catch (err) {
@@ -110,20 +116,20 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         }
     }
 
-    function fallbackRender(orig, react, out, dur, response) {
-        // Ovaj render se pokreće ako prvi pukne zbog audia (npr. mikrofon nije radio)
+    function fallbackRenderSimple(orig, react, out, dur, response) {
+        console.log("Pokrećem fallback (Bez miksanja audia)...");
         ffmpeg()
             .input(orig)
             .input(react)
             .duration(dur)
             .complexFilter([
-                `[0:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v0]`,
-                `[1:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v1]`,
-                `[v0][v1]vstack=inputs=2[v_stacked]`
+                `[0:v]fps=25,scale=360:320:force_original_aspect_ratio=increase,crop=360:320,setsar=1[v0]`,
+                `[1:v]fps=25,scale=360:320:force_original_aspect_ratio=increase,crop=360:320,setsar=1[v1]`,
+                `[v0][v1]vstack=inputs=2[v]`
             ])
-            .outputOptions(["-map [v_stacked]", "-map 0:a", "-c:v libx264", "-preset ultrafast", "-threads 1"])
-            .on("end", () => handleSupabaseUpload(out, response))
-            .on("error", (e) => { cleanup(); response.status(500).send("Double failure"); })
+            .outputOptions(["-map [v]", "-map 0:a", "-c:v libx264", "-preset ultrafast", "-threads 1"])
+            .on("end", () => uploadToSupabase(out, response))
+            .on("error", (e) => { cleanup(); response.status(500).send("Total failure"); })
             .save(out);
     }
 
