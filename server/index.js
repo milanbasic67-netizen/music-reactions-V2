@@ -34,11 +34,9 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- RENDER START (NO-STRETCH MODE) ---");
+    console.log("\n--- RENDER START (STABLE MODE) ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
-
-    if (!originalUrl || !reactionFile) return res.status(400).json({ error: "Missing files" });
 
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
@@ -52,22 +50,18 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // [0:v] ORIGINAL VIDEO:
-                // 1. Skaliraj na širinu 360, visinu izračunaj proporcionalno
-                // 2. Odseci (crop) tačno 360x320 iz samog centra (0:320:0:(ih-320)/2)
-                // 3. setsar=1 osigurava kvadratne piksele (nema izduživanja)
-                `[0:v]fps=25,scale=360:-1,crop=360:320:0:(ih-320)/2,setsar=1[v0]`,
-
-                // [1:v] REAKCIJA (KAMERA):
-                // Ista logika: širina 360, proporcionalna visina, pa krop centra
-                `[1:v]fps=25,scale=360:-1,crop=360:320:0:(ih-320)/2,setsar=1[v1]`,
-
-                // Vertikalno spajanje
+                // ORIGINAL: Skaliraj na 360 širinu, osiguraj parnu visinu, kropuj centar 360x320
+                `[0:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v0]`,
+                // REAKCIJA: Ista logika
+                `[1:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v1]`,
+                
+                // Spajanje videa
                 `[v0][v1]vstack=inputs=2[v_stacked]`,
 
-                // Audio miks
-                `[0:a]volume=0.3[a0]`,
-                `[1:a]volume=1.2[a1]`,
+                // AUDIO: amix može da pukne ako ulazi nisu isti. 
+                // Dodajemo aresample=44100 da ih izjednačimo pre miksa.
+                `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.3[a0]`,
+                `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.2[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[afinal]`
             ])
             .outputOptions([
@@ -80,33 +74,57 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-pix_fmt yuv420p",
                 "-movflags +faststart"
             ])
-            .on("progress", (p) => process.stdout.write(`Vreme: ${p.timemark} \r`))
+            .on("start", (cmd) => console.log("FFmpeg započeo..."))
+            .on("progress", (p) => process.stdout.write(`Progres: ${p.timemark} \r`))
             .on("error", (err) => {
-                console.error("FFmpeg Error:", err.message);
-                cleanup();
-                res.status(500).json({ error: "Render failed" });
+                console.error("\nFFmpeg Error:", err.message);
+                // Ako amix pukne, pokušavamo render BEZ audio miksa (samo sa originalnim zvukom)
+                console.log("Pokušavam fallback render (samo originalni audio)...");
+                fallbackRender(localOriginal, reactionFile.path, outputPath, finalDuration, res);
             })
             .on("end", async () => {
-                console.log("\nRender završen bez izduživanja slike.");
-                try {
-                    const storageName = `duets/final-${Date.now()}.mp4`;
-                    const fileStream = fs.createReadStream(outputPath);
-                    const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fileStream);
-                    if (upErr) throw upErr;
-                    const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
-                    cleanup();
-                    res.json({ success: true, videoUrl: publicUrl });
-                } catch (err) {
-                    cleanup();
-                    res.status(500).json({ error: "Upload failed" });
-                }
+                console.log("\nRender uspešan.");
+                await handleSupabaseUpload(outputPath, res);
             })
             .save(outputPath);
 
     } catch (err) {
         console.error(err);
-        cleanup();
         res.status(500).json({ error: "Server error" });
+    }
+
+    // --- POMOĆNE FUNKCIJE UNUTAR RUTE ---
+
+    async function handleSupabaseUpload(filePath, response) {
+        try {
+            const storageName = `duets/final-${Date.now()}.mp4`;
+            const fileStream = fs.createReadStream(filePath);
+            const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fileStream);
+            if (upErr) throw upErr;
+            const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
+            cleanup();
+            response.json({ success: true, videoUrl: publicUrl });
+        } catch (err) {
+            cleanup();
+            response.status(500).json({ error: "Upload failed" });
+        }
+    }
+
+    function fallbackRender(orig, react, out, dur, response) {
+        // Ovaj render se pokreće ako prvi pukne zbog audia (npr. mikrofon nije radio)
+        ffmpeg()
+            .input(orig)
+            .input(react)
+            .duration(dur)
+            .complexFilter([
+                `[0:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v0]`,
+                `[1:v]fps=25,scale=360:trunc(ow/a/2)*2,crop=360:320:0:(ih-320)/2,setsar=1[v1]`,
+                `[v0][v1]vstack=inputs=2[v_stacked]`
+            ])
+            .outputOptions(["-map [v_stacked]", "-map 0:a", "-c:v libx264", "-preset ultrafast", "-threads 1"])
+            .on("end", () => handleSupabaseUpload(out, response))
+            .on("error", (e) => { cleanup(); response.status(500).send("Double failure"); })
+            .save(out);
     }
 
     function cleanup() {
