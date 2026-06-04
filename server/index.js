@@ -32,7 +32,7 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- NO-STRETCH DUET RENDER ---");
+    console.log("\n--- RENDER START (MOBILE OPTIMIZED) ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
@@ -48,22 +48,19 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // LOGIKA:
-                // 1. Skaliraj video tako da POPUNI boks 720x640 (pola 9:16 ekrana)
-                // 2. force_original_aspect_ratio=increase garantuje da nema rastezanja
-                // 3. crop=720:640 odseca delove koji vire van boksa (centar)
-                // 4. setsar=1 resetuje metapodatke o pikselima
+                // LOGIKA ZA 480p (Idealno za mobilni ekran):
+                // Svaki video ide u prozor 480x427 (ukupna visina 854)
                 
                 // [0:v] ORIGINAL (Gornja polovina)
-                `[0:v]fps=25,scale=720:640:force_original_aspect_ratio=increase,crop=720:640,setsar=1[v0]`,
+                `[0:v]fps=25,scale=480:427:force_original_aspect_ratio=increase,crop=480:427,setsar=1[v0]`,
                 
                 // [1:v] REAKCIJA (Donja polovina)
-                `[1:v]fps=25,scale=720:640:force_original_aspect_ratio=increase,crop=720:640,setsar=1[v1]`,
+                `[1:v]fps=25,scale=480:427:force_original_aspect_ratio=increase,crop=480:427,setsar=1[v1]`,
                 
-                // Spajanje u vertikalni video (720x1280 ukupno)
+                // Spajanje u 480x854 (Standardna 480p vertikala)
                 `[v0][v1]vstack=inputs=2[v_final]`,
                 
-                // Audio miks (stabilizacija sample rate-a)
+                // Audio miks (ostaje isti jer je stabilan)
                 `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.3[a0]`,
                 `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
@@ -78,14 +75,14 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-pix_fmt yuv420p",
                 "-movflags +faststart"
             ])
-            .on("progress", (p) => process.stdout.write(`Status: ${p.timemark} \r`))
+            .on("progress", (p) => process.stdout.write(`Vreme: ${p.timemark} \r`))
             .on("error", (err) => {
                 console.error("FFmpeg Error:", err.message);
                 cleanup();
                 res.status(500).json({ error: "Render failed" });
             })
             .on("end", async () => {
-                console.log("\nRender uspešan bez rastezanja slike.");
+                console.log("\nRender završen (480p).");
                 try {
                     const storageName = `duets/final-${Date.now()}.mp4`;
                     const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
@@ -111,4 +108,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Server aktivan na ${PORT}`));
+app.listen(PORT, () => console.log(`Starter Server (480p) na portu ${PORT}`));
