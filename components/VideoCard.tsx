@@ -108,12 +108,12 @@ export default function VideoCard({ reaction }: Props) {
     if (!confirmed) return;
 
     try {
-      // Putanja do fajla u storage-u (buket: videos, folder: duets)
-      // Primer URL-a: .../videos/duets/tiktok-123.mp4 -> uzimamo "duets/tiktok-123.mp4"
+      // Putanja do fajla u storage-u
       const videoUrl = reaction.video_url;
       const storagePath = videoUrl.split("/videos/")[1];
 
       if (storagePath) {
+        console.log("Brišem fajl:", storagePath);
         await supabase.storage.from("videos").remove([storagePath]);
       }
 
@@ -134,7 +134,7 @@ export default function VideoCard({ reaction }: Props) {
   return (
     <div className="relative h-[100dvh] w-screen overflow-hidden bg-black snap-start flex items-center justify-center">
       
-      {/* VIDEO - 9:16 TikTok Format */}
+      {/* VIDEO - 9:16 TikTok Format (1080x1920) */}
       <video
         ref={videoRef}
         src={reaction.video_url}
@@ -142,6 +142,7 @@ export default function VideoCard({ reaction }: Props) {
         playsInline
         muted={muted}
         preload="metadata"
+        // object-cover osigurava da 9:16 video popuni ceo 100dvh ekran
         className="w-full h-full object-cover z-0"
       />
 
@@ -150,13 +151,13 @@ export default function VideoCard({ reaction }: Props) {
         
         {/* LEVA STRANA - INFO O PESMI */}
         <div className="flex-1 flex flex-col justify-end p-6 mb-20">
-          <Link href={`/u/${reaction.username}`} className="font-black text-2xl text-white hover:underline">
+          <Link href={`/u/${reaction.username}`} className="font-black text-2xl text-white hover:underline drop-shadow-lg">
             @{reaction.username}
           </Link>
-          <h2 className="text-lg mt-3 font-bold text-white truncate w-[70%]">
+          <h2 className="text-lg mt-3 font-bold text-white truncate w-[70%] drop-shadow-md">
             {reaction.song}
           </h2>
-          <p className="text-zinc-300 mt-1">{reaction.artist}</p>
+          <p className="text-zinc-300 mt-1 drop-shadow-md">{reaction.artist}</p>
         </div>
 
         {/* DESNA STRANA - DUGMIĆI */}
@@ -164,29 +165,29 @@ export default function VideoCard({ reaction }: Props) {
           
           {/* LIKE */}
           <button onClick={toggleLike} className="flex flex-col items-center group">
-            <div className={`p-3 rounded-full bg-black/20 backdrop-blur-sm transition ${liked ? 'text-red-500' : 'text-white'}`}>
+            <div className={`p-3 rounded-full bg-black/30 backdrop-blur-md transition ${liked ? 'text-red-500' : 'text-white'}`}>
                 <Heart className={`w-8 h-8 ${liked ? 'fill-current' : ''}`} />
             </div>
-            <span className="text-white text-xs mt-1 font-bold">{likesCount}</span>
+            <span className="text-white text-xs mt-1 font-bold drop-shadow-md">{likesCount}</span>
           </button>
 
           {/* SHARE */}
           <button onClick={shareVideo}>
-            <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+            <div className="p-3 rounded-full bg-black/30 backdrop-blur-md text-white">
                 <Share className="w-8 h-8" />
             </div>
           </button>
 
           {/* SOUND */}
           <button onClick={toggleSound}>
-            <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+            <div className="p-3 rounded-full bg-black/30 backdrop-blur-md text-white">
                 {muted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
             </div>
           </button>
 
-          {/* DELETE (Vidljiv svima, ali radi samo za Admina) */}
+          {/* DELETE (Pojavljuje se samo Adminu) */}
           {profile?.role === "admin" && (
-            <button onClick={deleteReaction} className="mt-4 text-red-500/50 hover:text-red-500 transition">
+            <button onClick={deleteReaction} className="mt-4 p-3 rounded-full bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition">
                 <Trash2 className="w-8 h-8" />
             </button>
           )}
@@ -194,6 +195,9 @@ export default function VideoCard({ reaction }: Props) {
         </div>
 
       </div>
+
+      {/* GRADIENT ZA BOLJU ČITLJIVOST (Dole) */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/60 to-transparent pointer-events-none z-5" />
 
     </div>
   );

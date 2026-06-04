@@ -11,26 +11,17 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. Middleware
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// 2. Supabase
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// 3. Folderi
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
-[uploadsDir, rendersDir].forEach(dir => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+[uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
 const upload = multer({ dest: uploadsDir });
 
-// Pomoćna funkcija za download
 async function downloadFile(url, targetPath) {
     const writer = fs.createWriteStream(targetPath);
     const response = await axios({ url, method: 'GET', responseType: 'stream' });
@@ -41,15 +32,12 @@ async function downloadFile(url, targetPath) {
     });
 }
 
-// 4. Glavna ruta
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- TIKTOK DUET RENDER (16:9 Camera Input) ---");
+    console.log("\n--- TIKTOK FULL HD RENDER (1080x1920) ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
-    if (!originalUrl || !reactionFile) {
-        return res.status(400).json({ error: "Missing files" });
-    }
+    if (!originalUrl || !reactionFile) return res.status(400).json({ error: "Missing files" });
 
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
@@ -63,17 +51,11 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // ORIGINAL (Gore): Skaliraj na 540x480, kropuj centar
-                `[0:v]fps=25,scale=540:360:force_original_aspect_ratio=increase,crop=540:360,setsar=1[v0]`,
-                
-                // REAKCIJA (Dole): Tvoj 16:9 snimak se skalira da popuni 540x480.
-                // Pošto je tvoj snimak širok (16:9), FFmpeg će odseći levu i desnu stranu
-                // tako da ti ostaneš u sredini vertikalnog TikTok prozora.
-                `[1:v]fps=25,scale=540:360:force_original_aspect_ratio=increase,crop=540:360,setsar=1[v1]`,
-                
-                // Spajanje u vertikalni TikTok 9:16 (540x960)
+                // LOGIKA: 1080x1920 (9:16). Svaki video je 1080x960.
+                // scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960 sprečava izduživanje
+                `[0:v]fps=30,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[v0]`,
+                `[1:v]fps=30,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[v1]`,
                 `[v0][v1]vstack=inputs=2[v_final]`,
-                
                 // Audio mix
                 `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.4[a0]`,
                 `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
@@ -84,35 +66,25 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-map [a_final]",
                 "-c:v libx264",
                 "-preset ultrafast",
-                "-crf 28",
+                "-crf 24",
                 "-threads 1",
                 "-pix_fmt yuv420p",
                 "-movflags +faststart"
             ])
-            .on("progress", (p) => process.stdout.write(`Status: ${p.timemark} \r`))
             .on("error", (err) => {
                 console.error("FFmpeg Error:", err.message);
                 cleanup();
                 res.status(500).json({ error: "Render failed" });
             })
             .on("end", async () => {
-                console.log("\nRender uspešan. Upload na Supabase...");
                 try {
                     const storageName = `duets/tiktok-${Date.now()}.mp4`;
-                    const { error: upErr } = await supabase.storage
-                        .from("videos")
-                        .upload(storageName, fs.createReadStream(outputPath));
-                    
+                    const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
                     if (upErr) throw upErr;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from("videos")
-                        .getPublicUrl(storageName);
-
+                    const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
                     cleanup();
                     res.json({ success: true, videoUrl: publicUrl });
                 } catch (err) {
-                    console.error("Upload Error:", err.message);
                     cleanup();
                     res.status(500).json({ error: "Upload failed" });
                 }
@@ -120,21 +92,14 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .save(outputPath);
 
     } catch (err) {
-        console.error("Server Error:", err);
+        console.error(err);
         cleanup();
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Server error" });
     }
 
     function cleanup() {
-        [localOriginal, reactionFile.path, outputPath].forEach(p => {
-            if (p && fs.existsSync(p)) fs.unlink(p, () => {});
-        });
+        [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
     }
 });
 
-// Health check za Render
-app.get("/", (req, res) => res.send("TikTok Duet Server is Online"));
-
-app.listen(PORT, () => {
-    console.log(`Backend spreman na portu ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server Online na portu ${PORT}`));
