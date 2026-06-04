@@ -73,7 +73,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 // transpose=1: RUČNO OKREĆE VIDEO ZA 90 STEPENI (Fix za mobilnu kameru)
                 // format=yuv420p: Garantuje kompatibilnost boja
                 // setsar=1: Sprečava deformaciju snimka sa kamere
-                `[1:v]fps=30,transpose=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1,format=yuv420p[v1]`,
+                `[1:v]fps=30,transpose=2,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1,format=yuv420p[v1]`,
                 
                 // Spajanje u vertikalni 9:16 (1080x1920)
                 `[v0][v1]vstack=inputs=2,setsar=1[v_final]`,
