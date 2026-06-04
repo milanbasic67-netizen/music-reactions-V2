@@ -64,7 +64,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .duration(finalDuration)
             .complexFilter([
                 // ORIGINAL (Gore): Skaliraj na 540x480, kropuj centar
-                `[0:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v0]`,
+                `[0:v]fps=25,scale=540:360:force_original_aspect_ratio=increase,crop=540:360,setsar=1[v0]`,
                 
                 // REAKCIJA (Dole): Tvoj 16:9 snimak se skalira da popuni 540x480.
                 // Pošto je tvoj snimak širok (16:9), FFmpeg će odseći levu i desnu stranu
