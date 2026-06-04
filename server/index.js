@@ -11,145 +11,104 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. CORS & Middleware
-app.use(cors({ origin: "*" }));
+app.use(cors());
 app.use(express.json());
 
-// 2. Supabase
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// 3. Folderi
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
-[uploadsDir, rendersDir].forEach(dir => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+[uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir); });
 
-// 4. Multer za reakciju
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => cb(null, `reaction-${Date.now()}.webm`)
-});
-const upload = multer({ storage });
+const upload = multer({ dest: uploadsDir });
 
-// POMOĆNA FUNKCIJA ZA DOWNLOAD ORIGINALA
+// DETALJAN DOWNLOAD LOG
 async function downloadFile(url, targetPath) {
+    console.log(`Započinjem download: ${url}`);
     const writer = fs.createWriteStream(targetPath);
-    const response = await axios({
-        url,
-        method: 'GET',
-        responseType: 'stream'
-    });
-    response.data.pipe(writer);
+    const response = await axios({ url, method: 'GET', responseType: 'stream' });
+    
     return new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
+        response.data.pipe(writer);
+        writer.on('finish', () => {
+            console.log("Download završen uspešno.");
+            resolve();
+        });
         writer.on('error', reject);
     });
 }
 
-// 5. RENDER RUTA
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    process.stdout.write("\n=== NOVI ZAHTEV (OPTIMIZOVAN) ===\n");
-    
+    console.log("--- NOVI ZAHTEV ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
-    if (!originalUrl || !reactionFile) {
-        return res.status(400).json({ error: "Nedostaju fajlovi" });
-    }
+    if (!originalUrl || !reactionFile) return res.status(400).send("Fale podaci");
 
-    const localOriginalPath = path.join(uploadsDir, `original-${Date.now()}.mp4`);
+    const localOrig = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
     const finalDuration = parseFloat(duration) || 10;
 
     try {
-        // KORAK 1: Download originala (ovo drastično ubrzava FFmpeg)
-        console.log("Preuzimam originalni video...");
-        await downloadFile(originalUrl, localOriginalPath);
+        // 1. DOWNLOAD (Logujemo vreme)
+        const startDown = Date.now();
+        await downloadFile(originalUrl, localOrig);
+        console.log(`Download trajao: ${(Date.now() - startDown)/1000}s`);
 
-        // KORAK 2: FFmpeg obrada
-        console.log("Pokrećem ultra-brzi render (480p)...");
+        // 2. FFmpeg (Max optimizacija za Starter plan)
+        console.log("Pokrećem FFmpeg (Ultrafast mode)...");
         
         ffmpeg()
-            .input(localOriginalPath)
+            .input(localOrig)
             .input(reactionFile.path)
-            .duration(finalDuration + 0.5)
+            .duration(finalDuration)
             .complexFilter([
-                // Skaliranje oba videa na 480x426 (ukupno 480x852 vertikalno)
-                // Force_original_aspect_ratio+crop sprečava razvlačenje slike
-                {
-                    filter: "scale",
-                    options: "480:426:force_original_aspect_ratio=increase,crop=480:426",
-                    inputs: "0:v", outputs: "v0"
-                },
-                {
-                    filter: "scale",
-                    options: "480:426:force_original_aspect_ratio=increase,crop=480:426",
-                    inputs: "1:v", outputs: "v1"
-                },
-                // Spajanje jedan iznad drugog
-                {
-                    filter: "vstack",
-                    options: { inputs: 2 },
-                    inputs: ["v0", "v1"], outputs: "vfinal"
-                },
-                // Audio miks
-                { filter: "volume", options: "0.3", inputs: "0:a", outputs: "a0" },
-                { filter: "volume", options: "1.2", inputs: "1:a", outputs: "a1" },
-                { 
-                    filter: "amix", 
-                    options: { inputs: 2, duration: "first" }, 
-                    inputs: ["a0", "a1"], outputs: "afinal" 
-                }
+                // Smanjujemo na 360p (širina) jer Shared CPU ne može da nosi 720p brzo
+                // setsar=1 popravlja aspect ratio probleme koji koče procesor
+                `[0:v]scale=360:640:force_original_aspect_ratio=increase,crop=360:640,setsar=1[v0]`,
+                `[1:v]scale=360:640:force_original_aspect_ratio=increase,crop=360:640,setsar=1[v1]`,
+                `[v0][v1]vstack=inputs=2[vfinal]`
             ])
             .outputOptions([
                 "-map [vfinal]",
-                "-map [afinal]",
                 "-c:v libx264",
-                "-preset superfast", // Ključno za brzinu na Render.com
-                "-crf 30",           // Balans kvaliteta i brzine
-                "-threads 2",        // Da ne uguši CPU besplatnog servera
-                "-pix_fmt yuv420p",
-                "-movflags +faststart"
+                "-preset ultrafast", // NAJBITNIJE: žrtvujemo veličinu fajla za brzinu
+                "-crf 28",
+                "-tune fastdecode",   // Optimizuje za brže dekodiranje frejmova
+                "-threads 1",         // OGRANIČAVAMO na 1 nit da Shared CPU ne "poludi"
+                "-pix_fmt yuv420p"
             ])
+            .on("start", (cmd) => console.log("FFmpeg komanda pokrenuta."))
             .on("progress", (p) => {
-                if (p.percent) console.log(`Progres: ${Math.round(p.percent)}%`);
+                // Ako p.percent nije definisan, logujemo bar timestampe
+                console.log(`Render progres: ${p.percent ? Math.round(p.percent) + '%' : p.timemark}`);
             })
             .on("error", (err) => {
                 console.error("FFmpeg Error:", err.message);
                 cleanup();
-                res.status(500).json({ error: "Render neuspešan" });
+                res.status(500).json({ error: err.message });
             })
             .on("end", async () => {
-                console.log("Render gotov. Šaljem na Supabase...");
+                console.log("Render gotov. Krećem upload...");
                 try {
-                    const storageName = `duets/${path.basename(outputPath)}`;
                     const fileStream = fs.createReadStream(outputPath);
-
-                    const { error: uploadError } = await supabase.storage
+                    const storageName = `duets/final-${Date.now()}.mp4`;
+                    
+                    const { error: upErr } = await supabase.storage
                         .from("videos")
-                        .upload(storageName, fileStream, {
-                            contentType: "video/mp4",
-                            upsert: true
-                        });
+                        .upload(storageName, fileStream, { contentType: "video/mp4" });
 
-                    if (uploadError) throw uploadError;
+                    if (upErr) throw upErr;
 
-                    const { data: { publicUrl } } = supabase.storage
-                        .from("videos")
-                        .getPublicUrl(storageName);
-
-                    console.log("Sve završeno uspešno!");
+                    const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
+                    
+                    console.log("Gotovo! URL:", publicUrl);
                     cleanup();
                     res.json({ success: true, videoUrl: publicUrl });
-
-                } catch (err) {
-                    console.error("Upload Error:", err);
+                } catch (e) {
+                    console.error("Upload Error:", e);
                     cleanup();
-                    res.status(500).json({ error: "Upload neuspešan" });
+                    res.status(500).send("Upload failed");
                 }
             })
             .save(outputPath);
@@ -157,17 +116,14 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) {
         console.error("Glavna greška:", err);
         cleanup();
-        res.status(500).json({ error: "Greška u pripremi fajlova" });
+        res.status(500).send(err.message);
     }
 
-    // Funkcija za čišćenje diska
     function cleanup() {
-        [localOriginalPath, reactionFile.path, outputPath].forEach(p => {
+        [localOrig, reactionFile.path, outputPath].forEach(p => {
             if (p && fs.existsSync(p)) fs.unlink(p, () => {});
         });
     }
 });
 
-app.get("/", (req, res) => res.send("Render Server Online"));
-
-app.listen(PORT, () => console.log(`Server na portu ${PORT}`));
+app.listen(PORT, () => console.log(`Starter Server na ${PORT}`));
