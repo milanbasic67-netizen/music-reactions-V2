@@ -92,16 +92,60 @@ export default function VideoCard({ reaction }: Props) {
     alert("Link copied!");
   }
 
-  // DELETE
+    // DELETE REACTION
   async function deleteReaction() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || (reaction.user_id !== user.id && profile?.role !== "admin")) {
-      return alert("Unauthorized");
-    }
+    try {
+      // 1. Provera admin statusa iz profila koji smo već učitali u useEffect-u
+      if (profile?.role !== "admin") {
+        alert("Samo admin može brisati reakcije.");
+        return;
+      }
 
-    if (confirm("Delete this duet?")) {
-      await supabase.from("reactions").delete().eq("id", reaction.id);
+      const confirmed = confirm("Da li ste sigurni da želite da obrišete ovaj duet i video fajl?");
+      if (!confirmed) return;
+
+      // 2. Izdvajanje putanje fajla iz URL-a
+      // URL format: .../storage/v1/object/public/videos/duets/tiktok-123.mp4
+      // Nama treba samo: "duets/tiktok-123.mp4"
+      const videoUrl = reaction.video_url;
+      const pathParts = videoUrl.split("/videos/");
+      const storagePath = pathParts[1]; 
+
+      if (storagePath) {
+        console.log("Brišem fajl iz storage-a:", storagePath);
+        const { error: storageError } = await supabase.storage
+          .from("videos")
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.error("Greška pri brisanju fajla:", storageError.message);
+          // Nastavljamo dalje čak i ako fajl nije nađen, da bismo očistili bazu
+        }
+      }
+
+      // 3. Brisanje povezanih lajkova (zbog Foreign Key ograničenja)
+      await supabase
+        .from("likes")
+        .delete()
+        .eq("reaction_id", reaction.id);
+
+      // 4. Brisanje zapisa iz tabele 'reactions'
+      const { error: dbError } = await supabase
+        .from("reactions")
+        .delete()
+        .eq("id", reaction.id);
+
+      if (dbError) {
+        alert("Greška pri brisanju iz baze: " + dbError.message);
+        return;
+      }
+
+      alert("Duet je uspešno obrisan.");
       window.location.reload();
+
+    } catch (err) {
+      console.error("System Error:", err);
+      alert("Došlo je do greške prilikom brisanja.");
     }
   }
 
