@@ -182,3 +182,19 @@ export default function VideoCard({ reaction }: Props) {
             <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
                 {muted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
             </div>
+          </button>
+
+          {/* DELETE (Vidljiv svima, ali radi samo za Admina) */}
+          {profile?.role === "admin" && (
+            <button onClick={deleteReaction} className="mt-4 text-red-500/50 hover:text-red-500 transition">
+                <Trash2 className="w-8 h-8" />
+            </button>
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
