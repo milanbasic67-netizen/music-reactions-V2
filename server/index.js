@@ -32,13 +32,13 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- RENDER START (MOBILE OPTIMIZED) ---");
+    console.log("\n--- TIKTOK STYLE RENDER (9:16) ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
-    const finalDuration = parseFloat(duration) || 10;
+    const finalDuration = parseFloat(duration) || 15;
 
     try {
         await downloadFile(originalUrl, localOriginal);
@@ -48,20 +48,21 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // LOGIKA ZA 480p (Idealno za mobilni ekran):
-                // Svaki video ide u prozor 480x427 (ukupna visina 854)
+                // TIKTOK LOGIKA:
+                // Ciljamo ukupnu rezoluciju 540x960 (9:16 vertikalno).
+                // Svaki video (original i reakcija) mora biti 540x480.
                 
-                // [0:v] ORIGINAL (Gornja polovina)
-                `[0:v]fps=25,scale=480:427:force_original_aspect_ratio=increase,crop=480:427,setsar=1[v0]`,
+                // 1. ORIGINAL (Gornji deo): Skaliraj da popuni 540x480, kropuj višak, resetuj SAR
+                `[0:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v0]`,
                 
-                // [1:v] REAKCIJA (Donja polovina)
-                `[1:v]fps=25,scale=480:427:force_original_aspect_ratio=increase,crop=480:427,setsar=1[v1]`,
+                // 2. REAKCIJA (Donji deo): Skaliraj da popuni 540x480, kropuj višak, resetuj SAR
+                `[1:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v1]`,
                 
-                // Spajanje u 480x854 (Standardna 480p vertikala)
+                // 3. Spajanje (vstack) -> Rezultat je 540x960
                 `[v0][v1]vstack=inputs=2[v_final]`,
                 
-                // Audio miks (ostaje isti jer je stabilan)
-                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.3[a0]`,
+                // 4. Audio Mix (Stereo 44.1kHz)
+                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.4[a0]`,
                 `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
             ])
@@ -70,10 +71,10 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 "-map [a_final]",
                 "-c:v libx264",
                 "-preset ultrafast",
-                "-crf 28",
+                "-crf 26",           // Bolji kvalitet za TikTok izgled
                 "-threads 1",
                 "-pix_fmt yuv420p",
-                "-movflags +faststart"
+                "-movflags +faststart" // Omogućava da video krene odmah na mobilnom
             ])
             .on("progress", (p) => process.stdout.write(`Vreme: ${p.timemark} \r`))
             .on("error", (err) => {
@@ -82,9 +83,9 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 res.status(500).json({ error: "Render failed" });
             })
             .on("end", async () => {
-                console.log("\nRender završen (480p).");
+                console.log("\nRender završen (TikTok Format).");
                 try {
-                    const storageName = `duets/final-${Date.now()}.mp4`;
+                    const storageName = `duets/tiktok-${Date.now()}.mp4`;
                     const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
                     if (upErr) throw upErr;
                     const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
@@ -108,4 +109,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Starter Server (480p) na portu ${PORT}`));
+app.listen(PORT, () => console.log(`TikTok-Style Render Server na portu ${PORT}`));
