@@ -1,614 +1,177 @@
 "use client";
 
 import {
-
   Heart,
-
   MessageCircle,
-
   Share,
-
   Trash2,
-
   Volume2,
-
   VolumeX,
-
 } from "lucide-react";
-
-import Link
-from "next/link";
-
-import {
-
-  useEffect,
-
-  useRef,
-
-  useState,
-
-} from "react";
-
-import { supabase }
-from "@/lib/supabase";
-
-import { getProfile }
-from "@/lib/getProfile";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { getProfile } from "@/lib/getProfile";
 
 type Props = {
-
   reaction: any;
-
 };
 
-export default function VideoCard({
-  reaction,
-}: Props) {
+export default function VideoCard({ reaction }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(reaction.likes_count || 0);
+  const [muted, setMuted] = useState(true);
 
-  const videoRef =
-    useRef<HTMLVideoElement>(
-      null
-    );
-
-  const [profile,
-    setProfile] =
-    useState<any>(
-      null
-    );
-
-  const [liked,
-    setLiked] =
-    useState(false);
-
-  const [likesCount,
-    setLikesCount] =
-    useState(
-
-      reaction.likes_count ||
-      0
-
-    );
-
-  const [muted,
-    setMuted] =
-    useState(true);
-
-  // LOAD PROFILE
+  // LOAD PROFILE & CHECK IF LIKED
   useEffect(() => {
-
     async function load() {
+      const p = await getProfile();
+      setProfile(p);
 
-      const p =
-        await getProfile();
-
-      setProfile(
-        p
-      );
-
+      if (p) {
+        const { data } = await supabase
+          .from("likes")
+          .select("*")
+          .eq("reaction_id", reaction.id)
+          .eq("user_id", p.id)
+          .single();
+        if (data) setLiked(true);
+      }
     }
-
     load();
+  }, [reaction.id]);
 
-  }, []);
-
-  // AUTOPLAY
+  // AUTOPLAY & INTERSECTION OBSERVER
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-    const video =
-      videoRef.current;
-
-    if (!video)
-      return;
-
-video.muted=true;
-
-    const observer =
-      new IntersectionObserver(
-
-        ([entry]) => {
-
-          if (
-            entry.isIntersecting
-          ) {
-
-            video
-              .play()
-              .catch(
-                () => {}
-              );
-
-          } else {
-
-            video.pause();
-
-          }
-
-        },
-
-        {
-
-          threshold:
-            0.7,
-
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
         }
-
-      );
-
-    observer.observe(
-      video
+      },
+      { threshold: 0.6 }
     );
 
-    return () => {
-
-      observer.disconnect();
-
-    };
-
+    observer.observe(video);
+    return () => observer.disconnect();
   }, []);
 
   // TOGGLE SOUND
   function toggleSound() {
-
-    const video =
-      videoRef.current;
-
-    if (!video)
-      return;
-
-    if (muted) {
-
-      video.muted =
-        false;
-
-      video.volume =
-        1;
-
-      setMuted(
-        false
-      );
-
-    } else {
-
-      video.muted =
-        true;
-
-      setMuted(
-        true
-      );
-
-    }
-
+    if (!videoRef.current) return;
+    videoRef.current.muted = !muted;
+    setMuted(!muted);
   }
 
-  // LIKE
+  // LIKE LOGIC
   async function toggleLike() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return alert("Login required");
 
-    const {
-      data: { user },
-    } =
-      await supabase
-        .auth
-        .getUser();
-
-    if (!user) {
-
-      alert(
-        "Login required"
-      );
-
-      return;
-
-    }
-
-    const {
-      data: existing,
-    } =
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .select("*")
-
-        .eq(
-          "reaction_id",
-          reaction.id
-        )
-
-        .eq(
-          "user_id",
-          user.id
-        )
-
-        .single();
-
-    // UNLIKE
-    if (existing) {
-
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .delete()
-
-        .eq(
-          "id",
-          existing.id
-        );
-
-      setLiked(
-        false
-      );
-
-      setLikesCount(
-        (
-          prev: number
-        ) =>
-          prev - 1
-      );
-
+    if (liked) {
+      await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
+      setLikesCount((prev: number) => prev - 1);
+      setLiked(false);
     } else {
-
-      // LIKE
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .insert({
-
-          reaction_id:
-            reaction.id,
-
-          user_id:
-            user.id,
-
-        });
-
-      setLiked(
-        true
-      );
-
-      setLikesCount(
-        (
-          prev: number
-        ) =>
-          prev + 1
-      );
-
+      await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
+      setLikesCount((prev: number) => prev + 1);
+      setLiked(true);
     }
-
   }
 
   // SHARE
   async function shareVideo() {
-
-    await navigator
-      .clipboard
-      .writeText(
-
-`${window.location.origin}/reaction/${reaction.id}`
-
-      );
-
-    alert(
-      "Link copied!"
-    );
-
+    await navigator.clipboard.writeText(`${window.location.origin}/reaction/${reaction.id}`);
+    alert("Link copied!");
   }
 
   // DELETE
   async function deleteReaction() {
-
-    try {
-
-      const {
-        data: {
-          user,
-        },
-      } =
-        await supabase
-          .auth
-          .getUser();
-
-      if (!user) {
-
-        alert(
-          "Login required"
-        );
-
-        return;
-
-      }
-
-      const canDelete =
-
-        reaction.user_id ===
-        user.id ||
-
-        profile?.role ===
-        "admin";
-
-      if (!canDelete) {
-
-        alert(
-          "You can delete only your own reactions"
-        );
-
-        return;
-
-      }
-
-      const confirmed =
-        confirm(
-          "Delete reaction?"
-        );
-
-      if (
-        !confirmed
-      ) return;
-
-      // STORAGE PATH
-      let storagePath =
-        "";
-
-      if (
-        reaction.video_url
-      ) {
-
-        const split =
-          reaction.video_url.split(
-            "/videos/"
-          );
-
-        storagePath =
-          split[1];
-
-      }
-
-      // DELETE STORAGE VIDEO
-      if (
-        storagePath
-      ) {
-
-        const {
-  data,
-  error: storageError,
-} =
-  await supabase
-    .storage
-    .from(
-      "videos/"
-    )
-    .remove([
-      storagePath,
-    ]);
-
-console.log(
-  "DELETE STORAGE",
-  data
-);
-
-console.log(
-  "DELETE ERROR",
-  storageError
-);
-
-      }
-
-      // DELETE LIKES
-      await supabase
-
-        .from(
-          "likes"
-        )
-
-        .delete()
-
-        .eq(
-          "reaction_id",
-          reaction.id
-        );
-
-      // DELETE REACTION
-      const {
-        error,
-      } =
-        await supabase
-
-          .from(
-            "reactions"
-          )
-
-          .delete()
-
-          .eq(
-            "id",
-            reaction.id
-          );
-
-      if (
-        error
-      ) {
-
-        alert(
-          error.message
-        );
-
-        return;
-
-      }
-
-      window.location.reload();
-
-    } catch (err) {
-
-      console.log(
-        err
-      );
-
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || (reaction.user_id !== user.id && profile?.role !== "admin")) {
+      return alert("Unauthorized");
     }
 
+    if (confirm("Delete this duet?")) {
+      await supabase.from("reactions").delete().eq("id", reaction.id);
+      window.location.reload();
+    }
   }
 
   return (
-
-    <div className="relative h-screen w-screen overflow-hidden bg-black snap-start">
-
-      {/* FINAL DUET VIDEO */}
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-black snap-start flex items-center justify-center">
+      
+      {/* VIDEO ELEMENT - OPTIMIZOVAN ZA 9:16 */}
       <video
-
-  ref={videoRef}
-
-  src={
-    reaction.video_url
-  }
-
-  loop
-
-  playsInline
-
-  muted={muted}
-
-  preload="metadata"
-
-        className="absolute inset-0 w-full h-full object-contain bg-black"
-
+        ref={videoRef}
+        src={reaction.video_url}
+        loop
+        playsInline
+        muted={muted}
+        preload="metadata"
+        className="w-full h-full object-cover shadow-2xl"
       />
 
-      {/* DARK OVERLAY */}
-      <div className="absolute inset-0 bg-black/20 z-10" />
+      {/* DARK GRADIENT OVERLAY (Samo pri dnu radi bolje čitljivosti teksta) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 z-10" />
 
-      {/* CONTENT */}
-      <div className="absolute inset-0 z-40 flex">
-
-        {/* LEFT */}
-        <div className="flex-1 flex flex-col justify-end p-5">
-
-          <div className="mb-24">
-
-            {/* USER */}
-            <Link
-
-              href={`/u/${reaction.username}`}
-
-              className="font-black text-2xl"
-
-            >
-
-              @
-              {reaction.username}
-
+      {/* UI CONTROLS */}
+      <div className="absolute inset-0 z-20 flex flex-col justify-end p-5 pb-24">
+        
+        <div className="flex justify-between items-end">
+          
+          {/* LEFT: INFO */}
+          <div className="flex-1 text-white">
+            <Link href={`/u/${reaction.username}`} className="font-black text-xl hover:underline">
+              @{reaction.username}
             </Link>
-
-            {/* SONG */}
-            <h2 className="text-lg mt-3 font-bold">
-
-              {reaction.song}
-
-            </h2>
-
-            {/* ARTIST */}
-            <p className="text-zinc-300 mt-1">
-
-              {reaction.artist}
-
-            </p>
-
+            <h2 className="text-lg font-bold mt-2 truncate w-[70vw]">{reaction.song}</h2>
+            <p className="text-zinc-300 text-sm">{reaction.artist}</p>
           </div>
 
-        </div>
+          {/* RIGHT: BUTTONS */}
+          <div className="flex flex-col items-center gap-6 mb-2">
+            
+            {/* LIKE */}
+            <button onClick={toggleLike} className="group">
+              <div className={`p-3 rounded-full bg-black/20 backdrop-blur-sm transition ${liked ? 'text-red-500' : 'text-white'}`}>
+                <Heart className={`w-7 h-7 ${liked ? 'fill-current' : ''}`} />
+              </div>
+              <span className="text-white text-xs font-bold mt-1 block text-center">{likesCount}</span>
+            </button>
 
-        {/* RIGHT */}
-        <div className="w-24 flex flex-col items-center justify-end gap-6 pb-32">
+            {/* SHARE */}
+            <button onClick={shareVideo}>
+              <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+                <Share className="w-7 h-7" />
+              </div>
+            </button>
 
-          {/* LIKE */}
-          <button
-            onClick={
-              toggleLike
-            }
-            className="flex flex-col items-center"
-          >
+            {/* SOUND */}
+            <button onClick={toggleSound}>
+              <div className="p-3 rounded-full bg-black/20 backdrop-blur-sm text-white">
+                {muted ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
+              </div>
+            </button>
 
-            <Heart
-              className={`w-8 h-8 ${
-                liked
-                  ? "fill-red-500 text-red-500"
-                  : "text-white"
-              }`}
-            />
-
-            <span className="text-xs mt-1">
-
-              {likesCount}
-
-            </span>
-
-          </button>
-
-          {/* COMMENTS */}
-          <button
-            className="flex flex-col items-center"
-          >
-
-            <MessageCircle className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* SHARE */}
-          <button
-            onClick={
-              shareVideo
-            }
-            className="flex flex-col items-center"
-          >
-
-            <Share className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* DELETE */}
-          <button
-            onClick={
-              deleteReaction
-            }
-            className="flex flex-col items-center"
-          >
-
-            <Trash2 className="w-8 h-8 text-white" />
-
-          </button>
-
-          {/* SOUND */}
-          <button
-            onClick={
-              toggleSound
-            }
-            className="flex flex-col items-center"
-          >
-
-            {muted ? (
-
-              <VolumeX className="w-8 h-8 text-white" />
-
-            ) : (
-
-              <Volume2 className="w-8 h-8 text-white" />
-
+            {/* DELETE (Show only for owner/admin) */}
+            {(profile?.id === reaction.user_id || profile?.role === "admin") && (
+              <button onClick={deleteReaction} className="text-zinc-500 hover:text-red-500 transition">
+                <Trash2 className="w-6 h-6" />
+              </button>
             )}
 
-          </button>
-
+          </div>
         </div>
-
       </div>
 
     </div>
-
   );
-
 }
