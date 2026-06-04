@@ -86,7 +86,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             // 3. Postavljanje originala preko reakcije (x=40, y=40 od gornjeg levog ugla)
             {
                 filter: "overlay",
-                options: { x: 0, y: 640 },
+                options: { x: 40, y: 40 },
                 inputs: ["v1", "v0"], outputs: "vfinal"
             },
             // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
