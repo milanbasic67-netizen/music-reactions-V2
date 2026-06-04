@@ -74,19 +74,20 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             // 1. Skaliranje reakcije (Pozadina - 720x1280)
             {
                 filter: "scale",
-                options: "720:1280:force_original_aspect_ratio=increase,crop=720:1280",
+                options: "540:640:force_original_aspect_ratio=increase,crop=540:640",
                 inputs: "1:v", outputs: "v1"
             },
             // 2. Skaliranje originalnog videa (Overlay prozor - npr. širina 320)
             {
                 filter: "scale",
-                options: "320:-1",
+                options: "540:640:force_original_aspect_ratio=increase,crop=540:640",
+
                 inputs: "0:v", outputs: "v0"
             },
             // 3. Postavljanje originala preko reakcije (x=40, y=40 od gornjeg levog ugla)
             {
                 filter: "overlay",
-                options: { x: 40, y: 40 },
+                options: { x: 0, y: 640 },
                 inputs: ["v1", "v0"], outputs: "vfinal"
             },
             // 4. Audio miks (Original tiši 20%, Mikrofon jači 150%)
