@@ -45,7 +45,6 @@ const upload = multer({ storage });
 
 // 5. RUTA ZA RENDER
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    // FORSIRANI LOGOVI ZA RENDER.COM DASHBOARD
     process.stdout.write("\n=== STIGAO NOVI ZAHTEV ZA RENDER ===\n");
     
     const { originalUrl, duration } = req.body;
@@ -56,88 +55,76 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         return res.status(400).json({ error: "Missing originalUrl or reaction file" });
     }
 
-    console.log(`Original: ${originalUrl}`);
-    console.log(`Reaction path: ${reactionFile.path}`);
-    console.log(`Trajanje: ${duration}s`);
-
     const outputPath = path.join(rendersDir, `duet-${Date.now()}.mp4`);
     const finalDuration = parseFloat(duration) || 15;
 
-    // FFmpeg PROCES
-    console.log("Pokrećem FFmpeg...");
+    console.log("Pokrećem FFmpeg za vertikalni split-screen...");
     
     ffmpeg()
-    .input(originalUrl)
-    .input(reactionFile.path)
-    .duration(finalDuration + 0.5)
-    .complexFilter([
-        // 1. Skaliranje i kropovanje prvog videa (Gornja polovina - 720x640)
-        {
-            filter: "scale",
-            options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
-            inputs: "0:v",
-            outputs: "top"
-        },
-        // 2. Skaliranje i kropovanje drugog videa (Donja polovina - 720x640)
-        {
-            filter: "scale",
-            options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
-            inputs: "1:v",
-            outputs: "bottom"
-        },
-        // 3. Vertikalno slaganje (Stack) - stavlja 'top' iznad 'bottom'
-        {
-            filter: "vstack",
-            inputs: ["top", "bottom"],
-            outputs: "vfinal"
-        },
-        // 4. Miksovanje audia (da se čuju oba videa istovremeno)
-        {
-            filter: "amix",
-            options: { inputs: 2, duration: "longest" },
-            inputs: ["0:a", "1:a"],
-            outputs: "afinal"
-        }
-    ])
-    .map("vfinal") // Koristi finalni video stream
-    .map("afinal") // Koristi finalni audio stream
-    .videoCodec("libx264")
-    .outputOptions([
-        "-preset veryfast",
-        "-crf 23",
-        "-movflags +faststart"
-    ])
+        .input(originalUrl)
+        .input(reactionFile.path)
+        .duration(finalDuration + 0.5)
+        .complexFilter([
+            // 1. Gornji video (Original) - Skaliraj na 720x640 i kropuj centar
+            {
+                filter: "scale",
+                options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
+                inputs: "0:v",
+                outputs: "v0_scaled"
+            },
+            // 2. Donji video (Reakcija) - Skaliraj na 720x640 i kropuj centar
+            {
+                filter: "scale",
+                options: "720:640:force_original_aspect_ratio=increase,crop=720:640",
+                inputs: "1:v",
+                outputs: "v1_scaled"
+            },
+            // 3. Vertikalno spajanje (vstack) - v0 iznad v1
+            {
+                filter: "vstack",
+                options: { inputs: 2 },
+                inputs: ["v0_scaled", "v1_scaled"],
+                outputs: "vfinal"
+            },
+            // 4. Audio obrada (Original 20%, Mikrofon 150%)
+            { filter: "volume", options: "0.2", inputs: "0:a", outputs: "a0" },
+            { filter: "volume", options: "1.5", inputs: "1:a", outputs: "a1" },
+            { 
+                filter: "amix", 
+                options: { inputs: 2, duration: "first", dropout_transition: 2 }, 
+                inputs: ["a0", "a1"], 
+                outputs: "afinal" 
+            }
+        ])
         .outputOptions([
             "-map [vfinal]",
             "-map [afinal]",
             "-c:v libx264",
-            "-preset ultrafast", // Najbrže enkodovanje, bitno za slabije servere
-            "-crf 28",           // Solidan kvalitet uz manji fajl
+            "-preset ultrafast", 
+            "-crf 28",           
             "-pix_fmt yuv420p",
             "-movflags +faststart"
         ])
         .on("start", (cmd) => {
-            console.log("FFmpeg komanda pokrenuta!");
+            console.log("FFmpeg proces započet.");
         })
         .on("progress", (progress) => {
             if (progress.percent) {
-                console.log(`Rendering: ${Math.round(progress.percent)}%`);
+                console.log(`Progress: ${Math.round(progress.percent)}%`);
             }
         })
         .on("error", (err) => {
             console.error("FFmpeg Error:", err.message);
-            // Čišćenje u slučaju greške
             if (fs.existsSync(reactionFile.path)) fs.unlinkSync(reactionFile.path);
-            res.status(500).json({ error: "Render failed during processing" });
+            res.status(500).json({ error: "Render failed" });
         })
         .on("end", async () => {
-            console.log("Render završen lokalno. Krećem upload na Supabase...");
+            console.log("Render završen. Upload na Supabase...");
 
             try {
                 const storageName = `duets/${path.basename(outputPath)}`;
                 const fileStream = fs.createReadStream(outputPath);
 
-                // Upload na Supabase korišćenjem Stream-a (štedi RAM)
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from("videos")
                     .upload(storageName, fileStream, {
@@ -152,31 +139,22 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                     .from("videos")
                     .getPublicUrl(storageName);
 
-                console.log("SVE ZAVRŠENO! URL:", publicUrl);
+                // Brisanje fajlova
+                fs.unlink(reactionFile.path, (err) => {});
+                fs.unlink(outputPath, (err) => {});
 
-                // ČIŠĆENJE: Obavezno brišemo privremene fajlove da ne prepunimo disk na Renderu
-                fs.unlink(reactionFile.path, (err) => { if (err) console.error("Greška pri brisanju raw fajla"); });
-                fs.unlink(outputPath, (err) => { if (err) console.error("Greška pri brisanju rendera"); });
-
-                res.json({
-                    success: true,
-                    videoUrl: publicUrl
-                });
+                res.json({ success: true, videoUrl: publicUrl });
 
             } catch (err) {
                 console.error("Storage Error:", err.message);
-                res.status(500).json({ error: "Upload to Supabase failed" });
+                res.status(500).json({ error: "Upload failed" });
             }
         })
         .save(outputPath);
 });
 
-// HEALTH CHECK ZA RENDER
-app.get("/", (req, res) => res.send("Duet Render Server is Running"));
+app.get("/", (req, res) => res.send("Render Server Online"));
 
 app.listen(PORT, () => {
-    console.log(`---`);
-    console.log(`Server je aktivan na portu ${PORT}`);
-    console.log(`Backend URL: ${process.env.APP_URL || 'Lokalno'}`);
-    console.log(`---`);
+    console.log(`Server aktivan na portu ${PORT}`);
 });
