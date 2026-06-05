@@ -32,7 +32,7 @@ async function downloadFile(url, targetPath) {
 }
 
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- IPHONE WEBM FIX RENDER ---");
+    console.log("\n--- IPHONE COMPATIBILITY RENDER START ---");
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
 
@@ -48,21 +48,22 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
             .input(reactionFile.path)
             .duration(finalDuration)
             .complexFilter([
-                // 1. ORIGINAL (Gornji deo)
-                `[0:v]fps=30,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[v0]`,
+                // ORIGINAL: Standardno skaliranje
+                `[0:v]fps=30,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v0]`,
                 
-                // 2. REAKCIJA (Donji deo - IPHONE FIX):
-                // Koristimo 'scale=1080:960' ali BEZ ručnog transpose-a.
-                // Ključ je 'setsar=1' koji resetuje iPhone-ovu deformaciju piksela.
-                // format=yuv420p rešava probleme sa bojama i kompatibilnošću.
-                `[1:v]fps=30,format=yuv420p,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960,setsar=1[v1]`,
+                // REAKCIJA (IPHONE FIX):
+                // 1. fps=30: Stabilizuje frame rate
+                // 2. format=yuv420p: Standardizuje paletu boja
+                // 3. setsar=1: Resetuje iPhone deformaciju piksela (OVO REŠAVA LICE)
+                // 4. scale/crop: Puni boks bez rastezanja
+                `[1:v]fps=30,format=yuv420p,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v1]`,
                 
-                // 3. Spajanje u vertikalni TikTok 9:16 (1080x1920)
+                // SPAJANJE: 1080x1920 (TikTok 9:16)
                 `[v0][v1]vstack=inputs=2,setsar=1[v_final]`,
                 
-                // 4. Audio mix
-                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.4[a0]`,
-                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
+                // AUDIO MIX
+                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.2[a0]`,
+                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.4[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
             ])
             .outputOptions([
@@ -86,6 +87,20 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 } catch (err) {
                     cleanup();
                     res.status(500).json({ error: "Upload failed" });
+                }
+            })
+            .save(outputPath);
+
+    } catch (err) {
+        console.error(err);
+        cleanup();
+        res.status(500).json({ error: "Server error" });
+    }
+
+    function cleanup() {
+        [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
+    }
+});
                 }
             })
             .save(outputPath);
