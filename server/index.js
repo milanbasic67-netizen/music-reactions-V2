@@ -62,8 +62,8 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 `[v0][v1]vstack=inputs=2,setsar=1[v_final]`,
                 
                 // AUDIO MIX
-                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.2[a0]`,
-                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.4[a1]`,
+                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.5[a0]`,
+                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
                 `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
             ])
             .outputOptions([
@@ -87,7 +87,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 } catch (err) {
                     cleanup();
                     res.status(500).json({ error: "Upload failed" });
-                }
+            
             })
             .save(outputPath);
 
@@ -101,7 +101,6 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
     }
 });
-                }
             })
             .save(outputPath);
 
