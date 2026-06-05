@@ -87,20 +87,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 } catch (err) {
                     cleanup();
                     res.status(500).json({ error: "Upload failed" });
-            
-            })
-            .save(outputPath);
-
-    } catch (err) {
-        console.error(err);
-        cleanup();
-        res.status(500).json({ error: "Server error" });
-    }
-
-    function cleanup() {
-        [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
-    }
-});
+                }
             })
             .save(outputPath);
 
