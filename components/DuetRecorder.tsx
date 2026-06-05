@@ -19,7 +19,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 1. PODEŠAVANJE KAMERE (16:9 FORMAT)
+  // 1. PODEŠAVANJE KAMERE (16:9 FORMAT - STANDARD ZA IPHONE/ANDROID)
   useEffect(() => {
     async function setup() {
       try {
@@ -27,7 +27,8 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            aspectRatio: 1.7777777778, // 16:9
+            aspectRatio: 1.7777777778, // 16:9 horizontalno
+            facingMode: "user" // Prednja kamera
           },
           audio: {
             echoCancellation: true,
@@ -41,12 +42,11 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         }
       } catch (err) {
         console.error("Greška sa kamerom:", err);
-        alert("Nije moguće pristupiti kameri.");
+        alert("Nije moguće pristupiti kameri. Proverite dozvole.");
       }
     }
     setup();
 
-    // Čišćenje kamere pri odlasku sa stranice
     return () => {
       stream?.getTracks().forEach(track => track.stop());
     };
@@ -64,8 +64,10 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         await songVideo.play();
       }
 
+      // OPTIMIZOVANA KONFIGURACIJA ZA IPHONE/MOBILE
       const recorder = new MediaRecorder(stream, {
         mimeType: "video/webm;codecs=vp8,opus",
+        videoBitsPerSecond: 2500000 // 2.5 Mbps za stabilan kvalitet i manje deformacije
       });
 
       mediaRecorderRef.current = recorder;
@@ -74,7 +76,6 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      // Kada se snimanje završi, automatski pokrećemo upload
       recorder.onstop = () => {
         const finalDur = songVideo?.currentTime || 0;
         handleUpload(finalDur);
@@ -98,13 +99,12 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
     }
   }
 
-  // 4. OBRADA, RENDER I UPIS U BAZU
+  // 4. OBRADA, RENDER I SIGURAN UPIS U BAZU
   async function handleUpload(duration: number) {
     setLoading(true);
-    console.log("Proces započet. Trajanje:", duration);
+    console.log("Upload započet. Trajanje:", duration);
 
     try {
-      // Kreiramo fajl od snimaka
       const reactionBlob = new Blob(chunksRef.current, { type: "video/webm" });
       const reactionFile = new File([reactionBlob], `react-${Date.now()}.webm`, { type: "video/webm" });
 
@@ -113,8 +113,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       formData.append("originalUrl", originalVideo);
       formData.append("duration", duration.toString());
 
-      // Šaljemo na naš backend za renderovanje
-      console.log("Šaljem na render...");
+      console.log("Šaljem na render server...");
       const renderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
         body: formData,
@@ -134,26 +133,24 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
 
       const profile = await getProfile();
 
-      // UPIS U TABELU REACTIONS (Ključni momenat)
+      // UPIS U TABELU REACTIONS (Sa await - čekamo potvrdu)
       console.log("Upisujem u tabelu 'reactions'...");
       const { error: insertError } = await supabase.from("reactions").insert({
         song: title,
         artist: artist,
         user_id: user.id,
         username: profile?.username || "anonymous",
-        video_url: renderData.videoUrl, // URL sa Supabase Storage-a koji je vratio backend
+        video_url: renderData.videoUrl, 
       });
 
       if (insertError) {
         console.error("Greška pri upisu u bazu:", insertError.message);
-        alert("Greška pri čuvanju podataka: " + insertError.message);
-        return;
+        throw new Error(insertError.message);
       }
 
       console.log("Sve je uspešno obavljeno!");
-      alert("Reakcija je uspešno objavljena!");
       
-      // Redirect na home
+      // Redirect na home tek nakon uspešnog upisa
       window.location.href = "/";
 
     } catch (err: any) {
@@ -190,7 +187,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
             onClick={startRecording}
             className="w-full bg-red-600 hover:bg-red-500 text-white py-5 rounded-2xl font-black text-xl shadow-lg transition active:scale-95"
           >
-            RECORD
+            START DUET
           </button>
         )}
 
@@ -207,15 +204,14 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-zinc-800 border-t-red-600 rounded-full animate-spin" />
             <p className="text-zinc-400 font-bold animate-pulse text-sm">
-              WORKING...
+              PROCESSING VIDEO...
             </p>
           </div>
         )}
       </div>
 
-      {/* Info o pesmi */}
       <div className="mt-10 text-center">
-        <p className="text-zinc-500 text-xs uppercase tracking-widest">Snimate reakciju na:</p>
+        <p className="text-zinc-500 text-xs uppercase tracking-widest">Reaction to:</p>
         <h3 className="text-white font-bold text-lg">{title}</h3>
         <p className="text-zinc-400 text-sm">{artist}</p>
       </div>
