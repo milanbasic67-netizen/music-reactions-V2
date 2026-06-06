@@ -26,88 +26,71 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 50 - HEADER-SAFE) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 51 - 240p LOW BITRATE) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const videoId = getYTID(url);
 
-    console.log("\n--- YOUTUBE IMPORT (VERSION 50 - HEADER-SAFE) ---");
+    console.log("\n--- YOUTUBE IMPORT (LOW BITRATE FOR TIMEOUT BYPASS) ---");
 
-    if (!videoId) return res.status(400).json({ error: "Nevažeći YouTube link." });
+    if (!videoId) return res.status(400).json({ error: "Invalid URL" });
 
     try {
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
-            params: { videoId, urlAccess: 'proxied', renderableFormats: '360p' },
+            params: { 
+                videoId, 
+                urlAccess: 'proxied', 
+                renderableFormats: '240p' // SMANJUJEMO REZOLUCIJU DA FAJL BUDE < 50MB
+            },
             headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }
         });
 
         const mp4Url = apiRes.data?.contents?.[0]?.videos?.[0]?.url;
-        if (!mp4Url) throw new Error("Link nije pronađen.");
+        if (!mp4Url) throw new Error("Link not found");
 
-        // 1. POKREĆEMO GET KA VIDEU
         https.get(mp4Url, (ytRes) => {
-            if (ytRes.statusCode !== 200) {
-                return res.status(500).json({ error: "YouTube stream error" });
-            }
-
             const videoName = `yt-${Date.now()}.mp4`;
             const supabaseUrl = new URL(`${process.env.SUPABASE_URL}/storage/v1/object/songs/${videoName}`);
-            const size = ytRes.headers['content-length']; // Izvlačimo veličinu iz stvarnog odgovora
+            const size = ytRes.headers['content-length'];
             
-            console.log(size ? `Veličina: ${(size/1024/1024).toFixed(2)} MB` : "Veličina nepoznata (Streaming)");
-
-            // 2. PRIPREMAMO UPLOAD (PUT je bolji za Pro planove i velike strimove)
-            const uploadHeaders = {
-                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-                'API-Key': process.env.SUPABASE_SERVICE_ROLE_KEY,
-                'Content-Type': 'video/mp4',
-                'x-upsert': 'true'
-            };
-
-            // Dodajemo Content-Length SAMO ako postoji
-            if (size) {
-                uploadHeaders['Content-Length'] = size;
-            } else {
-                uploadHeaders['Transfer-Encoding'] = 'chunked';
-            }
-
             const supabaseRequest = https.request({
                 hostname: supabaseUrl.hostname,
                 path: supabaseUrl.pathname,
                 method: 'PUT',
-                headers: uploadHeaders
+                headers: {
+                    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+                    'API-Key': process.env.SUPABASE_SERVICE_ROLE_KEY,
+                    'Content-Type': 'video/mp4',
+                    'x-upsert': 'true',
+                    ...(size && { 'Content-Length': size })
+                }
             }, (supRes) => {
                 let resData = "";
                 supRes.on("data", (d) => resData += d);
                 supRes.on("end", () => {
-                    if (supRes.statusCode >= 200 && supRes.statusCode < 300) {
+                    if (supRes.statusCode < 300) {
                         res.json({ 
                             success: true, 
                             videoUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/songs/${videoName}`,
                             thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-                            title: apiRes.data.metadata?.title || "YouTube Song"
+                            title: apiRes.data.metadata?.title || "YT Song"
                         });
                     } else {
-                        console.error("Supabase Error:", supRes.statusCode, resData);
-                        res.status(500).json({ error: "Supabase rejected", details: resData });
+                        res.status(500).json({ error: "Upload failed", details: resData });
                     }
                 });
             });
 
-            // 3. SPAJAMO CEVI
             ytRes.pipe(supabaseRequest);
-
-        }).on("error", (e) => {
-            res.status(500).json({ error: "YouTube connection failed" });
         });
 
     } catch (err) {
-        res.status(500).json({ error: "Import failed", details: err.message });
+        res.status(500).json({ error: "Import error" });
     }
 });
 
-// --- RUTA: RENDER DUET (Standardna optimizovana) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -123,12 +106,12 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 ffmpeg()
                     .input(localOriginal).input(reactionFile.path).duration(parseFloat(duration) || 10)
                     .complexFilter([
-                        `[0:v]fps=20,scale=640:480:force_original_aspect_ratio=increase,crop=640:480[v0]`,
-                        `[1:v]fps=20,scale=640:480:force_original_aspect_ratio=increase,crop=640:480[v1]`,
+                        `[0:v]fps=15,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v0]`,
+                        `[1:v]fps=15,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v1]`,
                         `[v0][v1]vstack=inputs=2[v_final]`,
                         `[0:a]volume=0.5[a0]`, `[1:a]volume=1.2[a1]`, `[a0][a1]amix=inputs=2:duration=first[a_final]`
                     ])
-                    .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 30", "-pix_fmt yuv420p"])
+                    .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 32", "-pix_fmt yuv420p"])
                     .on("end", async () => {
                         const storageName = `duets/tiktok-${Date.now()}.mp4`;
                         const fileStream = fs.createReadStream(outputPath);
@@ -145,4 +128,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend V50 - Header-Safe Streaming`));
+app.listen(PORT, () => console.log(`Backend V51 Online`));
