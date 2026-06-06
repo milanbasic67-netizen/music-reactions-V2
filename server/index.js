@@ -38,13 +38,13 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (ASINHRONA SA POLLING-OM) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 14 - ISPRAVLJEN POLLING) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const RAPID_HOST = 'yt-downloader9.p.rapidapi.com';
 
-    console.log("\n--- YOUTUBE IMPORT (ASYNC POLLING) ---");
+    console.log("\n--- YOUTUBE IMPORT (POLLING FIX) ---");
 
     try {
         // 1. ZAPOČNI ZADATAK
@@ -63,22 +63,20 @@ app.post("/import-youtube", async (req, res) => {
 
         const uid = startRes.data.uid;
         if (!uid) throw new Error("Nisam dobio UID od API-ja.");
+        console.log("UID dobijen:", uid);
 
-        console.log("Zadatak kreiran. UID:", uid);
-
-        // 2. POLLING (Provera statusa svakih 3 sekunde)
+        // 2. POLLING (Provera na /dl endpointu)
         let mp4Url = null;
         let attempts = 0;
-        const maxAttempts = 20; // Max 60 sekundi čekanja
+        const maxAttempts = 15; // Ukupno 45 sekundi čekanja
 
         while (!mp4Url && attempts < maxAttempts) {
             attempts++;
-            console.log(`Provera statusa (${attempts}/${maxAttempts})...`);
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Čekaj 3s
             
-            // Čekaj 3 sekunde pre sledeće provere
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            console.log(`Provera statusa (${attempts}/${maxAttempts})...`);
 
-            const statusRes = await axios.get(`https://${RAPID_HOST}/status`, {
+            const dlRes = await axios.get(`https://${RAPID_HOST}/dl`, {
                 params: { uid: uid },
                 headers: {
                     'x-rapidapi-key': RAPID_KEY,
@@ -86,26 +84,28 @@ app.post("/import-youtube", async (req, res) => {
                 }
             });
 
-            // Struktura statusa zavisi od API-ja, obično je status: "finished" ili slično
-            const statusData = statusRes.data;
-            
-            // Ako API vrati niz rezultata kada završi
-            if (Array.isArray(statusData) && statusData[0] && statusData[0].url) {
+            const statusData = dlRes.data;
+
+            // yt-downloader9 obično vraća niz u data polju
+            // Primer: { data: [{ url: "...", quality: "720p" }] }
+            if (statusData && Array.isArray(statusData)) {
                 mp4Url = statusData[0].url || statusData[0].video;
-            } else if (statusData.status === "finished" || statusData.url) {
-                mp4Url = statusData.url || statusData.video;
+            } else if (statusData.data && Array.isArray(statusData.data)) {
+                mp4Url = statusData.data[0].url || statusData.data[0].video;
+            } else if (statusData.url) {
+                mp4Url = statusData.url;
             }
         }
 
-        if (!mp4Url) throw new Error("Timeout: Video nije bio spreman na vreme.");
+        if (!mp4Url) throw new Error("Video nije bio spreman nakon 45 sekundi.");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje MP4 fajla...");
+        console.log("Skidanje sa YouTube-a...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Slanje na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -116,6 +116,7 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
+        console.log("Import USPEŠAN!");
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
@@ -124,7 +125,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -158,4 +159,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 13 (Async Polling)`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 14`));
