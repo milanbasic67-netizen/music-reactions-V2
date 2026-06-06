@@ -21,23 +21,18 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// --- KLJUČNA FUNKCIJA: Download sa iPhone Headers ---
+// --- MOĆNA FUNKCIJA ZA DOWNLOAD (Sa Tunnel Auth) ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
         headers: {
-            // Budući da URL sadrži c=IOS, koristimo iPhone User-Agent
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.youtube.com/',
-            'Origin': 'https://www.youtube.com',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'video',
-            'Sec-Fetch-Mode': 'no-cors',
-            'Sec-Fetch-Site': 'cross-site'
+            // Šaljemo ključeve i tunelu, jer on to često traži da bi propustio saobraćaj
+            'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
+            'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Referer': 'https://social-media-video-downloader.p.rapidapi.com/'
         }
     });
 
@@ -59,7 +54,7 @@ app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const videoId = getYTID(url);
     
-    console.log("\n--- YOUTUBE IMPORT (IPHONE EMULATION) ---");
+    console.log("\n--- YOUTUBE IMPORT (TUNNEL AUTH BYPASS) ---");
 
     try {
         const options = {
@@ -67,7 +62,7 @@ app.post("/import-youtube", async (req, res) => {
             url: 'https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details',
             params: {
                 videoId: videoId,
-                urlAccess: 'normal',
+                urlAccess: 'proxy', // PROMENA: Tražimo proxy pristup ako API to nudi
                 renderableFormats: '720p,1080p',
                 getTranscript: 'false'
             },
@@ -83,20 +78,22 @@ app.post("/import-youtube", async (req, res) => {
         let mp4Url = null;
         if (data.contents && data.contents[0]?.videos) {
             const videos = data.contents[0].videos;
-            // Biramo 720p ili prvi MP4
-            const best = videos.find(v => v.label === "720p") || videos[0];
+            // Biramo onaj koji u URL-u ima "tunnel" ili "api-v3"
+            const best = videos.find(v => v.url.includes('tunnel')) || 
+                         videos.find(v => v.label === "720p") || 
+                         videos[0];
             mp4Url = best?.url;
         }
 
-        if (!mp4Url) throw new Error("API nije vratio URL.");
+        if (!mp4Url) throw new Error("API nije vratio link.");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje sa iPhone emulacijom...");
+        console.log("Skidanje preko Tunela...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Slanje na Supabase...");
+        console.log("Upload na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -111,10 +108,10 @@ app.post("/import-youtube", async (req, res) => {
 
     } catch (err) {
         console.error("Greška:", err.message);
-        res.status(500).json({ error: "403 Forbidden zaobiđen bezuspešno", details: err.message });
+        res.status(500).json({ error: "YouTube blokira Render server. Pokušajte manuelni upload.", details: err.message });
     }
 });
 
-// ... (render-duet ruta ostaje ista kao pre) ...
+// ... (render-duet ruta ostaje ista) ...
 
-app.listen(PORT, () => console.log(`Server Online - iPhone Emulation Active`));
+app.listen(PORT, () => console.log(`Server Online - Tunnel Auth Bypass Enabled`));
