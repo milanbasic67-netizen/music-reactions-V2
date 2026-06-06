@@ -21,15 +21,22 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
+// --- POBOLJŠANA FUNKCIJA ZA DOWNLOAD (BYPASS 403) ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
+        timeout: 300000, // 5 minuta (za velike videe)
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Encoding': 'identity', // Veoma važno za Google CDN
+            'Referer': 'https://www.youtube.com/',
+            'Origin': 'https://www.youtube.com/'
         }
     });
+
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
         response.data.pipe(writer);
@@ -38,25 +45,21 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 34 - KONKRETAN API FIX) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 35) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
 
-    console.log("\n--- YOUTUBE IMPORT (YT-DOWNLOADER1 START) ---");
+    console.log("\n--- YOUTUBE IMPORT (CDN BYPASS START) ---");
 
     try {
         const options = {
             method: 'GET',
             url: 'https://yt-downloader1.p.rapidapi.com/api',
-            params: { 
-                url: url,
-                key: RAPID_KEY // API zahteva ključ i ovde
-            },
+            params: { url: url, key: RAPID_KEY },
             headers: {
                 'x-rapidapi-key': RAPID_KEY,
-                'x-rapidapi-host': 'yt-downloader1.p.rapidapi.com',
-                'Content-Type': 'application/json'
+                'x-rapidapi-host': 'yt-downloader1.p.rapidapi.com'
             }
         };
 
@@ -64,29 +67,23 @@ app.post("/import-youtube", async (req, res) => {
         const data = apiRes.data;
 
         let mp4Url = null;
-        let title = data.title || "YouTube Song";
+        let title = data.title || "YouTube Video";
 
-        // Parsiranje medias niza prema tvom prethodnom JSON-u
         if (data.medias && Array.isArray(data.medias)) {
-            // Tražimo MP4 koji ima i zvuk i sliku (audioAvailable: true)
-            const best = data.medias.find(m => m.extension === 'mp4' && m.audioAvailable && m.videoAvailable) || 
-                         data.medias[0];
-            
+            // Biramo MP4 koji ima zvuk i sliku
+            const best = data.medias.find(m => m.extension === 'mp4' && m.audioAvailable) || data.medias[0];
             mp4Url = best.url;
         }
 
-        if (!mp4Url) {
-            console.log("Struktura odgovora API-ja:", JSON.stringify(data).substring(0, 500));
-            throw new Error("API nije vratio MP4 link u očekivanom formatu.");
-        }
+        if (!mp4Url) throw new Error("Nije pronađen link u odgovoru API-ja.");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje MP4 fajla...");
+        console.log("Preuzimanje sa Google CDN-a...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase Storage...");
+        console.log("Upload na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -97,16 +94,19 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        console.log("IMPORT USPEŠAN!");
+        console.log("USPEH!");
         res.json({ success: true, videoUrl: publicUrl, title: title });
 
     } catch (err) {
-        console.error("Greška:", err.message);
+        // DETALJNIJE LOGOVANJE GREŠKE
+        console.error("DETALJI GREŠKE:");
+        console.error("Status:", err.response?.status);
+        console.error("Poruka:", err.message);
         res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -140,4 +140,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));
+app.listen(PORT, () => console.log(`Server spreman - Bypass Mode`));
