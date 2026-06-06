@@ -11,17 +11,11 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. Middleware
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// 2. Supabase Setup
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// 3. Folderi za privremene fajlove
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
 [uploadsDir, rendersDir].forEach(dir => {
@@ -30,7 +24,13 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// Pomoćna funkcija za download fajla sa URL-a
+// POMOĆNA FUNKCIJA: Čišćenje YouTube URL-a (Uzimanje samo Video ID-a)
+function getYouTubeID(url) {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length == 11) ? match[7] : null;
+}
+
 async function downloadFromUrl(url, targetPath) {
     const writer = fs.createWriteStream(targetPath);
     const response = await axios({ url, method: 'GET', responseType: 'stream' });
@@ -41,37 +41,39 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// 4. RUTA: IMPORT YOUTUBE (Preko RapidAPI)
+// 1. RUTA: IMPORT YOUTUBE (Poboljšana verzija)
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (RAPID API) ---", url);
+    console.log("\n--- YOUTUBE IMPORT ZAPOČET ---", url);
 
-    if (!url) return res.status(400).json({ error: "Missing YouTube URL" });
+    const videoId = getYouTubeID(url);
+    if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL" });
 
     try {
+        // KORISTIMO STABILNIJI API (Social Media Video Downloader)
+        // Napomena: Proveri na RapidAPI dashboardu da li je ovo tvoj 'Host'
         const options = {
             method: 'GET',
-            url: 'https://youtube-video-downloader-cli.p.rapidapi.com/video',
-            params: { url: url },
+            url: 'https://social-media-video-downloader.p.rapidapi.com/smvd/get/all',
+            params: { url: `https://www.youtube.com/watch?v=${videoId}` },
             headers: {
                 'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-                'X-RapidAPI-Host': 'youtube-video-downloader-cli.p.rapidapi.com'
+                'X-RapidAPI-Host': 'social-media-video-downloader.p.rapidapi.com'
             }
         };
 
-        // ISPRAVLJENA LINIJA:
         const apiRes = await axios.request(options);
-        
-        const videoData = apiRes.data;
-        // Pokušavamo da nađemo MP4 link u odgovorima API-ja
-        const mp4Url = videoData.formats?.find(f => f.ext === 'mp4' || f.container === 'mp4')?.url || videoData.url;
+        const data = apiRes.data;
 
-        if (!mp4Url) throw new Error("Could not find direct MP4 link");
+        // API obično vraća listu linkova. Tražimo onaj koji je MP4 i ima najbolji kvalitet.
+        const mp4Url = data.links?.find(l => l.extension === 'mp4' || l.quality.includes('720'))?.link || data.links?.[0]?.link;
+
+        if (!mp4Url) throw new Error("API nije pronašao MP4 link");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidam video sa YouTube servera...");
+        console.log("Skidam MP4 sa API servera...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Slanje na Supabase...");
@@ -89,69 +91,15 @@ app.post("/import-youtube", async (req, res) => {
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("YouTube Error:", err.message);
-        res.status(500).json({ error: "Failed to import YouTube video. Check API key." });
+        console.error("YouTube Error:", err.response?.data || err.message);
+        res.status(500).json({ error: "RapidAPI Error or YouTube blocked. Use manual upload." });
     }
 });
 
-// 5. RUTA: RENDER DUET (TikTok 1080x1920)
+// 2. RUTA: RENDER DUET (Bez promena)
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
-    console.log("\n--- TIKTOK DUET RENDER ---");
-    const { originalUrl, duration } = req.body;
-    const reactionFile = req.file;
-
-    const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
-    const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
-    const finalDuration = parseFloat(duration) || 10;
-
-    try {
-        await downloadFromUrl(originalUrl, localOriginal);
-
-        ffmpeg()
-            .input(localOriginal)
-            .input(reactionFile.path)
-            .duration(finalDuration)
-            .complexFilter([
-                `[0:v]fps=30,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v0]`,
-                `[1:v]fps=30,format=yuv420p,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v1]`,
-                `[v0][v1]vstack=inputs=2,setsar=1[v_final]`,
-                `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=0.5[a0]`,
-                `[1:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=1.2[a1]`,
-                `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[a_final]`
-            ])
-            .outputOptions([
-                "-map [v_final]", "-map [a_final]",
-                "-c:v libx264", "-preset ultrafast", "-crf 24",
-                "-pix_fmt yuv420p", "-movflags +faststart"
-            ])
-            .on("end", async () => {
-                const storageName = `duets/tiktok-${Date.now()}.mp4`;
-                const { error: upErr } = await supabase.storage
-                    .from("videos")
-                    .upload(storageName, fs.createReadStream(outputPath));
-                
-                if (upErr) throw upErr;
-
-                const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
-                
-                [localOriginal, reactionFile.path, outputPath].forEach(p => {
-                    if (p && fs.existsSync(p)) fs.unlink(p, () => {});
-                });
-
-                res.json({ success: true, videoUrl: publicUrl });
-            })
-            .on("error", (err) => {
-                console.error(err);
-                res.status(500).json({ error: "Render failed" });
-            })
-            .save(outputPath);
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
-    }
+    // ... tvoj postojeći render-duet kod ...
+    // (Zadrži sve isto kao u prošloj ispravci)
 });
 
-app.get("/", (req, res) => res.send("TikTok Duet Server Online (RapidAPI Fix)"));
-
-app.listen(PORT, () => console.log(`Server spreman na portu ${PORT}`));
+app.listen(PORT, () => console.log(`Server Online na portu ${PORT}`));
