@@ -38,10 +38,10 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 17 - FLEXIBLE PARSING) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 18 - MEDIAS ARRAY PARSING) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (FLEXIBLE) ---");
+    console.log("\n--- YOUTUBE IMPORT (MEDIAS ARRAY) ---");
 
     try {
         const encodedParams = new URLSearchParams();
@@ -61,54 +61,52 @@ app.post("/import-youtube", async (req, res) => {
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // OVO JE KLJUČ: Ispisujemo odgovor u logove da vidimo strukturu!
-        console.log("FULL API RESPONSE:", JSON.stringify(data));
-
         let mp4Url = null;
 
-        // 1. Provera 'result' niza (najčešće)
-        if (data.result && Array.isArray(data.result)) {
-            const best = data.result.find(r => r.extension === 'mp4' && (r.quality === '720p' || r.quality === 'HD')) || 
-                         data.result.find(r => r.extension === 'mp4') || 
-                         data.result[0];
-            mp4Url = best.url || best.link || best.download_url;
-        } 
-        // 2. Provera direktnih ključeva
-        else {
-            mp4Url = data.url || data.link || data.video || data.mp4 || data.download_url;
-        }
-
-        // 3. Provera unutar data objekta (ako je ugnježdeno)
-        if (!mp4Url && data.data) {
-            mp4Url = data.data.url || data.data.link || data.data.video;
+        // PARSIRANJE PREMA TVOM JSON-u:
+        if (data.medias && Array.isArray(data.medias)) {
+            console.log("Pronađen 'medias' niz. Tražim najbolji MP4...");
+            
+            // 1. Pokušavamo da nađemo 720p MP4
+            const mp4_720 = data.medias.find(m => m.ext === 'mp4' && m.quality.includes('720p'));
+            // 2. Ako nema, bilo koji MP4
+            const any_mp4 = data.medias.find(m => m.ext === 'mp4');
+            // 3. Uzimamo download_url
+            mp4Url = mp4_720?.download_url || any_mp4?.download_url || data.medias[0]?.download_url;
         }
 
         if (!mp4Url) {
-            throw new Error(`Nema linka. API je poslao: ${JSON.stringify(data).substring(0, 200)}`);
+            console.log("Struktura nije prepoznata. Full response:", JSON.stringify(data));
+            throw new Error("Nije pronađen download_url u 'medias' nizu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje...");
+        console.log("Preuzimanje fajla sa URL-a:", mp4Url.substring(0, 50) + "...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Supabase upload...");
+        console.log("Slanje na Supabase Songs...");
         const fileBuffer = fs.readFileSync(tempPath);
-        await supabase.storage.from("songs").upload(videoName, fileBuffer, { contentType: 'video/mp4' });
-        
+        const { error: upErr } = await supabase.storage
+            .from("songs")
+            .upload(videoName, fileBuffer, { contentType: 'video/mp4' });
+
+        if (upErr) throw upErr;
+
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
+        console.log("Uspešno uvezeno!");
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("Greška:", err.message);
-        res.status(500).json({ error: "Import Failed", details: err.message });
+        console.error("Greška pri uvozu:", err.message);
+        res.status(500).json({ error: "YouTube Import Failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET (Standard) ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -142,4 +140,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman - Verzija 17`));
+app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));
