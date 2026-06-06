@@ -21,20 +21,13 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-function getYTID(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : null;
-}
-
+// POMOĆNA FUNKCIJA ZA DOWNLOAD
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
-        }
+        headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
@@ -44,13 +37,16 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 38 - PATH FIX) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 39 - BEZ CRASH-A) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const videoId = getYTID(url);
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
+    
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[7].length == 11) ? match[7] : null;
 
-    console.log("\n--- YOUTUBE IMPORT (PROXIED PATH FIX) ---");
+    console.log("\n--- YOUTUBE IMPORT (OPTIMIZED STRATEGY) ---");
 
     try {
         const options = {
@@ -59,7 +55,7 @@ app.post("/import-youtube", async (req, res) => {
             params: {
                 videoId: videoId,
                 urlAccess: 'proxied',
-                renderableFormats: '720p',
+                renderableFormats: '360p', // SMANJUJEMO NA 360p DA SERVER NE PUKNE
                 getTranscript: 'false'
             },
             headers: {
@@ -72,32 +68,29 @@ app.post("/import-youtube", async (req, res) => {
         const data = apiRes.data;
 
         let mp4Url = null;
-
-        // PRECIZNA PUTANJA PREMA TVOM LOGU: data.contents[0].videos
         if (data.contents && data.contents[0] && data.contents[0].videos) {
-            const videoList = data.contents[0].videos;
-            console.log("Pronađena lista videa u 'contents'. Tražim link...");
-            
-            // Uzimamo prvi dostupni URL (obično je to onaj koji smo tražili preko renderableFormats)
-            mp4Url = videoList[0].url;
+            // Uzimamo prvi dostupni (360p) proksi link
+            mp4Url = data.contents[0].videos[0].url;
         }
 
-        if (!mp4Url) {
-            console.log("Struktura nije prepoznata:", JSON.stringify(data).substring(0, 500));
-            throw new Error("Nije pronađen URL u 'contents[0].videos' nizu.");
-        }
+        if (!mp4Url) throw new Error("Link nije pronađen.");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje preko SMVD proksi tunela...");
+        console.log("Preuzimanje u privremeni fajl...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
-        const fileBuffer = fs.readFileSync(tempPath);
+        // KLJUČNA PROMENA: STREAMING UPLOAD (Štedi RAM i sprečava restart servera)
+        console.log("Streaming upload na Supabase...");
+        const fileStream = fs.createReadStream(tempPath);
+        
         const { error: upErr } = await supabase.storage
             .from("songs")
-            .upload(videoName, fileBuffer, { contentType: 'video/mp4' });
+            .upload(videoName, fileStream, { 
+                contentType: 'video/mp4',
+                duplex: 'half' // Obavezno za Node.js strimove
+            });
 
         if (upErr) throw upErr;
 
@@ -112,7 +105,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -146,4 +139,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - V38`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 39 (Optimized RAM)`));
