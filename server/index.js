@@ -21,31 +21,17 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-function getYTID(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : null;
-}
-
-// --- MOĆAN DOWNLOADER (Emulira pravi browser 100%) ---
+// --- FUNKCIJA ZA DOWNLOAD SA BROWSER HEADERS (Protiv 403 greške) ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
-        timeout: 60000, // 1 minut max za download
-        maxRedirects: 5,
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'video/webm,video/mp4,video/*;q=0.9,application/octet-stream;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.youtube.com/',
-            'Origin': 'https://www.youtube.com',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': '*/*'
         }
     });
-
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
         response.data.pipe(writer);
@@ -54,51 +40,50 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (FIKSIRANI PARAMETRI) ---
+// --- RUTA: IMPORT YOUTUBE (PRILAGOĐENA ZA VIDEO DOWNLOADER PRO) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const videoId = getYTID(url);
-    
-    console.log("\n--- YOUTUBE IMPORT (VERZIJA 8) --- ID:", videoId);
+    console.log("\n--- YOUTUBE IMPORT (VIDEO DOWNLOADER PRO) ---");
+    console.log("URL:", url);
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details',
-            params: {
-                videoId: videoId,
-                urlAccess: 'normal', // Vraćeno na normal da izbegnemo 400
-                renderableFormats: '720p,1080p',
-                getTranscript: 'false'
-            },
+            url: 'https://video-downloader-pro1.p.rapidapi.com/download',
+            params: { url: url },
             headers: {
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com'
+                'x-rapidapi-host': 'video-downloader-pro1.p.rapidapi.com'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
+        // Video Downloader Pro obično vraća listu u data.result ili data.formats
         let mp4Url = null;
-        if (data.contents && data.contents[0]?.videos) {
-            const videos = data.contents[0].videos;
-            // Pokušavamo da nađemo 720p, ako nema, uzmi bilo koji
-            const best = videos.find(v => v.label === "720p") || 
-                         videos.find(v => v.label === "1080p") || 
-                         videos[0];
-            mp4Url = best?.url;
+        
+        // Pokušavamo da nađemo MP4 link u rezultatima
+        if (data.result && Array.isArray(data.result)) {
+            // Tražimo najbolji MP4 (sa videom i zvukom)
+            const bestLink = data.result.find(l => l.extension === 'mp4' && l.type === 'video') || data.result[0];
+            mp4Url = bestLink.url || bestLink.link;
+        } else if (data.url) {
+            mp4Url = data.url;
         }
 
-        if (!mp4Url) throw new Error("API nije vratio video link.");
+        if (!mp4Url) {
+            console.log("Struktura odgovora API-ja:", JSON.stringify(data));
+            throw new Error("API nije vratio ispravan MP4 link.");
+        }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Pokrećem download sa bypass-om...");
+        console.log("Preuzimanje video fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Upload na Supabase Storage...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -107,17 +92,19 @@ app.post("/import-youtube", async (req, res) => {
         if (upErr) throw upErr;
 
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
+
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
+        console.log("Import uspešan! Link:", publicUrl);
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("Greška:", err.message);
-        res.status(500).json({ error: "YouTube import failed", details: err.message });
+        console.error("Greška:", err.response?.data || err.message);
+        res.status(500).json({ error: "YouTube Import Failed", details: err.message });
     }
 });
 
-// --- RENDER DUET RUTA (Ista kao pre) ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -146,9 +133,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
                 res.json({ success: true, videoUrl: publicUrl });
             })
-            .on("error", (err) => { console.error(err); res.status(500).json({ error: "Render failed" }); })
-            .save(outputPath);
-    } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
-});
-
-app.listen(PORT, () => console.log(`Server Online - Verzija 8`));
+            .on("error", (err) => { console.error(err); res.status(500).json({ error
