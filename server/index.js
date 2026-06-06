@@ -21,13 +21,6 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// Funkcija za ekstrakciju ID-a (npr. iz watch?v=ID ili youtu.be/ID)
-function getYTID(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : null;
-}
-
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
@@ -45,55 +38,45 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 26 - TAČNI PARAMETRI) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 27 - DATAFANATIC PROXY) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const videoId = getYTID(url);
-
-    console.log("\n--- YOUTUBE IMPORT (V3 PARAMETERS FIX) ---");
-    
-    if (!videoId) {
-        return res.status(400).json({ error: "Pogrešan YouTube URL format." });
-    }
+    console.log("\n--- YOUTUBE IMPORT (DATAFANATIC PROXY BYPASS) ---");
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details',
-            params: {
-                videoId: videoId, // MORA biti samo ID
-                urlAccess: 'normal',
-                renderableFormats: '720p,highres',
-                getTranscript: 'false'
-            },
+            url: 'https://youtube-media-downloader.p.rapidapi.com/v2/video/details',
+            params: { url: url },
             headers: {
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com'
+                'x-rapidapi-host': 'youtube-media-downloader.p.rapidapi.com'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // Provera formata u odgovoru (ovaj API vraća formats.video)
+        // DataFanatic obično vraća direktne linkove u videos nizu
         let mp4Url = null;
-        if (data.formats && data.formats.video) {
-            // Tražimo najbolji 720p koji ima i zvuk
-            const best = data.formats.video.find(v => v.quality === '720p' && v.hasAudio) ||
-                         data.formats.video.find(v => v.hasAudio) ||
-                         data.formats.video[0];
-            mp4Url = best.url || best.link;
+        if (data.videos && data.videos.items) {
+            // Tražimo najbolji MP4 (obično muxed)
+            const formats = data.videos.items;
+            const best = formats.find(f => f.quality === '720p' && f.extension === 'mp4') || 
+                         formats.find(f => f.extension === 'mp4') || 
+                         formats[0];
+            mp4Url = best.url;
         }
 
         if (!mp4Url) {
             console.log("Struktura odgovora:", JSON.stringify(data).substring(0, 500));
-            throw new Error("Nije pronađen direktan MP4 link u v3 odgovoru.");
+            throw new Error("Nije pronađen MP4 link u DataFanatic odgovoru.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje...");
+        console.log("Preuzimanje preko proksija provajdera...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -149,4 +132,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman - Verzija 26`));
+app.listen(PORT, () => console.log(`Backend spreman - Verzija 27 (Proxy Bypass)`));
