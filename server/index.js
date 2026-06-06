@@ -21,23 +21,7 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// POMOĆNA FUNKCIJA ZA DOWNLOAD
-async function downloadFromUrl(url, targetPath) {
-    const response = await axios({
-        url,
-        method: 'GET',
-        responseType: 'stream',
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    return new Promise((resolve, reject) => {
-        const writer = fs.createWriteStream(targetPath);
-        response.data.pipe(writer);
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-    });
-}
-
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 39 - BEZ CRASH-A) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 40 - DIRECT PIPE) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
@@ -46,58 +30,43 @@ app.post("/import-youtube", async (req, res) => {
     const match = url.match(regExp);
     const videoId = (match && match[7].length == 11) ? match[7] : null;
 
-    console.log("\n--- YOUTUBE IMPORT (OPTIMIZED STRATEGY) ---");
+    console.log("\n--- YOUTUBE IMPORT (DIRECT PIPE MODE) ---");
 
     try {
-        const options = {
-            method: 'GET',
-            url: 'https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details',
-            params: {
-                videoId: videoId,
-                urlAccess: 'proxied',
-                renderableFormats: '360p', // SMANJUJEMO NA 360p DA SERVER NE PUKNE
-                getTranscript: 'false'
-            },
-            headers: {
-                'x-rapidapi-key': RAPID_KEY,
-                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com'
-            }
-        };
+        // 1. Dobijanje proksi linka
+        const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
+            params: { videoId, urlAccess: 'proxied', renderableFormats: '360p' },
+            headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }
+        });
 
-        const apiRes = await axios.request(options);
-        const data = apiRes.data;
-
-        let mp4Url = null;
-        if (data.contents && data.contents[0] && data.contents[0].videos) {
-            // Uzimamo prvi dostupni (360p) proksi link
-            mp4Url = data.contents[0].videos[0].url;
-        }
-
+        const mp4Url = apiRes.data?.contents?.[0]?.videos?.[0]?.url;
         if (!mp4Url) throw new Error("Link nije pronađen.");
 
+        console.log("Link dobijen. Pokrećem direktan prenos na Supabase...");
+
+        // 2. POVEZIVANJE: YouTube -> Backend -> Supabase (Bez čuvanja na disk!)
+        const videoStream = await axios({
+            url: mp4Url,
+            method: 'GET',
+            responseType: 'stream'
+        });
+
         const videoName = `yt-${Date.now()}.mp4`;
-        const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje u privremeni fajl...");
-        await downloadFromUrl(mp4Url, tempPath);
-
-        // KLJUČNA PROMENA: STREAMING UPLOAD (Štedi RAM i sprečava restart servera)
-        console.log("Streaming upload na Supabase...");
-        const fileStream = fs.createReadStream(tempPath);
-        
-        const { error: upErr } = await supabase.storage
+        // Direktno prosleđivanje strima u Supabase storage
+        const { data: upData, error: upErr } = await supabase.storage
             .from("songs")
-            .upload(videoName, fileStream, { 
+            .upload(videoName, videoStream.data, { 
                 contentType: 'video/mp4',
-                duplex: 'half' // Obavezno za Node.js strimove
+                duplex: 'half' 
             });
 
         if (upErr) throw upErr;
 
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
-        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-
-        res.json({ success: true, videoUrl: publicUrl, title: data.metadata?.title });
+        
+        console.log("Prenos završen uspešno!");
+        res.json({ success: true, videoUrl: publicUrl, title: apiRes.data.metadata?.title });
 
     } catch (err) {
         console.error("Greška:", err.message);
@@ -105,7 +74,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET (Standard) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -114,7 +83,12 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const finalDuration = parseFloat(duration) || 10;
 
     try {
-        await downloadFromUrl(originalUrl, localOriginal);
+        // Pomoćna funkcija za download originala radi rendera
+        const resp = await axios({ url: originalUrl, method: 'GET', responseType: 'stream' });
+        const writer = fs.createWriteStream(localOriginal);
+        resp.data.pipe(writer);
+        await new Promise((res, rej) => { writer.on('finish', res); writer.on('error', rej); });
+
         ffmpeg()
             .input(localOriginal).input(reactionFile.path).duration(finalDuration)
             .complexFilter([
@@ -139,4 +113,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 39 (Optimized RAM)`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 40 (Direct Pipe)`));
