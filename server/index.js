@@ -43,16 +43,16 @@ async function downloadFromUrl(url, targetPath) {
 // --- RUTA: IMPORT YOUTUBE (Fiksiran 404 Error) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const cleanUrl = getPureYoutubeUrl(url); // Čistimo link odmah!
+    const cleanUrl = getPureYoutubeUrl(url); // Funkcija koju smo već napravili
     
-    console.log("\n--- YOUTUBE IMPORT START ---");
-    console.log("Original:", url);
-    console.log("Cleaned:", cleanUrl);
+    console.log("\n--- YOUTUBE IMPORT (FIKSIRAN ENDPOINT) ---");
+    console.log("URL:", cleanUrl);
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://social-media-video-downloader.p.rapidapi.com/smvd/get/all',
+            // PROMENA: Izbacili smo /smvd/get/ i ostavili samo /all
+            url: 'https://social-media-video-downloader.p.rapidapi.com/all',
             params: { url: cleanUrl },
             headers: {
                 'X-RapidAPI-Key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
@@ -65,31 +65,32 @@ app.post("/import-youtube", async (req, res) => {
 
         let mp4Url = null;
 
-        // Navigacija kroz tvoj specifični JSON format
+        // Proveravamo tvoj format (contents -> videos)
         if (data.contents && data.contents[0] && data.contents[0].videos) {
             const videos = data.contents[0].videos;
-            // Tražimo MP4 (720p ili bilo koji)
-            const bestVideo = videos.find(v => v.metadata.mime_type.includes("video/mp4"));
+            // Tražimo MP4 (prioritet 720p)
+            const bestVideo = videos.find(v => v.label === "720p" && v.metadata.mime_type.includes("video/mp4")) ||
+                             videos.find(v => v.metadata.mime_type.includes("video/mp4"));
             if (bestVideo) mp4Url = bestVideo.url;
         } 
-        // Fallback ako API vrati ravan niz linkova
-        else if (data.links) {
-            const bestLink = data.links.find(l => l.extension === 'mp4');
+        // Druga varijanta koju ovaj API često vraća
+        else if (data.links && Array.isArray(data.links)) {
+            const bestLink = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('audio'));
             if (bestLink) mp4Url = bestLink.link;
         }
 
         if (!mp4Url) {
-            console.log("Full API response:", JSON.stringify(data));
-            throw new Error("API nije pronašao MP4 link za ovaj video.");
+            console.log("API Response:", JSON.stringify(data));
+            throw new Error("API nije pronašao MP4 link.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje fajla na server...");
+        console.log("Preuzimanje...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Slanje na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -101,12 +102,15 @@ app.post("/import-youtube", async (req, res) => {
 
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        console.log("Uspešno završen import!");
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
+        // Detaljan ispis greške da znamo šta se desilo
         console.error("YouTube Error Details:", err.response?.data || err.message);
-        res.status(500).json({ error: "Import nije uspeo. Proverite da li je video javan." });
+        res.status(500).json({ 
+            error: "Import failed", 
+            message: err.response?.data?.message || err.message 
+        });
     }
 });
 
