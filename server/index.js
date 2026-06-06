@@ -38,18 +38,17 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (KEEPSAVEIT FIX) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 10 - ROOT ENDPOINT) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (KEEPSAVEIT FIX) ---");
+    console.log("\n--- YOUTUBE IMPORT (KEEPSAVEIT ROOT FIX) ---");
 
     try {
         const options = {
             method: 'POST',
-            // PROMENA: Putanja je /all
-            url: 'https://all-social-media-video-downloader.p.rapidapi.com/all',
+            // PROMENA: Koristimo samo root (/) bez dodatnih putanja
+            url: 'https://all-social-media-video-downloader.p.rapidapi.com/',
             headers: {
-                // Ovaj API obicno zahteva form-urlencoded za POST
                 'content-type': 'application/x-www-form-urlencoded',
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
                 'x-rapidapi-host': 'all-social-media-video-downloader.p.rapidapi.com'
@@ -62,16 +61,19 @@ app.post("/import-youtube", async (req, res) => {
 
         let mp4Url = null;
 
-        // KeepSaveIt struktura: links niz
+        // KeepSaveIt struktura: Proveravamo 'links' niz ili direktno 'url'
         if (data.links && Array.isArray(data.links)) {
-            // Trazimo video (ne audio) koji je MP4
-            const best = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('kbps')) || data.links[0];
+            const best = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('audio')) || data.links[0];
             mp4Url = best.link || best.url;
+        } else if (data.url) {
+            mp4Url = data.url;
+        } else if (data.video) {
+            mp4Url = data.video;
         }
 
         if (!mp4Url) {
             console.log("Response structure:", JSON.stringify(data).substring(0, 500));
-            throw new Error("API nije vratio direktan MP4 link.");
+            throw new Error("API nije vratio direktan MP4 link. Proverite logove za strukturu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
@@ -99,7 +101,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -133,4 +135,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 9`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 10 (Root Endpoint)`));
