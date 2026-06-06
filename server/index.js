@@ -21,12 +21,6 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-function getYTID(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : null;
-}
-
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({ url, method: 'GET', responseType: 'stream' });
     return new Promise((resolve, reject) => {
@@ -37,24 +31,21 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (Poboljšana verzija) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 7 - POST ROOT) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const videoId = getYTID(url);
-    
-    console.log("\n--- YOUTUBE IMPORT ZAPOČET (OFFICIALOFUN API) --- ID:", videoId);
-
-    if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL" });
+    console.log("\n--- YOUTUBE IMPORT ZAPOČET (ROOT ENDPOINT) ---");
 
     try {
         const options = {
-            method: 'GET',
-            url: 'https://youtube-video-and-shorts-downloader.p.rapidapi.com/video',
-            params: { id: videoId },
+            method: 'POST',
+            url: 'https://social-media-video-downloader.p.rapidapi.com/',
             headers: {
+                'content-type': 'application/json',
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'youtube-video-and-shorts-downloader.p.rapidapi.com'
-            }
+                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com'
+            },
+            data: { url: url }
         };
 
         const apiRes = await axios.request(options);
@@ -62,28 +53,25 @@ app.post("/import-youtube", async (req, res) => {
 
         let mp4Url = null;
 
-        // Struktura ovog API-ja obično drži linkove u data.links
-        if (data.links && Array.isArray(data.links)) {
-            // Tražimo MP4 video koji ima i video i audio (najčešće 360p ili 720p)
-            const formats = data.links.filter(f => f.extension === 'mp4' && f.video && f.audio);
-            // Uzimamo onaj sa najboljim kvalitetom (ali ne 4k jer bi pukao Render timeout)
-            const bestFormat = formats.find(f => f.quality === '720p') || formats[0];
-            
-            mp4Url = bestFormat ? bestFormat.link : null;
+        // Navigacija kroz JSON (contents -> videos)
+        if (data.contents && data.contents[0] && data.contents[0].videos) {
+            const videos = data.contents[0].videos;
+            const best = videos.find(v => v.metadata.mime_type.includes("video/mp4"));
+            mp4Url = best?.url;
         }
 
         if (!mp4Url) {
-            console.log("Struktura odgovora API-ja:", JSON.stringify(data).substring(0, 500));
-            throw new Error("API nije vratio direktan MP4 link. Pokušajte drugi video.");
+            console.log("API struktura odgovora:", JSON.stringify(data));
+            throw new Error("Nije pronađen direktan MP4 link.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje MP4...");
+        console.log("Preuzimanje...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Slanje na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
