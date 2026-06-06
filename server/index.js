@@ -21,13 +21,16 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
+// --- DOWNLOAD FUNKCIJA (Poboljšana protiv 403) ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
+            'Referer': 'https://www.youtube.com/'
         }
     });
     return new Promise((resolve, reject) => {
@@ -38,22 +41,23 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 10 - ROOT ENDPOINT) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 11 - JSON FIX) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (KEEPSAVEIT ROOT FIX) ---");
+    console.log("\n--- YOUTUBE IMPORT (VERZIJA 11 - JSON) ---");
 
     try {
         const options = {
             method: 'POST',
-            // PROMENA: Koristimo samo root (/) bez dodatnih putanja
             url: 'https://all-social-media-video-downloader.p.rapidapi.com/',
+            params: { url: url }, // Neki provajderi traže url u params čak i za POST
             headers: {
-                'content-type': 'application/x-www-form-urlencoded',
+                'content-type': 'application/json',
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
                 'x-rapidapi-host': 'all-social-media-video-downloader.p.rapidapi.com'
             },
-            data: new URLSearchParams({ url: url })
+            data: { url: url }, // Šaljemo i u body-ju kao JSON za svaki slučaj
+            maxRedirects: 5
         };
 
         const apiRes = await axios.request(options);
@@ -61,7 +65,7 @@ app.post("/import-youtube", async (req, res) => {
 
         let mp4Url = null;
 
-        // KeepSaveIt struktura: Proveravamo 'links' niz ili direktno 'url'
+        // Navigacija kroz strukturu (proveravamo sve poznate ključeve)
         if (data.links && Array.isArray(data.links)) {
             const best = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('audio')) || data.links[0];
             mp4Url = best.link || best.url;
@@ -72,14 +76,14 @@ app.post("/import-youtube", async (req, res) => {
         }
 
         if (!mp4Url) {
-            console.log("Response structure:", JSON.stringify(data).substring(0, 500));
-            throw new Error("API nije vratio direktan MP4 link. Proverite logove za strukturu.");
+            console.log("Struktura odgovora:", JSON.stringify(data));
+            throw new Error("API nije vratio video link.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje fajla...");
+        console.log("Skidanje fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Slanje na Supabase...");
@@ -101,7 +105,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -135,4 +139,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 10 (Root Endpoint)`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 11`));
