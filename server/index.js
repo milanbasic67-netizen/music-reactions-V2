@@ -38,10 +38,10 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 27 - DATAFANATIC PROXY) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 28 - PRECIZNO PARSIRANJE) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (DATAFANATIC PROXY BYPASS) ---");
+    console.log("\n--- YOUTUBE IMPORT (V2 STRUCTURE PARSING) ---");
 
     try {
         const options = {
@@ -57,26 +57,34 @@ app.post("/import-youtube", async (req, res) => {
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // DataFanatic obično vraća direktne linkove u videos nizu
+        // 1. Ekstrakcija metapodataka iz tvog JSON-a
+        const title = data.title || "Untitled Song";
+        const artist = data.channel?.name || "Unknown Artist";
+        console.log(`Naslov: ${title}, Autor: ${artist}`);
+
+        // 2. Pronalaženje najboljeg MP4 linka koji ima i VIDEO i AUDIO
         let mp4Url = null;
-        if (data.videos && data.videos.items) {
-            // Tražimo najbolji MP4 (obično muxed)
-            const formats = data.videos.items;
-            const best = formats.find(f => f.quality === '720p' && f.extension === 'mp4') || 
-                         formats.find(f => f.extension === 'mp4') || 
-                         formats[0];
-            mp4Url = best.url;
+
+        if (data.videos && data.videos.items && Array.isArray(data.videos.items)) {
+            const items = data.videos.items;
+
+            // Tražimo format koji je MP4, ima zvuk, i rezoluciju 720p ili 360p
+            const bestMuxed = items.find(v => v.extension === 'mp4' && v.hasAudio && v.quality === '720p') ||
+                              items.find(v => v.extension === 'mp4' && v.hasAudio && v.quality === '360p') ||
+                              items.find(v => v.extension === 'mp4' && v.hasAudio);
+            
+            mp4Url = bestMuxed?.url;
         }
 
         if (!mp4Url) {
-            console.log("Struktura odgovora:", JSON.stringify(data).substring(0, 500));
-            throw new Error("Nije pronađen MP4 link u DataFanatic odgovoru.");
+            console.log("Dostupni formati:", JSON.stringify(data.videos?.items?.map(i => i.quality + i.extension)));
+            throw new Error("Nije pronađen MP4 fajl koji sadrži i video i zvuk.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje preko proksija provajdera...");
+        console.log("Preuzimanje direktnog GoogleVideo linka...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -90,15 +98,21 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        res.json({ success: true, videoUrl: publicUrl });
+        // Vraćamo i podatke o pesmi kako bi frontend mogao da ih prikaže
+        res.json({ 
+            success: true, 
+            videoUrl: publicUrl,
+            title: title,
+            artist: artist
+        });
 
     } catch (err) {
-        console.error("Greška:", err.response?.data || err.message);
+        console.error("Greška:", err.message);
         res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET (Standard) ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -132,4 +146,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman - Verzija 27 (Proxy Bypass)`));
+app.listen(PORT, () => console.log(`Backend spreman - Verzija 28`));
