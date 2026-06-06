@@ -21,19 +21,15 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// --- DOWNLOAD FUNKCIJA SA NAPREDNIM HEADERS ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
         method: 'GET',
         responseType: 'stream',
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': 'https://www.youtube.com/',
-            'Origin': 'https://www.youtube.com'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
     });
-
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
         response.data.pipe(writer);
@@ -42,47 +38,49 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (KEEPSAVEIT BYPASS) ---
+// --- RUTA: IMPORT YOUTUBE (KEEPSAVEIT FIX) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (KEEPSAVEIT BYPASS) ---");
+    console.log("\n--- YOUTUBE IMPORT (KEEPSAVEIT FIX) ---");
 
     try {
-        // Ovaj API zahteva x-www-form-urlencoded
-        const params = new URLSearchParams();
-        params.append('url', url);
-
         const options = {
             method: 'POST',
-            url: 'https://all-social-media-video-downloader.p.rapidapi.com/api/video/info',
+            // PROMENA: Putanja je /all
+            url: 'https://all-social-media-video-downloader.p.rapidapi.com/all',
             headers: {
+                // Ovaj API obicno zahteva form-urlencoded za POST
                 'content-type': 'application/x-www-form-urlencoded',
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
                 'x-rapidapi-host': 'all-social-media-video-downloader.p.rapidapi.com'
             },
-            data: params
+            data: new URLSearchParams({ url: url })
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // KeepSaveIt vraca niz u 'links' polju
         let mp4Url = null;
+
+        // KeepSaveIt struktura: links niz
         if (data.links && Array.isArray(data.links)) {
-            // Tražimo MP4 koji nije "audio-only"
-            const bestLink = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('audio')) || data.links[0];
-            mp4Url = bestLink.link || bestLink.url;
+            // Trazimo video (ne audio) koji je MP4
+            const best = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('kbps')) || data.links[0];
+            mp4Url = best.link || best.url;
         }
 
-        if (!mp4Url) throw new Error("API nije pronašao video link.");
+        if (!mp4Url) {
+            console.log("Response structure:", JSON.stringify(data).substring(0, 500));
+            throw new Error("API nije vratio direktan MP4 link.");
+        }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje preko API proxy-ja...");
+        console.log("Preuzimanje fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Slanje na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -96,12 +94,12 @@ app.post("/import-youtube", async (req, res) => {
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("Greška:", err.message);
+        console.error("Greška:", err.response?.data || err.message);
         res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET (Standardna) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -135,4 +133,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server radi na portu ${PORT}`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 9`));
