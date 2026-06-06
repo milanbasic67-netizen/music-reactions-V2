@@ -27,8 +27,17 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
+// --- FIKSIRANA FUNKCIJA ZA DOWNLOAD (Dodat User-Agent) ---
 async function downloadFromUrl(url, targetPath) {
-    const response = await axios({ url, method: 'GET', responseType: 'stream' });
+    const response = await axios({ 
+        url, 
+        method: 'GET', 
+        responseType: 'stream',
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*'
+        }
+    });
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
         response.data.pipe(writer);
@@ -37,12 +46,12 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (FIKSIRANA NAVIGACIJA) ---
+// --- RUTA: IMPORT YOUTUBE ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const videoId = getYTID(url);
     
-    console.log("\n--- YOUTUBE IMPORT (FIKSIRANA STRUKTURA) --- ID:", videoId);
+    console.log("\n--- YOUTUBE IMPORT (BYPASSING 403) --- ID:", videoId);
 
     try {
         const options = {
@@ -63,12 +72,10 @@ app.post("/import-youtube", async (req, res) => {
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // --- TAČNA PUTANJA PREMA TVOM ODGOVORU ---
         let mp4Url = null;
         if (data.contents && data.contents[0] && data.contents[0].videos) {
             const videos = data.contents[0].videos;
-            
-            // Prioritet: 720p (najbolji za duet), pa 1080p, pa bilo šta drugo
+            // Biramo 720p kao najsigurniju opciju
             const bestVideo = videos.find(v => v.label === "720p") || 
                              videos.find(v => v.label === "1080p") || 
                              videos[0];
@@ -76,15 +83,12 @@ app.post("/import-youtube", async (req, res) => {
             mp4Url = bestVideo?.url;
         }
 
-        if (!mp4Url) {
-            console.log("Struktura nije prepoznata:", JSON.stringify(data).substring(0, 300));
-            throw new Error("Nije pronađen URL u videos nizu.");
-        }
+        if (!mp4Url) throw new Error("Nije pronađen URL u videos nizu.");
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje fajla...");
+        console.log("Preuzimanje sa bypass-om...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -101,7 +105,7 @@ app.post("/import-youtube", async (req, res) => {
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("Greška:", err.message);
+        console.error("Greška:", err.response?.data || err.message);
         res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
@@ -140,4 +144,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server radi!`));
+app.listen(PORT, () => console.log(`Server radi na portu ${PORT}`));
