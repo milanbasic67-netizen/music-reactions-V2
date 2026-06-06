@@ -26,13 +26,15 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 49 - SMART PIPE) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 50 - HEADER-SAFE) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const videoId = getYTID(url);
 
-    console.log("\n--- YOUTUBE IMPORT (SMART PIPE MODE) ---");
+    console.log("\n--- YOUTUBE IMPORT (VERSION 50 - HEADER-SAFE) ---");
+
+    if (!videoId) return res.status(400).json({ error: "Nevažeći YouTube link." });
 
     try {
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
@@ -43,55 +45,69 @@ app.post("/import-youtube", async (req, res) => {
         const mp4Url = apiRes.data?.contents?.[0]?.videos?.[0]?.url;
         if (!mp4Url) throw new Error("Link nije pronađen.");
 
-        // KORAK 1: Saznajemo veličinu fajla sa proksija bez skidanja
-        const probe = await axios.head(mp4Url);
-        const size = probe.headers['content-length'];
-        console.log(`Detektovana veličina: ${(size / 1024 / 1024).toFixed(2)} MB`);
+        // 1. POKREĆEMO GET KA VIDEU
+        https.get(mp4Url, (ytRes) => {
+            if (ytRes.statusCode !== 200) {
+                return res.status(500).json({ error: "YouTube stream error" });
+            }
 
-        const videoName = `yt-${Date.now()}.mp4`;
-        const supabaseUrl = new URL(`${process.env.SUPABASE_URL}/storage/v1/object/songs/${videoName}`);
+            const videoName = `yt-${Date.now()}.mp4`;
+            const supabaseUrl = new URL(`${process.env.SUPABASE_URL}/storage/v1/object/songs/${videoName}`);
+            const size = ytRes.headers['content-length']; // Izvlačimo veličinu iz stvarnog odgovora
+            
+            console.log(size ? `Veličina: ${(size/1024/1024).toFixed(2)} MB` : "Veličina nepoznata (Streaming)");
 
-        // KORAK 2: Otvaramo cev ka Supabase-u sa UNAPRED definisanom veličinom
-        const supabaseRequest = https.request({
-            hostname: supabaseUrl.hostname,
-            path: supabaseUrl.pathname,
-            method: 'POST',
-            headers: {
+            // 2. PRIPREMAMO UPLOAD (PUT je bolji za Pro planove i velike strimove)
+            const uploadHeaders = {
                 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
                 'API-Key': process.env.SUPABASE_SERVICE_ROLE_KEY,
                 'Content-Type': 'video/mp4',
-                'Content-Length': size, // OVO REŠAVA 413 GREŠKU
                 'x-upsert': 'true'
-            }
-        }, (supRes) => {
-            let resData = "";
-            supRes.on("data", (d) => resData += d);
-            supRes.on("end", () => {
-                if (supRes.statusCode >= 200 && supRes.statusCode < 300) {
-                    res.json({ 
-                        success: true, 
-                        videoUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/songs/${videoName}`,
-                        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-                        title: apiRes.data.metadata?.title || "YouTube Song"
-                    });
-                } else {
-                    res.status(500).json({ error: "Supabase rejected", details: resData });
-                }
-            });
-        });
+            };
 
-        // KORAK 3: Direktno prebacivanje (Pipe)
-        https.get(mp4Url, (ytRes) => {
+            // Dodajemo Content-Length SAMO ako postoji
+            if (size) {
+                uploadHeaders['Content-Length'] = size;
+            } else {
+                uploadHeaders['Transfer-Encoding'] = 'chunked';
+            }
+
+            const supabaseRequest = https.request({
+                hostname: supabaseUrl.hostname,
+                path: supabaseUrl.pathname,
+                method: 'PUT',
+                headers: uploadHeaders
+            }, (supRes) => {
+                let resData = "";
+                supRes.on("data", (d) => resData += d);
+                supRes.on("end", () => {
+                    if (supRes.statusCode >= 200 && supRes.statusCode < 300) {
+                        res.json({ 
+                            success: true, 
+                            videoUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/songs/${videoName}`,
+                            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+                            title: apiRes.data.metadata?.title || "YouTube Song"
+                        });
+                    } else {
+                        console.error("Supabase Error:", supRes.statusCode, resData);
+                        res.status(500).json({ error: "Supabase rejected", details: resData });
+                    }
+                });
+            });
+
+            // 3. SPAJAMO CEVI
             ytRes.pipe(supabaseRequest);
+
+        }).on("error", (e) => {
+            res.status(500).json({ error: "YouTube connection failed" });
         });
 
     } catch (err) {
-        console.error("Greška:", err.message);
-        if (!res.headersSent) res.status(500).json({ error: "Import failed", details: err.message });
+        res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET ---
+// --- RUTA: RENDER DUET (Standardna optimizovana) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -129,4 +145,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend V49 - Smart Pipe`));
+app.listen(PORT, () => console.log(`Backend V50 - Header-Safe Streaming`));
