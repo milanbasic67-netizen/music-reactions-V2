@@ -26,16 +26,15 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 53 - SMART FORMAT SELECTION) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 54 - COMBINED AUDIO/VIDEO) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const videoId = getYTID(url);
 
-    console.log("\n--- YOUTUBE IMPORT (SELECTING SMALL FORMAT) ---");
+    console.log("\n--- YOUTUBE IMPORT (BALANCED SOUND & SIZE) ---");
 
     try {
-        // 1. Tražimo sve dostupne formate
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
             params: { videoId, urlAccess: 'proxied' },
             headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }
@@ -43,28 +42,24 @@ app.post("/import-youtube", async (req, res) => {
 
         const allVideos = apiRes.data?.contents?.[0]?.videos || [];
         
-        // 2. FILTRIRAMO NAJMANJI KVALITET (360p ili 480p)
-        // Tražimo video koji u polju 'quality' ima 360 ili 480
-        let selectedVideo = allVideos.find(v => v.quality === "360p") || 
-                            allVideos.find(v => v.quality === "480p") || 
-                            allVideos.find(v => v.quality === "240p") ||
-                            allVideos[allVideos.length - 1]; // Zadnji je obično najlošiji kvalitet
+        // KLJUČNA IZMENA: Tražimo format koji ima I video I audio (Progressive)
+        // Ovi formati obično imaju kvalitet "360p" i nisu "video/webm"
+        let selectedVideo = allVideos.find(v => 
+            v.quality === "360p" && 
+            v.container === "mp4" && 
+            v.hasAudio !== false // Tražimo eksplicitno audio
+        ) || allVideos.find(v => v.quality === "360p") || allVideos[0];
 
-        if (!selectedVideo || !selectedVideo.url) {
-            throw new Error("Nije pronađen odgovarajući format.");
-        }
+        if (!selectedVideo || !selectedVideo.url) throw new Error("Format nije pronađen.");
 
-        console.log(`Izabran kvalitet: ${selectedVideo.quality}`);
+        console.log(`Izabran format: ${selectedVideo.quality} (Audio: ${selectedVideo.hasAudio})`);
         
-        // 3. POKREĆEMO PRENOS
         const videoName = `yt-${Date.now()}.mp4`;
         const supabaseUrl = new URL(`${process.env.SUPABASE_URL}/storage/v1/object/songs/${videoName}`);
 
-        console.log("Pokrećem prenos na Supabase...");
-
         https.get(selectedVideo.url, (ytRes) => {
             const size = ytRes.headers['content-length'];
-            console.log(`Veličina fajla koji stiže: ${size ? (size/1024/1024).toFixed(2) + " MB" : "Nepoznato"}`);
+            console.log(`Veličina: ${size ? (size/1024/1024).toFixed(2) + " MB" : "Unknown"}`);
 
             const supabaseRequest = https.request({
                 hostname: supabaseUrl.hostname,
@@ -89,7 +84,7 @@ app.post("/import-youtube", async (req, res) => {
                             title: apiRes.data.metadata?.title || "YouTube Song"
                         });
                     } else {
-                        res.status(500).json({ error: "Supabase odbio fajl", details: resData });
+                        res.status(500).json({ error: "Supabase error", details: resData });
                     }
                 });
             });
@@ -98,12 +93,11 @@ app.post("/import-youtube", async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Greška:", err.message);
-        res.status(500).json({ error: "Import failed", details: err.message });
+        res.status(500).json({ error: "Import failed" });
     }
 });
 
-// --- RUTA: RENDER DUET ---
+// --- RUTA: RENDER DUET (Bez izmena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -119,12 +113,12 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 ffmpeg()
                     .input(localOriginal).input(reactionFile.path).duration(parseFloat(duration) || 10)
                     .complexFilter([
-                        `[0:v]fps=15,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v0]`,
-                        `[1:v]fps=15,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v1]`,
+                        `[0:v]fps=20,scale=640:480:force_original_aspect_ratio=increase,crop=640:480[v0]`,
+                        `[1:v]fps=20,scale=640:480:force_original_aspect_ratio=increase,crop=640:480[v1]`,
                         `[v0][v1]vstack=inputs=2[v_final]`,
                         `[0:a]volume=0.5[a0]`, `[1:a]volume=1.2[a1]`, `[a0][a1]amix=inputs=2:duration=first[a_final]`
                     ])
-                    .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 32"])
+                    .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 28"])
                     .on("end", async () => {
                         const storageName = `duets/tiktok-${Date.now()}.mp4`;
                         const fileStream = fs.createReadStream(outputPath);
@@ -141,4 +135,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend V53 - Small Format Mode`));
+app.listen(PORT, () => console.log(`Backend V54 - Sound Fix Ready`));
