@@ -15,11 +15,20 @@ app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 const uploadsDir = path.join(__dirname, "uploads");
 const rendersDir = path.join(__dirname, "renders");
 [uploadsDir, rendersDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
 const upload = multer({ dest: uploadsDir });
+
+// --- FUNKCIJA ZA ČIŠĆENJE LINKA (Uklanja plejliste i smeće) ---
+function getPureYoutubeUrl(url) {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    const id = (match && match[7].length == 11) ? match[7] : null;
+    return id ? `https://www.youtube.com/watch?v=${id}` : url;
+}
 
 async function downloadFromUrl(url, targetPath) {
     const writer = fs.createWriteStream(targetPath);
@@ -31,16 +40,20 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (Fiksirana za SMVD JSON strukturu) ---
+// --- RUTA: IMPORT YOUTUBE (Fiksiran 404 Error) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT ZAPOČET ---", url);
+    const cleanUrl = getPureYoutubeUrl(url); // Čistimo link odmah!
+    
+    console.log("\n--- YOUTUBE IMPORT START ---");
+    console.log("Original:", url);
+    console.log("Cleaned:", cleanUrl);
 
     try {
         const options = {
             method: 'GET',
             url: 'https://social-media-video-downloader.p.rapidapi.com/smvd/get/all',
-            params: { url: url },
+            params: { url: cleanUrl },
             headers: {
                 'X-RapidAPI-Key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
                 'X-RapidAPI-Host': 'social-media-video-downloader.p.rapidapi.com'
@@ -50,39 +63,33 @@ app.post("/import-youtube", async (req, res) => {
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // --- LOGIKA ZA IZVLAČENJE LINKA IZ TVOG KONTEKSTA ---
         let mp4Url = null;
 
+        // Navigacija kroz tvoj specifični JSON format
         if (data.contents && data.contents[0] && data.contents[0].videos) {
             const videos = data.contents[0].videos;
-            
-            // 1. Pokušavamo da nađemo 720p MP4 (najbolji balans kvaliteta i brzine za duet)
-            let bestVideo = videos.find(v => v.label === "720p" && v.metadata.mime_type.includes("video/mp4"));
-            
-            // 2. Ako nema 720p, tražimo 1080p MP4
-            if (!bestVideo) {
-                bestVideo = videos.find(v => v.label === "1080p" && v.metadata.mime_type.includes("video/mp4"));
-            }
-
-            // 3. Ako nema ni toga, uzmi bilo koji MP4
-            if (!bestVideo) {
-                bestVideo = videos.find(v => v.metadata.mime_type.includes("video/mp4"));
-            }
-
+            // Tražimo MP4 (720p ili bilo koji)
+            const bestVideo = videos.find(v => v.metadata.mime_type.includes("video/mp4"));
             if (bestVideo) mp4Url = bestVideo.url;
+        } 
+        // Fallback ako API vrati ravan niz linkova
+        else if (data.links) {
+            const bestLink = data.links.find(l => l.extension === 'mp4');
+            if (bestLink) mp4Url = bestLink.link;
         }
 
         if (!mp4Url) {
-            throw new Error("Nije pronađen odgovarajući MP4 video link u API odgovoru.");
+            console.log("Full API response:", JSON.stringify(data));
+            throw new Error("API nije pronašao MP4 link za ovaj video.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidam video na server...");
+        console.log("Skidanje fajla na server...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Slanje na Supabase...");
+        console.log("Upload na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -94,16 +101,16 @@ app.post("/import-youtube", async (req, res) => {
 
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        console.log("Uspeh! Video URL:", publicUrl);
+        console.log("Uspešno završen import!");
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("YouTube Error:", err.message);
-        res.status(500).json({ error: "Greška pri uvozu: " + err.message });
+        console.error("YouTube Error Details:", err.response?.data || err.message);
+        res.status(500).json({ error: "Import nije uspeo. Proverite da li je video javan." });
     }
 });
 
-// --- RUTA: RENDER DUET (TikTok 1080x1920 Fix) ---
+// --- RUTA: RENDER DUET (TikTok Fix) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
