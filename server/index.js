@@ -21,7 +21,7 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// --- DOWNLOAD FUNKCIJA (Poboljšana protiv 403) ---
+// --- DOWNLOAD FUNKCIJA (Browser Emulation) ---
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
@@ -29,10 +29,10 @@ async function downloadFromUrl(url, targetPath) {
         responseType: 'stream',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
-            'Referer': 'https://www.youtube.com/'
+            'Accept': '*/*'
         }
     });
+
     return new Promise((resolve, reject) => {
         const writer = fs.createWriteStream(targetPath);
         response.data.pipe(writer);
@@ -41,52 +41,54 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 11 - JSON FIX) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA: YT-DOWNLOADER9) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (VERZIJA 11 - JSON) ---");
+    console.log("\n--- YOUTUBE IMPORT (YT-DOWNLOADER9 START) ---");
 
     try {
         const options = {
             method: 'POST',
-            url: 'https://all-social-media-video-downloader.p.rapidapi.com/',
-            params: { url: url }, // Neki provajderi traže url u params čak i za POST
+            url: 'https://yt-downloader9.p.rapidapi.com/start',
             headers: {
-                'content-type': 'application/json',
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'all-social-media-video-downloader.p.rapidapi.com'
+                'x-rapidapi-host': 'yt-downloader9.p.rapidapi.com',
+                'Content-Type': 'application/json'
             },
-            data: { url: url }, // Šaljemo i u body-ju kao JSON za svaki slučaj
-            maxRedirects: 5
+            data: {
+                urls: [url],
+                onlyAudio: false,
+                ignorePlaylists: true,
+                videoQuality: 'best'
+            }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
+        // yt-downloader9 obično vraća niz rezultata
         let mp4Url = null;
-
-        // Navigacija kroz strukturu (proveravamo sve poznate ključeve)
-        if (data.links && Array.isArray(data.links)) {
-            const best = data.links.find(l => l.extension === 'mp4' && !l.quality.includes('audio')) || data.links[0];
-            mp4Url = best.link || best.url;
-        } else if (data.url) {
-            mp4Url = data.url;
-        } else if (data.video) {
-            mp4Url = data.video;
+        
+        // Navigacija kroz niz odgovora
+        if (Array.isArray(data) && data[0]) {
+            // Neki API-ji vrate direktno .video, neki .downloadUrl
+            mp4Url = data[0].video || data[0].downloadUrl || data[0].url;
+        } else if (data.results && data.results[0]) {
+            mp4Url = data.results[0].video || data.results[0].url;
         }
 
         if (!mp4Url) {
-            console.log("Struktura odgovora:", JSON.stringify(data));
-            throw new Error("API nije vratio video link.");
+            console.log("Struktura odgovora API-ja:", JSON.stringify(data));
+            throw new Error("API nije vratio MP4 link u očekivanom formatu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje fajla...");
+        console.log("Preuzimanje fajla sa YouTube-a...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Slanje na Supabase...");
+        console.log("Slanje na Supabase Storage...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -97,11 +99,12 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
+        console.log("Import uspešan!");
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
         console.error("Greška:", err.response?.data || err.message);
-        res.status(500).json({ error: "Import failed", details: err.message });
+        res.status(500).json({ error: "YouTube Import Failed", details: err.message });
     }
 });
 
@@ -109,14 +112,22 @@ app.post("/import-youtube", async (req, res) => {
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
+
+    if (!originalUrl || !reactionFile) {
+        return res.status(400).json({ error: "Missing files" });
+    }
+
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);
     const outputPath = path.join(rendersDir, `final-${Date.now()}.mp4`);
     const finalDuration = parseFloat(duration) || 10;
 
     try {
         await downloadFromUrl(originalUrl, localOriginal);
+        
         ffmpeg()
-            .input(localOriginal).input(reactionFile.path).duration(finalDuration)
+            .input(localOriginal)
+            .input(reactionFile.path)
+            .duration(finalDuration)
             .complexFilter([
                 `[0:v]fps=30,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v0]`,
                 `[1:v]fps=30,format=yuv420p,setsar=1,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[v1]`,
@@ -131,12 +142,22 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 const { error: upErr } = await supabase.storage.from("videos").upload(storageName, fs.createReadStream(outputPath));
                 if (upErr) throw upErr;
                 const { data: { publicUrl } } = supabase.storage.from("videos").getPublicUrl(storageName);
-                [localOriginal, reactionFile.path, outputPath].forEach(p => { if (p && fs.existsSync(p)) fs.unlink(p, () => {}); });
+                
+                [localOriginal, reactionFile.path, outputPath].forEach(p => {
+                    if (p && fs.existsSync(p)) fs.unlink(p, () => {});
+                });
+                
                 res.json({ success: true, videoUrl: publicUrl });
             })
-            .on("error", (err) => { console.error(err); res.status(500).json({ error: "Render failed" }); })
+            .on("error", (err) => {
+                console.error(err);
+                res.status(500).json({ error: "Render failed" });
+            })
             .save(outputPath);
-    } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 11`));
+app.listen(PORT, () => console.log(`Server Online na portu ${PORT}`));
