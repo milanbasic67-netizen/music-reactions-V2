@@ -21,7 +21,6 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// Funkcija za izvlačenje ID-a iz YouTube linka
 function getYTID(url) {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
@@ -38,14 +37,12 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (Koristeći tvoj provereni kod) ---
+// --- RUTA: IMPORT YOUTUBE (FIKSIRANA NAVIGACIJA) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const videoId = getYTID(url);
     
-    console.log("\n--- YOUTUBE IMPORT (V3 ENDPOINT) --- ID:", videoId);
-
-    if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL" });
+    console.log("\n--- YOUTUBE IMPORT (FIKSIRANA STRUKTURA) --- ID:", videoId);
 
     try {
         const options = {
@@ -54,32 +51,34 @@ app.post("/import-youtube", async (req, res) => {
             params: {
                 videoId: videoId,
                 urlAccess: 'normal',
-                renderableFormats: '720p,highres',
+                renderableFormats: '720p,1080p,highres',
                 getTranscript: 'false'
             },
             headers: {
                 'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com',
-                'Content-Type': 'application/json'
+                'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // Izvlačenje MP4 linka iz v3 strukture
+        // --- TAČNA PUTANJA PREMA TVOM ODGOVORU ---
         let mp4Url = null;
-        if (data.videos && data.videos.items) {
-            // Tražimo najbolji MP4 (720p ili bilo koji sa zvukom)
-            const best = data.videos.items.find(v => v.extension === 'mp4' && v.hasAudio) || 
-                         data.videos.items.find(v => v.extension === 'mp4') ||
-                         data.videos.items[0];
-            mp4Url = best?.url;
+        if (data.contents && data.contents[0] && data.contents[0].videos) {
+            const videos = data.contents[0].videos;
+            
+            // Prioritet: 720p (najbolji za duet), pa 1080p, pa bilo šta drugo
+            const bestVideo = videos.find(v => v.label === "720p") || 
+                             videos.find(v => v.label === "1080p") || 
+                             videos[0];
+            
+            mp4Url = bestVideo?.url;
         }
 
         if (!mp4Url) {
-            console.log("Struktura odgovora:", JSON.stringify(data).substring(0, 500));
-            throw new Error("API nije vratio direktan MP4 link.");
+            console.log("Struktura nije prepoznata:", JSON.stringify(data).substring(0, 300));
+            throw new Error("Nije pronađen URL u videos nizu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
@@ -88,7 +87,7 @@ app.post("/import-youtube", async (req, res) => {
         console.log("Preuzimanje fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Slanje na Supabase...");
+        console.log("Upload na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -102,7 +101,7 @@ app.post("/import-youtube", async (req, res) => {
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("YouTube Error:", err.response?.data || err.message);
+        console.error("Greška:", err.message);
         res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
@@ -141,4 +140,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija sa V3 Endpointom`));
+app.listen(PORT, () => console.log(`Server radi!`));
