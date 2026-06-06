@@ -37,44 +37,56 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 6) ---
+// --- RUTA: IMPORT YOUTUBE (FIKSIRAN ROOT ENDPOINT) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const videoId = getYTID(url);
+    const cleanUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : url;
     
-    console.log("\n--- [VERZIJA 6] POKUŠAJ SA /dl ENDPOINTOM --- ID:", videoId);
-
-    if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL" });
+    console.log("\n--- [VERZIJA 7] POKUŠAJ SA ROOT ENDPOINTOM ---");
+    console.log("Cilj:", cleanUrl);
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://youtube-video-fast-downloader-24-7.p.rapidapi.com/dl',
-            params: { id: videoId },
+            // PROMENA: Samo root URL, bez /all ili /video
+            url: 'https://social-media-video-downloader.p.rapidapi.com/',
+            params: { url: cleanUrl },
             headers: {
                 'X-RapidAPI-Key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'X-RapidAPI-Host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
+                'X-RapidAPI-Host': 'social-media-video-downloader.p.rapidapi.com'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // Proveravamo gde je link u odgovoru (ovaj API ga obično drži u 'link' ili 'url')
-        let mp4Url = data.link || data.url || (data.urls && data.urls[0]?.url);
+        // Logujemo strukturu u Render logove da budemo sigurni
+        console.log("API Response Structure:", JSON.stringify(data).substring(0, 500));
+
+        let mp4Url = null;
+
+        // Provera formata koji smo videli u prošlim odgovorima
+        if (data.contents && data.contents[0]?.videos) {
+            const videos = data.contents[0].videos;
+            const best = videos.find(v => v.metadata.mime_type.includes("mp4"));
+            mp4Url = best?.url;
+        } else if (data.links && Array.isArray(data.links)) {
+            const bestLink = data.links.find(l => l.extension === 'mp4');
+            mp4Url = bestLink?.link;
+        }
 
         if (!mp4Url) {
-            console.log("DEBUG API RESPONSE:", JSON.stringify(data));
-            throw new Error("API nije vratio MP4 link. Proverite da li ste kliknuli 'Subscribe' na RapidAPI.");
+            throw new Error("API nije pronašao MP4 link. Proveri logove za strukturu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje MP4...");
+        console.log("Preuzimanje fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Slanje na Supabase...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -88,12 +100,8 @@ app.post("/import-youtube", async (req, res) => {
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("GREŠKA U VERZIJI 6:", err.response?.data || err.message);
-        res.status(500).json({ 
-            error: "Import failed", 
-            details: err.message,
-            tip: "Proverite da li ste pretplaćeni na 'YouTube Video FAST Downloader 24/7' na RapidAPI-ju."
-        });
+        console.error("GREŠKA U VERZIJI 7:", err.response?.data || err.message);
+        res.status(500).json({ error: "Import failed", details: err.message });
     }
 });
 
@@ -131,4 +139,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server V6 Online (Fixing 404)`));
+app.listen(PORT, () => console.log(`Server V7 Online (Root Endpoint Fix)`));
