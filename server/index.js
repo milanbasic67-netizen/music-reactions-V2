@@ -21,6 +21,7 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
+// Funkcija za preuzimanje fajla na server
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
@@ -38,74 +39,54 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 14 - ISPRAVLJEN POLLING) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 16 - AI DOWNLOADER) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
-    const RAPID_HOST = 'yt-downloader9.p.rapidapi.com';
-
-    console.log("\n--- YOUTUBE IMPORT (POLLING FIX) ---");
+    console.log("\n--- YOUTUBE IMPORT (AI DOWNLOADER) ---");
 
     try {
-        // 1. ZAPOČNI ZADATAK
-        const startRes = await axios.post(`https://${RAPID_HOST}/start`, {
-            urls: [url],
-            onlyAudio: false,
-            ignorePlaylists: true,
-            videoQuality: 'best'
-        }, {
+        // Slanje parametara kao form-urlencoded
+        const encodedParams = new URLSearchParams();
+        encodedParams.set('url', url);
+
+        const options = {
+            method: 'POST',
+            url: 'https://youtube-video-downloader-ai.p.rapidapi.com/download.php',
             headers: {
-                'x-rapidapi-key': RAPID_KEY,
-                'x-rapidapi-host': RAPID_HOST,
-                'Content-Type': 'application/json'
-            }
-        });
+                'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
+                'x-rapidapi-host': 'youtube-video-downloader-ai.p.rapidapi.com',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            data: encodedParams
+        };
 
-        const uid = startRes.data.uid;
-        if (!uid) throw new Error("Nisam dobio UID od API-ja.");
-        console.log("UID dobijen:", uid);
+        const apiRes = await axios.request(options);
+        const data = apiRes.data;
 
-        // 2. POLLING (Provera na /dl endpointu)
+        // Izvlačenje MP4 linka (ovaj API obično vraća u polju 'result' ili direktno 'url')
         let mp4Url = null;
-        let attempts = 0;
-        const maxAttempts = 15; // Ukupno 45 sekundi čekanja
-
-        while (!mp4Url && attempts < maxAttempts) {
-            attempts++;
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Čekaj 3s
-            
-            console.log(`Provera statusa (${attempts}/${maxAttempts})...`);
-
-            const dlRes = await axios.get(`https://${RAPID_HOST}/dl`, {
-                params: { uid: uid },
-                headers: {
-                    'x-rapidapi-key': RAPID_KEY,
-                    'x-rapidapi-host': RAPID_HOST
-                }
-            });
-
-            const statusData = dlRes.data;
-
-            // yt-downloader9 obično vraća niz u data polju
-            // Primer: { data: [{ url: "...", quality: "720p" }] }
-            if (statusData && Array.isArray(statusData)) {
-                mp4Url = statusData[0].url || statusData[0].video;
-            } else if (statusData.data && Array.isArray(statusData.data)) {
-                mp4Url = statusData.data[0].url || statusData.data[0].video;
-            } else if (statusData.url) {
-                mp4Url = statusData.url;
-            }
+        if (data.result && Array.isArray(data.result)) {
+            // Tražimo MP4 video sa zvukom
+            const best = data.result.find(r => r.extension === 'mp4' && r.quality === '720p') || 
+                         data.result.find(r => r.extension === 'mp4') ||
+                         data.result[0];
+            mp4Url = best.url || best.link;
+        } else if (data.url) {
+            mp4Url = data.url;
         }
 
-        if (!mp4Url) throw new Error("Video nije bio spreman nakon 45 sekundi.");
+        if (!mp4Url) {
+            console.log("Struktura odgovora:", JSON.stringify(data));
+            throw new Error("Nije pronađen direktan MP4 link u odgovoru API-ja.");
+        }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Skidanje sa YouTube-a...");
+        console.log("Preuzimanje fajla na server...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Slanje na Supabase...");
+        console.log("Upload na Supabase Storage...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -116,16 +97,16 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        console.log("Import USPEŠAN!");
+        console.log("Import uspešan! Link:", publicUrl);
         res.json({ success: true, videoUrl: publicUrl });
 
     } catch (err) {
-        console.error("Greška:", err.message);
-        res.status(500).json({ error: "Import failed", details: err.message });
+        console.error("Greška:", err.response?.data || err.message);
+        res.status(500).json({ error: "YouTube Import Failed", details: err.message });
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -159,4 +140,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 14`));
+app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));
