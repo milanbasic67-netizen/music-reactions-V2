@@ -21,7 +21,6 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// Funkcija za mrežni download
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
@@ -39,31 +38,37 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 32 - PRECIZNO ZA TVOJ JSON) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 34 - KONKRETAN API FIX) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (MATCHING JSON STRUCTURE) ---");
+    const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
+
+    console.log("\n--- YOUTUBE IMPORT (YT-DOWNLOADER1 START) ---");
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://youtube-video-fast-downloader-24-7.p.rapidapi.com/playground', // Zameni sa tačnim endpointom ako se razlikuje
-            params: { url: url },
+            url: 'https://yt-downloader1.p.rapidapi.com/api',
+            params: { 
+                url: url,
+                key: RAPID_KEY // API zahteva ključ i ovde
+            },
             headers: {
-                'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
+                'x-rapidapi-key': RAPID_KEY,
+                'x-rapidapi-host': 'yt-downloader1.p.rapidapi.com',
+                'Content-Type': 'application/json'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // 1. Ekstrakcija linka iz 'medias' niza
         let mp4Url = null;
-        let title = data.title || "YouTube Video";
+        let title = data.title || "YouTube Song";
 
+        // Parsiranje medias niza prema tvom prethodnom JSON-u
         if (data.medias && Array.isArray(data.medias)) {
-            // Tražimo onaj koji je MP4 i ima audio+video (kao u tvom JSON-u)
+            // Tražimo MP4 koji ima i zvuk i sliku (audioAvailable: true)
             const best = data.medias.find(m => m.extension === 'mp4' && m.audioAvailable && m.videoAvailable) || 
                          data.medias[0];
             
@@ -71,16 +76,17 @@ app.post("/import-youtube", async (req, res) => {
         }
 
         if (!mp4Url) {
-            throw new Error("Nije pronađen pogodan video link u 'medias' nizu.");
+            console.log("Struktura odgovora API-ja:", JSON.stringify(data).substring(0, 500));
+            throw new Error("API nije vratio MP4 link u očekivanom formatu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje fajla...");
+        console.log("Preuzimanje MP4 fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
-        console.log("Upload na Supabase...");
+        console.log("Upload na Supabase Storage...");
         const fileBuffer = fs.readFileSync(tempPath);
         const { error: upErr } = await supabase.storage
             .from("songs")
@@ -91,7 +97,7 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        console.log("Uspešno!");
+        console.log("IMPORT USPEŠAN!");
         res.json({ success: true, videoUrl: publicUrl, title: title });
 
     } catch (err) {
@@ -100,7 +106,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET (Standard) ---
+// --- RUTA: RENDER DUET (Bez promena) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -134,4 +140,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend Online - Verzija 32`));
+app.listen(PORT, () => console.log(`Backend spreman na portu ${PORT}`));
