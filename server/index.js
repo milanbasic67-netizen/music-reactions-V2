@@ -38,53 +38,52 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 28 - PRECIZNO PARSIRANJE) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 31 - YT DOWNLOADER 1) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    console.log("\n--- YOUTUBE IMPORT (V2 STRUCTURE PARSING) ---");
+    const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
+    const RAPID_HOST = 'yt-downloader1.p.rapidapi.com';
+
+    console.log("\n--- YOUTUBE IMPORT (YT DOWNLOADER 1) ---");
 
     try {
         const options = {
             method: 'GET',
-            url: 'https://youtube-media-downloader.p.rapidapi.com/v2/video/details',
-            params: { url: url },
+            url: `https://${RAPID_HOST}/download`,
+            params: { id: url }, // Ovaj API nekad prihvata ceo URL pod 'id'
             headers: {
-                'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
-                'x-rapidapi-host': 'youtube-media-downloader.p.rapidapi.com'
+                'x-rapidapi-key': RAPID_KEY,
+                'x-rapidapi-host': RAPID_HOST
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // 1. Ekstrakcija metapodataka iz tvog JSON-a
-        const title = data.title || "Untitled Song";
-        const artist = data.channel?.name || "Unknown Artist";
-        console.log(`Naslov: ${title}, Autor: ${artist}`);
-
-        // 2. Pronalaženje najboljeg MP4 linka koji ima i VIDEO i AUDIO
+        // Struktura: data.data.formats (muxed su oni sa zvukom i slikom)
         let mp4Url = null;
+        let title = data.data?.title || "Song";
 
-        if (data.videos && data.videos.items && Array.isArray(data.videos.items)) {
-            const items = data.videos.items;
-
-            // Tražimo format koji je MP4, ima zvuk, i rezoluciju 720p ili 360p
-            const bestMuxed = items.find(v => v.extension === 'mp4' && v.hasAudio && v.quality === '720p') ||
-                              items.find(v => v.extension === 'mp4' && v.hasAudio && v.quality === '360p') ||
-                              items.find(v => v.extension === 'mp4' && v.hasAudio);
+        if (data.data && data.data.formats) {
+            // Tražimo MP4 format koji ima i zvuk (muxed)
+            const formats = data.data.formats;
+            // Obično format sa itag 18 (360p) ili 22 (720p) ima zvuk
+            const best = formats.find(f => f.qualityLabel === '720p' && f.container === 'mp4') ||
+                         formats.find(f => f.qualityLabel === '360p' && f.container === 'mp4') ||
+                         formats.find(f => f.container === 'mp4');
             
-            mp4Url = bestMuxed?.url;
+            mp4Url = best?.url;
         }
 
         if (!mp4Url) {
-            console.log("Dostupni formati:", JSON.stringify(data.videos?.items?.map(i => i.quality + i.extension)));
-            throw new Error("Nije pronađen MP4 fajl koji sadrži i video i zvuk.");
+            console.log("Struktura odgovora:", JSON.stringify(data).substring(0, 500));
+            throw new Error("Nije pronađen download link.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje direktnog GoogleVideo linka...");
+        console.log("Preuzimanje...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -98,13 +97,7 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
-        // Vraćamo i podatke o pesmi kako bi frontend mogao da ih prikaže
-        res.json({ 
-            success: true, 
-            videoUrl: publicUrl,
-            title: title,
-            artist: artist
-        });
+        res.json({ success: true, videoUrl: publicUrl, title: title });
 
     } catch (err) {
         console.error("Greška:", err.message);
@@ -112,7 +105,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET (Standard) ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -146,4 +139,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman - Verzija 28`));
+app.listen(PORT, () => console.log(`Server Online - Verzija 31`));
