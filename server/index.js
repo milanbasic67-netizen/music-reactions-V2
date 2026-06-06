@@ -21,6 +21,7 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
+// Funkcija za mrežni download
 async function downloadFromUrl(url, targetPath) {
     const response = await axios({
         url,
@@ -38,52 +39,45 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 31 - YT DOWNLOADER 1) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 32 - PRECIZNO ZA TVOJ JSON) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
-    const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
-    const RAPID_HOST = 'yt-downloader1.p.rapidapi.com';
-
-    console.log("\n--- YOUTUBE IMPORT (YT DOWNLOADER 1) ---");
+    console.log("\n--- YOUTUBE IMPORT (MATCHING JSON STRUCTURE) ---");
 
     try {
         const options = {
             method: 'GET',
-            url: `https://${RAPID_HOST}/download`,
-            params: { id: url }, // Ovaj API nekad prihvata ceo URL pod 'id'
+            url: 'https://youtube-video-fast-downloader-24-7.p.rapidapi.com/playground', // Zameni sa tačnim endpointom ako se razlikuje
+            params: { url: url },
             headers: {
-                'x-rapidapi-key': RAPID_KEY,
-                'x-rapidapi-host': RAPID_HOST
+                'x-rapidapi-key': '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea',
+                'x-rapidapi-host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
             }
         };
 
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // Struktura: data.data.formats (muxed su oni sa zvukom i slikom)
+        // 1. Ekstrakcija linka iz 'medias' niza
         let mp4Url = null;
-        let title = data.data?.title || "Song";
+        let title = data.title || "YouTube Video";
 
-        if (data.data && data.data.formats) {
-            // Tražimo MP4 format koji ima i zvuk (muxed)
-            const formats = data.data.formats;
-            // Obično format sa itag 18 (360p) ili 22 (720p) ima zvuk
-            const best = formats.find(f => f.qualityLabel === '720p' && f.container === 'mp4') ||
-                         formats.find(f => f.qualityLabel === '360p' && f.container === 'mp4') ||
-                         formats.find(f => f.container === 'mp4');
+        if (data.medias && Array.isArray(data.medias)) {
+            // Tražimo onaj koji je MP4 i ima audio+video (kao u tvom JSON-u)
+            const best = data.medias.find(m => m.extension === 'mp4' && m.audioAvailable && m.videoAvailable) || 
+                         data.medias[0];
             
-            mp4Url = best?.url;
+            mp4Url = best.url;
         }
 
         if (!mp4Url) {
-            console.log("Struktura odgovora:", JSON.stringify(data).substring(0, 500));
-            throw new Error("Nije pronađen download link.");
+            throw new Error("Nije pronađen pogodan video link u 'medias' nizu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje...");
+        console.log("Preuzimanje fajla...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -97,6 +91,7 @@ app.post("/import-youtube", async (req, res) => {
         const { data: { publicUrl } } = supabase.storage.from("songs").getPublicUrl(videoName);
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
 
+        console.log("Uspešno!");
         res.json({ success: true, videoUrl: publicUrl, title: title });
 
     } catch (err) {
@@ -139,4 +134,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Server Online - Verzija 31`));
+app.listen(PORT, () => console.log(`Backend Online - Verzija 32`));
