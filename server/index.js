@@ -26,13 +26,13 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 56 - DEEP PICKER) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 57 - AUDIO-FIRST PICKER) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const videoId = getYTID(url);
 
-    console.log("\n--- YOUTUBE IMPORT (V56 - DEEP PICKER) ---");
+    console.log("\n--- YOUTUBE IMPORT (V57 - AUDIO-FIRST) ---");
 
     try {
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
@@ -41,32 +41,29 @@ app.post("/import-youtube", async (req, res) => {
         });
 
         const allVideos = apiRes.data?.contents?.[0]?.videos || [];
-        
-        // 1. LOGUJEMO STRUKTURU (Da vidiš u Render konzoli šta API šalje)
-        if (allVideos.length > 0) {
-            console.log("Dostupni formati (prvi primer):", JSON.stringify(allVideos[0]));
-        }
 
-        // 2. PAMETNA PRETRAGA: Tražimo 360p ili 480p format
-        let selectedVideo = allVideos.find(v => {
-            const q = String(v.quality || v.qualityLabel || v.resolution || "").toLowerCase();
-            return (q.includes("360") || q.includes("480")) && v.url;
+        // 1. FILTRIRAMO SAMO FORMATE KOJI IMAJU ZVUK
+        const audioVideos = allVideos.filter(v => v.hasAudio === true && v.url);
+        
+        console.log(`Pronađeno formata sa zvukom: ${audioVideos.length}`);
+
+        // 2. SORTIRAMO IH OD NAJMANJE REZOLUCIJE KA NAJVEĆOJ
+        const sortedAudioVideos = audioVideos.sort((a, b) => {
+            const resA = parseInt(a.quality || a.qualityLabel || "0");
+            const resB = parseInt(b.quality || b.qualityLabel || "0");
+            return resA - resB;
         });
 
-        // 3. FALLBACK: Ako nismo našli po imenu, tražimo onaj koji ima zvuk
+        // 3. BIRAMO NAJMANJI KOJI NIJE 144p (obično 360p ili 480p)
+        let selectedVideo = sortedAudioVideos.find(v => parseInt(v.quality || v.qualityLabel) >= 360) || sortedAudioVideos[0];
+
         if (!selectedVideo) {
-            selectedVideo = allVideos.find(v => v.hasAudio === true && v.url);
+            console.log("Nije nađen format sa hasAudio:true, koristim fallback...");
+            selectedVideo = allVideos.find(v => (v.quality === "360p" || v.quality === "480p") && v.url) || allVideos[0];
         }
 
-        // 4. ULTIMATIVNI FALLBACK: Uzimamo poslednji na listi (obično su najlošiji/najmanji na kraju)
-        if (!selectedVideo) {
-            selectedVideo = allVideos[allVideos.length - 1];
-        }
-
-        if (!selectedVideo || !selectedVideo.url) throw new Error("Format nije pronađen.");
-
-        const formatName = selectedVideo.quality || selectedVideo.qualityLabel || "unknown";
-        console.log(`Izabran format: ${formatName}`);
+        const formatInfo = selectedVideo.quality || selectedVideo.qualityLabel || "360p";
+        console.log(`Izabran format sa zvukom: ${formatInfo}`);
         
         const videoName = `yt-${Date.now()}.mp4`;
         const supabaseUrl = new URL(`${process.env.SUPABASE_URL}/storage/v1/object/songs/${videoName}`);
@@ -74,12 +71,6 @@ app.post("/import-youtube", async (req, res) => {
         https.get(selectedVideo.url, (ytRes) => {
             const size = ytRes.headers['content-length'];
             console.log(`STVARNA VELIČINA: ${size ? (size/1024/1024).toFixed(2) + " MB" : "Nepoznato"}`);
-
-            // SIGURNOSNA PROVERA: Ako je i dalje preko 150MB, prekidamo da ne srušimo Render
-            if (size && size > 150 * 1024 * 1024) {
-                console.error("Fajl je prevelik (iznad 150MB).");
-                return res.status(500).json({ error: "Fajl je prevelik. Izabrani kvalitet nije 360p." });
-            }
 
             const supabaseRequest = https.request({
                 hostname: supabaseUrl.hostname,
@@ -156,4 +147,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend V56 - Deep Picker Ready`));
+app.listen(PORT, () => console.log(`Backend V57 - Audio-First Picker`));
