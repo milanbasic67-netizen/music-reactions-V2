@@ -21,7 +21,6 @@ const rendersDir = path.join(__dirname, "renders");
 
 const upload = multer({ dest: uploadsDir });
 
-// Funkcija za izvlačenje Video ID-a
 function getYTID(url) {
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
@@ -45,17 +44,13 @@ async function downloadFromUrl(url, targetPath) {
     });
 }
 
-// --- RUTA: IMPORT YOUTUBE (VERZIJA 37 - PROXIED MODE) ---
+// --- RUTA: IMPORT YOUTUBE (VERZIJA 38 - PATH FIX) ---
 app.post("/import-youtube", async (req, res) => {
     const { url } = req.body;
     const videoId = getYTID(url);
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
 
-    console.log("\n--- YOUTUBE IMPORT (PROXIED MODE) ---");
-
-    if (!videoId) {
-        return res.status(400).json({ error: "Nevažeći YouTube link." });
-    }
+    console.log("\n--- YOUTUBE IMPORT (PROXIED PATH FIX) ---");
 
     try {
         const options = {
@@ -63,8 +58,8 @@ app.post("/import-youtube", async (req, res) => {
             url: 'https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details',
             params: {
                 videoId: videoId,
-                urlAccess: 'proxied', // KLJUČNO: API koristi sopstvene proksije
-                renderableFormats: '720p', // Tražimo direktan 720p stream
+                urlAccess: 'proxied',
+                renderableFormats: '720p',
                 getTranscript: 'false'
             },
             headers: {
@@ -76,23 +71,26 @@ app.post("/import-youtube", async (req, res) => {
         const apiRes = await axios.request(options);
         const data = apiRes.data;
 
-        // Kod proxied moda, linkovi su obično u formats.video
         let mp4Url = null;
-        if (data.formats && data.formats.video) {
-            // Biramo prvi format koji ima zvuk i sliku
-            const best = data.formats.video.find(v => v.hasAudio) || data.formats.video[0];
-            mp4Url = best.url || best.link;
+
+        // PRECIZNA PUTANJA PREMA TVOM LOGU: data.contents[0].videos
+        if (data.contents && data.contents[0] && data.contents[0].videos) {
+            const videoList = data.contents[0].videos;
+            console.log("Pronađena lista videa u 'contents'. Tražim link...");
+            
+            // Uzimamo prvi dostupni URL (obično je to onaj koji smo tražili preko renderableFormats)
+            mp4Url = videoList[0].url;
         }
 
         if (!mp4Url) {
-            console.log("Full Response:", JSON.stringify(data).substring(0, 500));
-            throw new Error("Nije pronađen proxied download link.");
+            console.log("Struktura nije prepoznata:", JSON.stringify(data).substring(0, 500));
+            throw new Error("Nije pronađen URL u 'contents[0].videos' nizu.");
         }
 
         const videoName = `yt-${Date.now()}.mp4`;
         const tempPath = path.join(uploadsDir, videoName);
 
-        console.log("Preuzimanje preko API proksi tunela (ovo može biti sporije)...");
+        console.log("Preuzimanje preko SMVD proksi tunela...");
         await downloadFromUrl(mp4Url, tempPath);
 
         console.log("Upload na Supabase...");
@@ -114,7 +112,7 @@ app.post("/import-youtube", async (req, res) => {
     }
 });
 
-// --- RUTA: RENDER DUET (Bez promena) ---
+// --- RUTA: RENDER DUET ---
 app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
@@ -148,4 +146,4 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: "Server error" }); }
 });
 
-app.listen(PORT, () => console.log(`Backend spreman - Proxied Mode V37`));
+app.listen(PORT, () => console.log(`Server Online - V38`));
