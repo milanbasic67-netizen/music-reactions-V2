@@ -161,18 +161,47 @@ export default function VideoCard({ reaction }: Props) {
           </button>
 
           {profile?.role === "admin" && (
-            <button 
-              onClick={async () => {
-                if (confirm("Obriši?")) {
-                  await supabase.from("reactions").delete().eq("id", reaction.id);
-                  window.location.reload();
-                }
-              }} 
-              className="p-3 rounded-full bg-red-600/40 text-white hover:bg-red-600 transition-colors"
-            >
-              <Trash2 className="w-7 h-7" />
-            </button>
-          )}
+  <button 
+    onClick={async () => {
+      if(confirm("Delete this video and file permanently?")) {
+        try {
+          // 1. Extract the file path from the public URL
+          // URL looks like: .../storage/v1/object/public/videos/duets/tiktok-123.mp4
+          // We need: duets/tiktok-123.mp4
+          const pathParts = reaction.video_url.split('/public/videos/');
+          const filePath = pathParts[1];
+
+          if (filePath) {
+            // 2. Delete from Supabase Storage
+            const { error: storageError } = await supabase
+              .storage
+              .from("videos")
+              .remove([filePath]);
+            
+            if (storageError) console.error("Storage error:", storageError.message);
+          }
+
+          // 3. Delete from Database Table
+          const { error: dbError } = await supabase
+            .from("reactions")
+            .delete()
+            .eq("id", reaction.id);
+
+          if (dbError) throw dbError;
+
+          alert("Deleted successfully!");
+          window.location.reload();
+          
+        } catch (err: any) {
+          alert("Error deleting: " + err.message);
+        }
+      }
+    }} 
+    className="p-3 rounded-full bg-red-600/40 text-white hover:bg-red-600 transition-colors"
+  >
+    <Trash2 className="w-7 h-7" />
+  </button>
+)}
         </div>
 
         {showComments && (
