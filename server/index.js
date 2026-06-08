@@ -139,7 +139,7 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
                 `[0:v]fps=20,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v0]`,
                 `[1:v]fps=20,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v1]`,
                 `[v0][v1]vstack=inputs=2[v_final]`,
-                `[0:a]volume=0.8[a0]`, `[1:a]highpass=f=200,volume=2.0[a1]`, `[a0][a1]amix=inputs=2:duration=first[a_final]`
+                `[0:a]volume=0.6[a0]`, `[1:a]highpass=f=200,volume=3.0[a1]`, `[a0][a1]amix=inputs=2:duration=first[a_final]`
             ])
             .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 32"])
             .on("end", async () => {
