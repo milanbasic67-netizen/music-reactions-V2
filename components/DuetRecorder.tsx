@@ -13,7 +13,7 @@ type Props = {
 
 export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const searchParams = useSearchParams();
-  const isTemporary = searchParams.get("temp") === "true"; // Provera da li brišemo
+  const isTemporary = searchParams.get("temp") === "true"; // Provera da li brišemo original
 
   const cameraRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -23,6 +23,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 1. Postavljanje kamere
   useEffect(() => {
     async function setup() {
       try {
@@ -32,26 +33,39 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         });
         setStream(media);
         if (cameraRef.current) cameraRef.current.srcObject = media;
-      } catch (err) { alert("Kamera nije dostupna."); }
+      } catch (err) { 
+        alert("Kamera nije dostupna. Proverite dozvole."); 
+      }
     }
     setup();
     return () => stream?.getTracks().forEach(track => track.stop());
   }, []);
 
+  // 2. Start snimanja
   async function startRecording() {
     if (!stream) return;
     chunksRef.current = [];
+    
     const songVideo = document.getElementById("song-video") as HTMLVideoElement;
-    if (songVideo) { songVideo.currentTime = 0; await songVideo.play(); }
+    if (songVideo) { 
+        songVideo.currentTime = 0; 
+        await songVideo.play(); 
+    }
 
     const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8,opus" });
     mediaRecorderRef.current = recorder;
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    
+    recorder.ondataavailable = (e) => { 
+        if (e.data.size > 0) chunksRef.current.push(e.data); 
+    };
+
     recorder.onstop = () => handleUpload(songVideo?.currentTime || 10);
+    
     recorder.start();
     setRecording(true);
   }
 
+  // 3. Renderovanje i Čišćenje
   async function handleUpload(duration: number) {
     setLoading(true);
     try {
@@ -63,6 +77,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       formData.append("originalUrl", originalVideo);
       formData.append("duration", duration.toString());
 
+      // Slanje na tvoj Render backend
       const renderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
         body: formData,
@@ -74,7 +89,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       const profile = await getProfile();
 
-      // 1. UPIS REAKCIJE
+      // UPIS REAKCIJE U TABELU
       const { error: insertError } = await supabase.from("reactions").insert({
         song: title,
         artist: artist,
@@ -84,20 +99,39 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       });
 
       if (!insertError) {
-        // 2. ČIŠĆENJE ORIGINALA (Ako je TEMP)
+        // --- LOGIKA ČIŠĆENJA (SAMO AKO JE TEMP) ---
         if (isTemporary) {
+          console.log("Korisnički duet završen - počinjem brisanje originala...");
+          
+          // Izvlačenje imena fajla iz punog URL-a
           const fileName = originalVideo.split('/').pop();
+
           if (fileName) {
-            await supabase.storage.from("songs").remove([fileName]);
-            await supabase.from("songs").delete().eq("video_url", originalVideo);
+            // A) Brisanje iz Storage-a (songs bucket)
+            const { error: storageErr } = await supabase.storage
+                .from("songs")
+                .remove([fileName]);
+            
+            if (storageErr) console.error("Storage delete error:", storageErr.message);
+
+            // B) Brisanje iz tabele 'songs'
+            const { error: dbErr } = await supabase
+                .from("songs")
+                .delete()
+                .eq("video_url", originalVideo);
+            
+            if (dbErr) console.error("Database delete error:", dbErr.message);
+            
+            console.log("Originalni video je uspešno uklonjen.");
           }
         }
-        alert("Objavljeno!");
+
+        alert("Objavljeno! Vaš duet je spreman.");
         window.location.href = "/";
       }
 
     } catch (err: any) {
-      alert("Greška: " + err.message);
+      alert("Greška pri obradi: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -105,19 +139,51 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
 
   return (
     <div className="flex flex-col items-center p-4">
-      <div className="w-full max-w-[400px] aspect-video bg-black rounded-3xl overflow-hidden border-4 border-zinc-800 relative">
-        <video ref={cameraRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-        {recording && <div className="absolute top-4 right-4 w-3 h-3 bg-red-600 rounded-full animate-pulse" />}
+      {/* PREVIEW KAMERE */}
+      <div className="w-full max-w-[400px] aspect-video bg-black rounded-[2.5rem] overflow-hidden border-4 border-zinc-800 relative shadow-2xl">
+        <video 
+            ref={cameraRef} 
+            autoPlay 
+            muted 
+            playsInline 
+            className="w-full h-full object-cover" 
+        />
+        {recording && (
+            <div className="absolute top-6 right-6 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full">
+                <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
+                <span className="text-white text-[10px] font-black tracking-widest uppercase">Recording</span>
+            </div>
+        )}
       </div>
 
-      <div className="mt-8 w-full max-w-[400px]">
+      {/* KONTROLE */}
+      <div className="mt-10 w-full max-w-[400px]">
         {!recording && !loading && (
-          <button onClick={startRecording} className="w-full bg-red-600 py-5 rounded-2xl font-black text-xl">RECORD</button>
+          <button 
+            onClick={startRecording} 
+            className="w-full bg-red-600 hover:bg-red-500 text-white py-6 rounded-[2rem] font-black text-2xl shadow-xl shadow-red-900/30 transition active:scale-95"
+          >
+            RECORD
+          </button>
         )}
+        
         {recording && (
-          <button onClick={() => mediaRecorderRef.current?.stop()} className="w-full bg-white text-black py-5 rounded-2xl font-black text-xl">PUBLISH</button>
+          <button 
+            onClick={() => mediaRecorderRef.current?.stop()} 
+            className="w-full bg-white text-black py-6 rounded-[2rem] font-black text-2xl shadow-xl transition active:scale-95"
+          >
+            PUBLISH
+          </button>
         )}
-        {loading && <p className="text-center animate-pulse font-bold text-zinc-500">OBRADA VIDEA...</p>}
+
+        {loading && (
+          <div className="text-center py-6">
+            <p className="text-zinc-500 font-black text-lg animate-pulse tracking-tighter uppercase">
+              Obrada videa...
+            </p>
+            <p className="text-zinc-700 text-xs mt-1">Spajamo tvoj glas sa pesmom</p>
+          </div>
+        )}
       </div>
     </div>
   );
