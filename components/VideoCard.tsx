@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
-import CommentSection from "./CommentSection"; // DODATO
+import CommentSection from "./CommentSection";
 
 type Props = {
   reaction: any;
@@ -24,7 +24,7 @@ export default function VideoCard({ reaction }: Props) {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [muted, setMuted] = useState(true);
-  const [showComments, setShowComments] = useState(false); // DODATO
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     if (!reaction) return;
@@ -68,81 +68,23 @@ export default function VideoCard({ reaction }: Props) {
   if (!reaction) return null;
 
   return (
-    <div className="relative h-[100dvh] w-screen overflow-hidden bg-black snap-start">
+    <div className="relative h-[100dvh] w-full bg-zinc-950 snap-start flex justify-center overflow-hidden">
       
-      <video
-        ref={videoRef}
-        src={reaction.video_url}
-        loop
-        playsInline
-        muted={muted}
-        className="absolute inset-0 w-full h-full object-cover z-0"
-        onClick={() => setMuted(!muted)}
-      />
-
-      <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
-
-      {/* INFO */}
-      <div className="absolute bottom-8 left-4 z-20 w-[70%] pointer-events-none">
-        <Link href={`/u/${reaction.username}`} className="pointer-events-auto inline-block">
-          <span className="font-black text-white text-lg drop-shadow-lg">@{reaction.username || "user"}</span>
-        </Link>
-        <h2 className="text-white text-sm mt-2 font-medium drop-shadow-md line-clamp-2">
-          {reaction.song}
-        </h2>
-        <p className="text-zinc-400 text-xs mt-1">{reaction.artist}</p>
-      </div>
-
-      {/* IKONICE */}
-      <div className="absolute right-4 bottom-24 z-30 flex flex-col items-center gap-6">
+      {/* GLAVNI KONTEJNER (Širina telefona na desktopu) */}
+      <div className="relative h-full aspect-[9/16] w-full max-w-[480px] bg-black shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden border-x border-zinc-900">
         
-        <button onClick={toggleLike} className="flex flex-col items-center">
-          <div className={`p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform active:scale-125 ${liked ? 'text-red-500' : 'text-white'}`}>
-            <Heart className={`w-7 h-7 ${liked ? 'fill-current' : ''}`} />
-          </div>
-          <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{likesCount}</span>
-        </button>
-
-        {/* DUGME ZA KOMENTARE */}
-        <button onClick={() => setShowComments(true)} className="flex flex-col items-center">
-          <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white">
-            <MessageCircle className="w-7 h-7" />
-          </div>
-          <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">0</span>
-        </button>
-
-        <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Kopirano!"); }}>
-          <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white">
-            <Share className="w-7 h-7" />
-          </div>
-        </button>
-
-        <button onClick={() => setMuted(!muted)}>
-          <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white">
-            {muted ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
-          </div>
-        </button>
-
-        {profile?.role === "admin" && (
-            <button onClick={async () => {
-                if(confirm("Obriši?")) {
-                    await supabase.from("reactions").delete().eq("id", reaction.id);
-                    window.location.reload();
-                }
-            }} className="p-3 rounded-full bg-red-600/40 text-white">
-                <Trash2 className="w-7 h-7" />
-            </button>
-        )}
-      </div>
-
-      {/* MODAL ZA KOMENTARE (DODATO) */}
-      {showComments && (
-        <CommentSection 
-            reactionId={reaction.id} 
-            onClose={() => setShowComments(false)} 
+        <video
+          ref={videoRef}
+          src={reaction.video_url}
+          loop
+          playsInline
+          muted={muted}
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          onClick={() => setMuted(!muted)}
         />
-      )}
 
-    </div>
-  );
-}
+        {/* GRADIENT SENKA ZA BOLJU VIDLJIVOST TEKSTA */}
+        <div className="absolute bottom-0 left-0 right-0 h-[45%] bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none z-10" />
+
+        {/* INFO INFO BOX */}
+        <div className
