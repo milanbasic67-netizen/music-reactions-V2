@@ -8,15 +8,15 @@ export default function ProfileRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    async function getMyUsername() {
-      // 1. Get the logged in user's ID
+    async function redirectToActualUsername() {
+      // 1. Get the current logged-in user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         return router.push("/login");
       }
 
-      // 2. Look up their username in the profiles table
+      // 2. Fetch their actual username from your 'profiles' table
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("username")
@@ -24,15 +24,16 @@ export default function ProfileRedirect() {
         .single();
 
       if (profile?.username) {
-        // 3. Redirect to /u/their_actual_username
+        // 3. Send them to /u/john_doe (their actual name)
         router.push(`/u/${profile.username}`);
       } else {
-        console.error("No username found for this ID:", user.id);
-        router.push("/"); // Go home if no username exists
+        // If no username exists in the DB, send them home or to a setup page
+        console.error("No username found in database for this ID");
+        router.push("/"); 
       }
     }
 
-    getMyUsername();
+    redirectToActualUsername();
   }, [router]);
 
   return (

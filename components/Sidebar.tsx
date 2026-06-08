@@ -80,15 +80,23 @@ export default function Sidebar() {
       <div className="border-t border-zinc-800 pt-8 mt-auto space-y-3">
         {user ? (
           <>
+            {/* 
+                CORRECTED PROFILE LINK:
+                Points to /profile, which will handle the redirect 
+                to your actual username automatically.
+            */}
             <Link 
-              href={`/u/${user.user_metadata?.username || 'profile'}`}
+              href="/profile" 
               className={`flex items-center gap-4 px-4 py-4 rounded-2xl font-black text-lg transition-all ${
-                pathname.startsWith('/u/') ? "text-white bg-zinc-900" : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                pathname === "/profile" || pathname.startsWith("/u/") 
+                  ? "text-white bg-zinc-900" 
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
               }`}
             >
               <User className="w-7 h-7" />
               <span>Profile</span>
             </Link>
+
             <button 
               onClick={() => { supabase.auth.signOut(); window.location.reload(); }}
               className="flex items-center gap-4 px-4 py-4 w-full rounded-2xl font-black text-lg text-zinc-600 hover:bg-red-600/10 hover:text-red-500 transition-all duration-300"
@@ -100,7 +108,7 @@ export default function Sidebar() {
         ) : (
           <div className="bg-zinc-900/50 p-6 rounded-3xl border border-zinc-800">
             <p className="text-zinc-400 text-sm font-medium mb-4 leading-relaxed">
-              Log in to record duets and follow your favorite creators.
+              Log in to record duets and follow creators.
             </p>
             <Link 
               href="/login"
