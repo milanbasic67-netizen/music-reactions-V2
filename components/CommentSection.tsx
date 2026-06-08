@@ -2,102 +2,107 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { X, Send } from "lucide-react";
+import { X, Send, MessageSquare } from "lucide-react";
 
-type Props = {
-  reactionId: number;
-  onClose: () => void;
-};
+type Props = { reactionId: string; onClose: () => void; };
 
 export default function CommentSection({ reactionId, onClose }: Props) {
   const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [user, setUser] = useState<any>(null);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // 1. Učitaj korisnika i komentare
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
-      const { data } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("reaction_id", reactionId)
-        .order("created_at", { ascending: false });
-
-      if (data) setComments(data);
-    }
-    load();
+    fetchComments();
   }, [reactionId]);
 
-  // 2. Slanje komentara
-  async function postComment() {
-    if (!newComment.trim() || !user) return;
+  async function fetchComments() {
+    const { data } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("reaction_id", reactionId)
+      .order("created_at", { ascending: false });
+    setComments(data || []);
+  }
 
-    // Dobijamo profil da bismo imali username
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single();
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
 
-    const { data, error } = await supabase.from("comments").insert({
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return alert("Please log in to comment");
+
+    setLoading(true);
+    const { error } = await supabase.from("comments").insert({
       reaction_id: reactionId,
-      text: newComment,
-      username: profile?.username || "anonymous",
-    }).select().single();
+      user_id: user.id,
+      username: user.user_metadata.username || "user",
+      content: text.trim()
+    });
 
-    if (data) {
-      setComments([data, ...comments]);
-      setNewComment("");
+    if (!error) {
+      setText("");
+      fetchComments();
     }
+    setLoading(false);
   }
 
   return (
-    <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm">
-      <div className="bg-zinc-900 w-full h-[70%] rounded-t-3xl flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="mt-auto bg-zinc-950 rounded-t-[2.5rem] h-[70%] flex flex-col border-t border-zinc-800 shadow-2xl">
         
         {/* HEADER */}
-        <div className="p-5 border-b border-zinc-800 flex justify-between items-center">
-          <span className="text-white font-bold text-sm">Komentari ({comments.length})</span>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">
-            <X className="w-6 h-6" />
+        <div className="p-6 flex justify-between items-center border-b border-zinc-900">
+          <span className="font-black text-xs uppercase tracking-widest text-zinc-400">
+            {comments.length} Comments
+          </span>
+          <button onClick={onClose} className="p-2 hover:bg-zinc-900 rounded-full transition">
+            <X className="w-6 h-6 text-white" />
           </button>
         </div>
 
-        {/* LISTA KOMENTARA */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {comments.map((c) => (
-            <div key={c.id} className="flex flex-col">
-              <span className="text-zinc-500 text-xs font-bold">@{c.username}</span>
-              <p className="text-white text-sm mt-1">{c.text}</p>
+        {/* COMMENTS LIST */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {comments.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-zinc-700">
+              <MessageSquare className="w-12 h-12 mb-2 opacity-20" />
+              <p className="font-bold text-xs uppercase tracking-tighter">Be the first to comment</p>
             </div>
-          ))}
-          {comments.length === 0 && (
-            <div className="text-center text-zinc-600 mt-10 text-sm italic">
-              Još uvek nema komentara. Budi prvi!
-            </div>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className="flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 flex items-center justify-center font-black text-[10px]">
+                  {c.username?.[0].toUpperCase()}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">@{c.username}</span>
+                  <p className="text-sm text-zinc-200 mt-1 leading-relaxed">{c.content}</p>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
-        {/* INPUT */}
-        <div className="p-5 border-t border-zinc-800 bg-zinc-900 pb-10">
-          <div className="flex items-center gap-2 bg-zinc-800 rounded-full px-4 py-2">
-            <input
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Napiši komentar..."
-              className="bg-transparent flex-1 text-white text-sm outline-none"
+        {/* INPUT AREA */}
+        <form onSubmit={handleSubmit} className="p-6 border-t border-zinc-900 bg-zinc-950 pb-10">
+          <div className="relative flex items-center">
+            <input 
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Add a comment..."
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-red-600 transition"
             />
-            <button onClick={postComment} className="text-red-500">
+            <button 
+              type="submit"
+              disabled={loading}
+              className="absolute right-3 p-2 bg-red-600 rounded-xl text-white hover:bg-red-500 disabled:opacity-50 transition"
+            >
               <Send className="w-5 h-5" />
             </button>
           </div>
-        </div>
+        </form>
+
       </div>
-      {/* Click outside to close */}
-      <div className="absolute top-0 left-0 w-full h-[30%]" onClick={onClose} />
     </div>
   );
 }
