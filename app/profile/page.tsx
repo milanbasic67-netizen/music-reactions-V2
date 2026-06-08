@@ -1,288 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import VideoCard
-from "@/components/VideoCard";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-import { supabase }
-from "@/lib/supabase";
-import { getProfile }
-from "@/lib/getProfile";
-
-import FollowButton
-from "@/components/FollowButton";
-
-export default function UserPage() {
-
-  const [profile, setProfile] =
-    useState<any>(null);
-const [reactions, setReactions] =
-  useState<any[]>([]);
-
-const [followsCount, setFollowsCount] =
-  useState(0);
-
-const [followingCount, setFollowingCount] =
-  useState(0);
-  const [loading, setLoading] =
-    useState(true);
+export default function ProfileRedirect() {
+  const router = useRouter();
 
   useEffect(() => {
+    async function getMyUsername() {
+      // 1. Get the logged in user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return router.push("/login");
+      }
 
-  async function loadProfile() {
+      // 2. Look up their username in the profiles table
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .single();
 
-    const p =
-      await getProfile();
+      if (profile?.username) {
+        // 3. Redirect to /u/their_actual_username
+        router.push(`/u/${profile.username}`);
+      } else {
+        console.error("No username found for this ID:", user.id);
+        router.push("/"); // Go home if no username exists
+      }
+    }
 
-    setProfile(p);
-
-    const { data } =
-      await supabase
-
-        .from("reactions")
-
-        .select("*")
-
-        .eq(
-          "user_id",
-          p.id
-        )
-
-        .order(
-          "created_at",
-          {
-            ascending:
-              false,
-          }
-        );
-
-    setReactions(
-      data || []
-    );
-
-const {
-  count: follows,
-} =
-  await supabase
-
-    .from("follows")
-
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-
-    .eq(
-      "following_username",
-      p.username
-    );
-setFollowsCount(
-  follows || 0
-);
-const {
-  count: following,
-} =
-  await supabase
-
-    .from("follows")
-
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-
-    .eq(
-      "follower_username",
-      p.username
-    );
-setFollowingCount(
-  following || 0
-);
-    setLoading(false);
-
-  }
-
-  loadProfile();
-
-}, []);
-
-  if (loading) {
-
-    return (
-
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-
-        Loading...
-
-      </main>
-
-    );
-
-  }
-
-  if (!profile) {
-
-    return (
-
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-
-        Login required
-
-      </main>
-
-    );
-
-  }
+    getMyUsername();
+  }, [router]);
 
   return (
-
-    <main className="min-h-screen bg-black text-white">
-
-      <div className="p-6 border-b border-zinc-900">
-
-        <div className="flex items-center gap-5">
-
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-zinc-900">
-
-            {profile.avatar_url ? (
-
-              <img
-                src={profile.avatar_url}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-
-            ) : (
-
-              <div className="w-full h-full flex items-center justify-center text-3xl font-black">
-
-                {profile.username?.[0]?.toUpperCase()}
-
-              </div>
-
-            )}
-
-          </div>
-
-          <div>
-
-            <h1 className="text-2xl font-black">
-
-              @{profile.username}
-
-            </h1>
-
-            <div className="flex gap-6 mt-3 text-sm">
-
-              <div>
-
-                <span className="font-black">
-
-                  {reactions.length}
-
-                </span>
-
-                <span className="text-zinc-500 ml-1">
-
-                  Duets
-
-                </span>
-
-              </div>
-
-              <div>
-
-                <span className="font-black">
-
-                {followsCount}
-
-                </span>
-
-                <span className="text-zinc-500 ml-1">
-
-                  Follows
-
-                </span>
-
-              </div>
-
-              <div>
-
-                <span className="font-black">
-
-                {followingCount}
-
-                </span>
-
-                <span className="text-zinc-500 ml-1">
-
-                  Following
-
-                </span>
-
-              </div>
-
-            </div>
-
-            <div className="mt-4">
-
-              <FollowButton
-                profileId={profile.id}
-              />
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-      {reactions.length === 0 ? (
-
-  <div className="flex flex-col items-center justify-center h-[50vh] text-zinc-500">
-
-    <div className="text-6xl mb-4">
-
-      🎤
-
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
     </div>
-
-    <div className="text-xl font-bold">
-
-      No duets yet
-
-    </div>
-
-    <div className="text-sm mt-2">
-
-      Create your first reaction
-
-    </div>
-
-  </div>
-
-) : (
-
-  <div className="snap-y snap-mandatory overflow-y-scroll h-[calc(100vh-180px)]">
-
-    {reactions.map(
-      (reaction) => (
-
-        <VideoCard
-          key={reaction.id}
-          reaction={reaction}
-        />
-
-      )
-    )}
-
-  </div>
-
-)}
-
-    </main>
-
   );
-
 }
