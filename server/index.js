@@ -134,15 +134,37 @@ app.post("/render-duet", upload.single("reaction"), async (req, res) => {
         await new Promise((res, rej) => { writer.on('finish', res); writer.on('error', rej); });
 
         ffmpeg()
-            .input(localOriginal).input(reactionFile.path).duration(parseFloat(duration) || 10)
-            .complexFilter([
-                `[0:v]fps=20,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v0]`,
-                `[1:v]fps=20,scale=480:360:force_original_aspect_ratio=increase,crop=480:360[v1]`,
-                `[v0][v1]vstack=inputs=2[v_final]`,
-                `[0:a]volume=0.2[a0]`, `[1:a]volume=1.5[a1]`, `[a0][a1]amix=inputs=2:duration=first[a_final]`
-            ])
-            .outputOptions(["-map [v_final]", "-map [a_final]", "-c:v libx264", "-preset ultrafast", "-crf 32"])
-            .on("end", async () => {
+    .input(localOriginal)
+    .input(reactionFile.path)
+    .duration(parseFloat(duration) || 10)
+    .complexFilter([
+        // VIDEO PROCESIRANJE
+        `[0:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=540:480,setsar=1[v0]`,
+        `[1:v]fps=25,scale=540:480:force_original_aspect_ratio=increase,crop=480:480,setsar=1[v1]`,
+        `[v0][v1]vstack=inputs=2[v_final]`,
+
+        // AUDIO PROCESIRANJE (Rešavanje tvog problema)
+        // 1. Originalna pesma (0:a) - Smanjujemo na 0.08 (8% jačine)
+        `[0:a]volume=0.08[a0]`,
+
+        // 2. Tvoj glas (1:a) 
+        // - highpass=f=200: sečemo duboke tonove i buku koji čine glas mutnim
+        // - volume=3.0: pojačavamo te 3 puta
+        `[1:a]highpass=f=200,volume=3.0[a1]`,
+
+        // 3. Spajanje sa Limiterom
+        // - alimiter: osigurava da čak i ako vrištiš, zvuk ne krči, već se "zakuca" na 0dB
+        `[a0][a1]amix=inputs=2:duration=first:dropout_transition=0,alimiter=limit=0.9[a_final]`
+    ])
+    .outputOptions([
+        "-map [v_final]",
+        "-map [a_final]",
+        "-c:v libx264",
+        "-preset ultrafast",
+        "-crf 28",
+        "-pix_fmt yuv420p"
+    ])
+    .on("end", async () => {
                 const storageName = `duets/tiktok-${Date.now()}.mp4`;
                 await axios.post(`${process.env.SUPABASE_URL}/storage/v1/object/videos/${storageName}`, fs.createReadStream(outputPath), {
                     headers: { 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'API-Key': process.env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'video/mp4' }
