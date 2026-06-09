@@ -2,15 +2,36 @@
 
 export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import DuetRecorder from "@/components/DuetRecorder";
+import { supabase } from "@/lib/supabase";
 
 function CreateContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const videoUrl = searchParams.get("video") || "";
   const title = decodeURIComponent(searchParams.get("title") || "");
   const artist = decodeURIComponent(searchParams.get("artist") || "");
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.replace("/login");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen bg-[#0D0D14] flex items-center justify-center text-white font-black">
+        UČITAVANJE...
+      </main>
+    );
+  }
 
   if (!videoUrl) {
     return (
