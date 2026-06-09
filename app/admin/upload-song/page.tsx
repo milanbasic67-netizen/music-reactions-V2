@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
 import TopBar from "@/components/TopBar";
-import { Music, Video, CheckCircle, Loader2, Plus, Info } from "lucide-react";
+import { Music, Video, CheckCircle, Loader2, Plus, Settings2 } from "lucide-react";
 
 export default function UploadSongPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -34,25 +34,22 @@ export default function UploadSongPage() {
         body: JSON.stringify({ url: youtubeUrl.trim() }),
       });
 
-      if (!res.ok) {
-        if (res.status === 502) throw new Error("Render server crashed (OOM/Timeout). Use Manual Mode.");
-        throw new Error(`Server error: ${res.status}`);
-      }
-
       const result = await res.json();
-      if (result.success) {
+      if (res.ok && result.success) {
         await supabase.from("songs").insert({
           title: result.title,
           artist: "YouTube Import",
           video_url: result.videoUrl,
           thumbnail_url: result.thumbnailUrl
         });
-        alert("Success!");
+        alert("Song added successfully!");
+        setYoutubeUrl("");
         window.location.reload();
+      } else {
+        alert("Server returned an error. Try restarting Render or use Manual mode.");
       }
-    } catch (err: any) {
-      alert("SERVER OVERLOAD: " + err.message);
-      setIsManual(true); // Automatski prebaci na manual ako server pukne
+    } catch (err) {
+      alert("Connection error. Server might be down.");
     } finally {
       setLoading(false);
     }
@@ -63,85 +60,119 @@ export default function UploadSongPage() {
     setLoading(true);
     const { error } = await supabase.from("songs").insert({
       title: manualData.title,
-      artist: manualData.artist || "Unknown Artist",
+      artist: manualData.artist || "Unknown",
       video_url: manualData.videoUrl,
       thumbnail_url: manualData.thumbUrl || `https://img.youtube.com/vi/default/maxresdefault.jpg`
     });
-
     if (!error) {
-      alert("Song added manually!");
+      alert("Manual entry successful!");
       window.location.reload();
-    } else {
-      alert("Database error: " + error.message);
     }
     setLoading(false);
   };
 
-  if (profile && profile.role !== "admin") return <div className="text-white p-20 text-center">NOT AUTHORIZED</div>;
+  if (profile && profile.role !== "admin") return <div className="p-20 text-center">Unauthorized</div>;
 
   return (
     <main className="min-h-screen bg-black text-white">
       <TopBar />
+      
       <div className="max-w-6xl mx-auto px-6 pt-32 pb-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           
+          {/* LEVA STRANA - IMPORT */}
           <div className="space-y-8">
-            <div className="bg-red-600/10 border border-red-600/20 p-4 rounded-2xl flex gap-3">
-              <Info className="text-red-500 shrink-0" />
-              <p className="text-xs text-red-200 leading-relaxed">
-                <strong>NOTE:</strong> Render's free server often crashes during YouTube processing (502 error). 
-                If it fails, use <strong>Manual Mode</strong> to paste direct links.
-              </p>
+            <div>
+              <h1 className="text-5xl font-black tracking-tighter uppercase italic">
+                Manage <span className="text-red-600">Songs</span>
+              </h1>
+              <p className="text-zinc-500 mt-2 font-medium">Add new tracks to the DUET library.</p>
             </div>
 
-            <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-white/5">
-              <button onClick={() => setIsManual(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${!isManual ? "bg-red-600" : "text-zinc-500"}`}>AUTOMATIC</button>
-              <button onClick={() => setIsManual(true)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${isManual ? "bg-red-600" : "text-zinc-500"}`}>MANUAL</button>
+            {/* MODE SWITCHER */}
+            <div className="inline-flex bg-zinc-900/80 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
+              <button 
+                onClick={() => setIsManual(false)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${!isManual ? "bg-white text-black shadow-xl" : "text-zinc-500 hover:text-white"}`}
+              >
+                AUTOMATIC
+              </button>
+              <button 
+                onClick={() => setIsManual(true)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${isManual ? "bg-white text-black shadow-xl" : "text-zinc-500 hover:text-white"}`}
+              >
+                MANUAL
+              </button>
             </div>
 
-            <div className="bg-zinc-900/50 p-8 rounded-[2rem] border border-white/5 backdrop-blur-xl">
+            <div className="bg-zinc-900/40 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-2xl shadow-2xl">
               {!isManual ? (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-4 bg-black/50 p-5 rounded-2xl border border-white/5">
-                    <Video className="text-red-600" size={28} />
-                    <input type="text" placeholder="YouTube Link..." className="bg-transparent border-none outline-none w-full text-white font-bold" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">YouTube URL</label>
+                    <div className="flex items-center gap-4 bg-black/40 p-5 rounded-2xl border border-white/5 focus-within:border-red-600/50 transition-all">
+                      <Video className="text-red-600" size={24} />
+                      <input 
+                        type="text" 
+                        placeholder="Paste link here..." 
+                        className="bg-transparent border-none outline-none w-full text-white font-bold placeholder:text-zinc-700"
+                        value={youtubeUrl}
+                        onChange={(e) => setYoutubeUrl(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <button onClick={handleImport} disabled={loading} className="w-full bg-white text-black py-4 rounded-2xl font-black flex items-center justify-center gap-2">
-                    {loading ? <Loader2 className="animate-spin" /> : "IMPORT VIA SERVER"}
+                  <button 
+                    onClick={handleImport}
+                    disabled={loading || !youtubeUrl}
+                    className="w-full bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 text-white py-5 rounded-2xl font-black text-lg transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-3"
+                  >
+                    {loading ? <Loader2 className="animate-spin" /> : <Plus size={24} />}
+                    {loading ? "PROCESSING..." : "IMPORT SONG"}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <input placeholder="Title" className="w-full bg-black/50 p-4 rounded-xl border border-white/5" onChange={(e) => setManualData({...manualData, title: e.target.value})} />
-                  <input placeholder="Artist" className="w-full bg-black/50 p-4 rounded-xl border border-white/5" onChange={(e) => setManualData({...manualData, artist: e.target.value})} />
-                  <input placeholder="Direct MP4 URL" className="w-full bg-black/50 p-4 rounded-xl border border-white/5" onChange={(e) => setManualData({...manualData, videoUrl: e.target.value})} />
-                  <input placeholder="Thumbnail URL" className="w-full bg-black/50 p-4 rounded-xl border border-white/5" onChange={(e) => setManualData({...manualData, thumbUrl: e.target.value})} />
-                  <button onClick={handleManualInsert} disabled={loading} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2">
-                    <Plus size={20} /> ADD TO LIBRARY
+                  <input placeholder="Title" className="w-full bg-black/40 p-4 rounded-xl border border-white/5 text-sm font-bold" onChange={(e) => setManualData({...manualData, title: e.target.value})} />
+                  <input placeholder="Artist" className="w-full bg-black/40 p-4 rounded-xl border border-white/5 text-sm font-bold" onChange={(e) => setManualData({...manualData, artist: e.target.value})} />
+                  <input placeholder="Video Direct URL (.mp4)" className="w-full bg-black/40 p-4 rounded-xl border border-white/5 text-sm font-bold" onChange={(e) => setManualData({...manualData, videoUrl: e.target.value})} />
+                  <input placeholder="Thumbnail URL" className="w-full bg-black/40 p-4 rounded-xl border border-white/5 text-sm font-bold" onChange={(e) => setManualData({...manualData, thumbUrl: e.target.value})} />
+                  <button onClick={handleManualInsert} disabled={loading} className="w-full bg-white text-black py-4 rounded-xl font-black mt-4 hover:bg-zinc-200 transition-colors">
+                    ADD MANUALLY
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* BIBLIOTEKA */}
-          <div className="bg-zinc-900/20 p-8 rounded-[2rem] border border-white/5 flex flex-col h-[600px]">
-             <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Music className="text-red-500" /> ACTIVE LIBRARY</h2>
-             <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
+          {/* DESNA STRANA - BIBLIOTEKA */}
+          <div className="bg-zinc-900/10 p-8 rounded-[2.5rem] border border-white/5 flex flex-col h-[650px] shadow-inner">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-black flex items-center gap-3 uppercase tracking-tighter">
+                <Settings2 className="text-red-500" /> Library Status
+              </h2>
+              <span className="text-[10px] bg-zinc-800 px-3 py-1 rounded-full font-black text-zinc-400">{songs.length} TOTAL</span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
               {songs.map((song) => (
-                <div key={song.id} className="flex items-center gap-4 bg-zinc-900/80 p-3 rounded-2xl border border-white/5">
-                  <div className="w-16 h-12 bg-zinc-800 rounded-xl overflow-hidden flex-shrink-0">
-                    {song.thumbnail_url && <img src={song.thumbnail_url} className="w-full h-full object-cover" />}
+                <div key={song.id} className="flex items-center gap-4 bg-zinc-900/60 p-3 rounded-2xl border border-white/5 group hover:border-red-600/30 transition-all duration-300">
+                  <div className="w-16 h-12 bg-zinc-800 rounded-xl overflow-hidden shrink-0 shadow-lg">
+                    {song.thumbnail_url ? (
+                      <img src={song.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center"><Music size={16} /></div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm truncate uppercase">{song.title}</h3>
-                    <p className="text-zinc-500 text-[10px] truncate font-bold">{song.artist}</p>
+                    <h3 className="font-black text-xs truncate uppercase tracking-tight group-hover:text-red-500 transition-colors">{song.title}</h3>
+                    <p className="text-zinc-500 text-[10px] font-bold mt-0.5">{song.artist}</p>
                   </div>
-                  <CheckCircle size={18} className="text-green-500 opacity-50" />
+                  <CheckCircle size={16} className="text-green-500/30" />
                 </div>
               ))}
             </div>
           </div>
+
         </div>
       </div>
     </main>
