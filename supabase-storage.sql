@@ -32,6 +32,7 @@ USING (
 -- ============================================================
 -- VERIFY
 -- ============================================================
-SELECT bucket_id, name, definition
-FROM storage.policies
-ORDER BY bucket_id, name;
+SELECT schemaname, tablename, policyname
+FROM pg_policies
+WHERE schemaname = 'storage'
+ORDER BY tablename, policyname;
