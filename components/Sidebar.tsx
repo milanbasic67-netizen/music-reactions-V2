@@ -36,7 +36,7 @@ export default function Sidebar() {
   const navItems = [
     { label: "For You", icon: Home, href: "/" },
     { label: "Trending", icon: TrendingUp, href: "/trending" },
-    { label: "Create Duet", icon: PlusSquare, href: "/upload-song" },
+    { label: "Create Duet", icon: PlusSquare, href: "/songs" },
   ];
 
   return (
