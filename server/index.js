@@ -202,13 +202,20 @@ app.post("/delete-video", verifyAuth, async (req, res) => {
     }
 
     // Delete file from storage using service role (bypasses RLS)
+    let storageWarning = null;
     if (storagePath) {
-      const { error: storageError } = await supabaseAdmin.storage
+      const { data: storageData, error: storageError } = await supabaseAdmin.storage
         .from("videos")
         .remove([storagePath]);
       if (storageError) {
         return res.status(500).json({ error: "Storage delete failed", details: storageError.message });
       }
+      // storageData is array of deleted objects — empty means path not found
+      if (!storageData || storageData.length === 0) {
+        storageWarning = `File not found at path: ${storagePath}`;
+      }
+    } else {
+      storageWarning = "No storagePath provided";
     }
 
     // Delete row from reactions
@@ -219,7 +226,7 @@ app.post("/delete-video", verifyAuth, async (req, res) => {
 
     if (dbError) return res.status(500).json({ error: "DB delete failed", details: dbError.message });
 
-    res.json({ success: true });
+    res.json({ success: true, storageError: storageWarning });
   } catch (err) {
     res.status(500).json({ error: "Delete failed", details: err.message });
   }

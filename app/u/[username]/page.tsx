@@ -162,7 +162,14 @@ export default function UserProfilePage() {
         body: JSON.stringify({ reactionId: vidId, storagePath }),
       });
 
-      if (!res.ok) { alert("Failed to delete video."); return; }
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Delete failed: ${result.error || "unknown"} — ${result.details || ""}`);
+        return;
+      }
+      if (result.storageError) {
+        alert(`Storage warning: ${result.storageError}`);
+      }
       setReactions(prev => prev.filter(v => v.id !== vidId));
     } catch {
       alert("Error deleting video.");
