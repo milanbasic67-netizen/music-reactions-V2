@@ -200,13 +200,26 @@ export default function VideoCard({ reaction }: Props) {
           </button>
 
           {profile?.role === "admin" && (
-            <button 
+            <button
               onClick={async () => {
-                if(confirm("Delete video permanently?")) {
-                  const { error } = await supabase.from("reactions").delete().eq("id", reaction.id);
-                  if (!error) window.location.reload();
+                if (!confirm("Delete video permanently?")) return;
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const parts = reaction.video_url?.split("/public/videos/");
+                  const storagePath = parts?.length > 1 ? decodeURIComponent(parts[1]) : null;
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delete-video`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ reactionId: reaction.id, storagePath }),
+                  });
+                  const result = await res.json().catch(() => ({}));
+                  if (!res.ok) { alert(`Delete failed: ${result.error || "unknown"}`); return; }
+                  if (result.storageError) alert(`Storage warning: ${result.storageError}`);
+                  window.location.reload();
+                } catch {
+                  alert("Error deleting video.");
                 }
-              }} 
+              }}
               className="p-3 rounded-full bg-red-600/40 text-white hover:bg-red-600 transition-colors"
             >
               <Trash2 className="w-7 h-7" />
