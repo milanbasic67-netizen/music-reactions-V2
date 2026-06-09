@@ -115,8 +115,8 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
-        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4" />
+      <div className="min-h-screen bg-[#0D0D14] text-white flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="font-black text-xs uppercase tracking-widest opacity-40">Loading...</p>
       </div>
     );
@@ -124,26 +124,26 @@ export default function UserProfilePage() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-10 text-center">
-        <AlertCircle className="w-16 h-16 text-zinc-800 mb-4" />
+      <div className="min-h-screen bg-[#0D0D14] text-white flex flex-col items-center justify-center p-10 text-center">
+        <AlertCircle className="w-16 h-16 text-slate-700 mb-4" />
         <h1 className="text-2xl font-black mb-2">USER NOT FOUND</h1>
-        <p className="text-zinc-500 text-sm mb-8">The user @{username} doesn't exist.</p>
-        <button onClick={() => router.push("/")} className="px-10 py-3 bg-zinc-900 rounded-full font-bold">Home</button>
+        <p className="text-slate-500 text-sm mb-8">The user @{username} doesn't exist.</p>
+        <button onClick={() => router.push("/")} className="px-10 py-3 bg-white/5 rounded-full font-bold">Home</button>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black text-white pb-24">
+    <main className="min-h-screen bg-[#0D0D14] text-white pb-24">
       <div className="max-w-[1000px] mx-auto p-6 lg:p-12">
         
         {/* HEADER */}
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-full overflow-hidden bg-zinc-900 border-2 border-zinc-800 shadow-2xl relative">
+          <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-full overflow-hidden bg-slate-900 border-2 border-white/10 shadow-2xl relative">
             {profile.avatar_url ? (
               <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-4xl font-black bg-zinc-800 uppercase">
+              <div className="w-full h-full flex items-center justify-center text-4xl font-black bg-slate-800 uppercase">
                 {profile.username?.[0]}
               </div>
             )}
@@ -155,15 +155,15 @@ export default function UserProfilePage() {
             <div className="flex gap-8 mt-6">
               <div className="flex flex-col items-center md:items-start">
                 <span className="text-lg font-black">{reactions.length}</span>
-                <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Duets</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Duets</span>
               </div>
               <div className="flex flex-col items-center md:items-start">
                 <span className="text-lg font-black">{followsCount}</span>
-                <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Followers</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Followers</span>
               </div>
               <div className="flex flex-col items-center md:items-start">
                 <span className="text-lg font-black">{followingCount}</span>
-                <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Following</span>
+                <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Following</span>
               </div>
             </div>
 
@@ -173,12 +173,12 @@ export default function UserProfilePage() {
                   <button className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest">
                     Edit Profile
                   </button>
-                  <button onClick={handleLogout} className="px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-red-500 transition">
+                  <button onClick={handleLogout} className="px-4 py-3 bg-white/5 border border-white/8 rounded-xl hover:text-red-400 transition">
                     <LogOut className="w-5 h-5" />
                   </button>
                 </>
               ) : (
-                <button className="flex-1 md:px-16 py-3 bg-red-600 hover:bg-red-500 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-900/20 transition">
+                <button className="flex-1 md:px-16 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-violet-900/20 transition">
                   Follow
                 </button>
               )}
@@ -187,25 +187,25 @@ export default function UserProfilePage() {
         </div>
 
         {/* TABS */}
-        <div className="mt-16 border-b border-zinc-900 flex justify-center md:justify-start gap-12">
+        <div className="mt-16 border-b border-white/8 flex justify-center md:justify-start gap-12">
           <button className="pb-4 border-b-2 border-white flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
             <Grid className="w-4 h-4" /> Videos
           </button>
-          <button className="pb-4 text-zinc-600 flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
+          <button className="pb-4 text-slate-600 flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
             <Lock className="w-4 h-4" /> Liked
           </button>
         </div>
 
         {/* VIDEO GRID */}
         {reactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-zinc-700">
+          <div className="flex flex-col items-center justify-center py-24 text-slate-700">
             <Music2 className="w-12 h-12 mb-4 opacity-10" />
             <p className="font-black uppercase tracking-tighter text-xs">No videos shared</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 lg:gap-4 mt-8">
             {reactions.map((vid) => (
-              <div key={vid.id} className="relative aspect-[9/16] bg-zinc-900 rounded-sm lg:rounded-2xl overflow-hidden group border border-zinc-900">
+              <div key={vid.id} className="relative aspect-[9/16] bg-slate-900 rounded-sm lg:rounded-2xl overflow-hidden group border border-white/5">
                 <video src={vid.video_url} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                 

@@ -25,7 +25,7 @@ export default function TopBar() {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-black/90 backdrop-blur-xl border-b border-white/10 h-16">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-[#0D0D14]/90 backdrop-blur-xl border-b border-white/8 h-16">
       <div className="max-w-full mx-auto h-full flex items-center justify-between px-4">
         
         {/* LEVO: Logo i Link za Feed */}
@@ -33,7 +33,7 @@ export default function TopBar() {
           className="flex items-center gap-2 cursor-pointer" 
           onClick={() => window.location.href = "/"}
         >
-          <div className="bg-red-600 p-1.5 rounded-lg">
+          <div className="bg-violet-600 p-1.5 rounded-lg">
             <Music2 className="text-white w-5 h-5" />
           </div>
           <h1 className="text-white text-xl font-black tracking-tighter">DUET</h1>
@@ -45,9 +45,9 @@ export default function TopBar() {
           {/* DUGME: BIBLIOTEKA (Ono što ti je falilo na desktopu) */}
           <button
             onClick={() => window.location.href = "/songs"}
-            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-xl text-sm font-black transition border border-white/5"
+            className="flex items-center gap-2 bg-white/8 hover:bg-white/12 text-white px-3 py-2 rounded-xl text-sm font-black transition border border-white/5"
           >
-            <LayoutGrid size={18} className="text-red-500" />
+            <LayoutGrid size={18} className="text-violet-400" />
             <span className="hidden md:inline">Browse Songs</span>
             <span className="md:hidden">Songs</span>
           </button>
@@ -56,7 +56,7 @@ export default function TopBar() {
           {profile?.role === "admin" && (
             <button
               onClick={() => window.location.href = "/admin/upload-song"}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-xl text-sm font-black transition shadow-lg shadow-red-600/20"
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-3 py-2 rounded-xl text-sm font-black transition shadow-lg shadow-violet-600/20"
             >
               <PlusCircle size={18} />
               <span className="hidden md:inline">Admin Upload</span>
@@ -68,7 +68,7 @@ export default function TopBar() {
           {/* LOGOUT */}
           <button
             onClick={logout}
-            className="p-2 rounded-xl bg-zinc-900 text-zinc-400 hover:text-white transition border border-white/5"
+            className="p-2 rounded-xl bg-white/5 text-slate-400 hover:text-white transition border border-white/5"
           >
             <LogOut size={18} />
           </button>

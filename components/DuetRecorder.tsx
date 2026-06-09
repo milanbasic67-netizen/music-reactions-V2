@@ -140,7 +140,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   return (
     <div className="flex flex-col items-center p-4">
       {/* PREVIEW KAMERE */}
-      <div className="w-full max-w-[400px] aspect-video bg-black rounded-[2.5rem] overflow-hidden border-4 border-zinc-800 relative shadow-2xl">
+      <div className="w-full max-w-[400px] aspect-video bg-black rounded-[2.5rem] overflow-hidden border-4 border-white/10 relative shadow-2xl">
         <video 
             ref={cameraRef} 
             autoPlay 
@@ -161,7 +161,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         {!recording && !loading && (
           <button 
             onClick={startRecording} 
-            className="w-full bg-red-600 hover:bg-red-500 text-white py-6 rounded-[2rem] font-black text-2xl shadow-xl shadow-red-900/30 transition active:scale-95"
+            className="w-full bg-violet-600 hover:bg-violet-500 text-white py-6 rounded-[2rem] font-black text-2xl shadow-xl shadow-violet-900/30 transition active:scale-95"
           >
             RECORD
           </button>
@@ -178,10 +178,10 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
 
         {loading && (
           <div className="text-center py-6">
-            <p className="text-zinc-500 font-black text-lg animate-pulse tracking-tighter uppercase">
+            <p className="text-slate-500 font-black text-lg animate-pulse tracking-tighter uppercase">
               Video processing...
             </p>
-            <p className="text-zinc-700 text-xs mt-1">Spajamo tvoj glas sa pesmom</p>
+            <p className="text-slate-600 text-xs mt-1">Spajamo tvoj glas sa pesmom</p>
           </div>
         )}
       </div>

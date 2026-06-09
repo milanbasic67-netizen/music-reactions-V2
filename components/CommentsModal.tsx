@@ -106,7 +106,7 @@ export default function CommentsModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-end">
 
-      <div className="w-full h-[70vh] bg-zinc-950 rounded-t-3xl border-t border-white/10 p-5 overflow-y-auto">
+      <div className="w-full h-[70vh] bg-[#0F0F1A] rounded-t-3xl border-t border-white/8 p-5 overflow-y-auto">
 
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
@@ -153,7 +153,7 @@ export default function CommentsModal({
 
                 </div>
 
-                <div className="text-zinc-300 mt-1">
+                <div className="text-slate-300 mt-1">
 
                   {
                     comment.text
@@ -169,7 +169,7 @@ export default function CommentsModal({
         </div>
 
         {/* INPUT */}
-        <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-white/10 p-4 flex gap-3">
+        <div className="fixed bottom-0 left-0 right-0 bg-[#0F0F1A] border-t border-white/8 p-4 flex gap-3">
 
           <input
             value={text}
@@ -179,14 +179,14 @@ export default function CommentsModal({
               )
             }
             placeholder="Add comment..."
-            className="flex-1 bg-zinc-900 rounded-2xl px-5 py-4 text-white outline-none"
+            className="flex-1 bg-white/5 border border-white/8 rounded-2xl px-5 py-4 text-white outline-none focus:border-violet-500 transition"
           />
 
           <button
             onClick={
               addComment
             }
-            className="bg-red-600 px-6 rounded-2xl text-white font-bold"
+            className="bg-violet-600 hover:bg-violet-500 px-6 rounded-2xl text-white font-bold transition"
           >
 
             Send

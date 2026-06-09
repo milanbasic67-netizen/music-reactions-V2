@@ -46,19 +46,19 @@ export default function UserUploadPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-5 flex flex-col items-center justify-center">
-      <div className="w-full max-w-md bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 text-center">
+    <main className="min-h-screen bg-[#0D0D14] text-white p-5 flex flex-col items-center justify-center">
+      <div className="w-full max-w-md bg-white/5 p-8 rounded-[2.5rem] border border-white/8 text-center">
         <h1 className="text-3xl font-black mb-6">NOVI DUET</h1>
         <input
           value={youtubeUrl}
           onChange={(e) => setYoutubeUrl(e.target.value)}
           placeholder="Paste YouTube link..."
-          className="w-full bg-black border border-zinc-800 rounded-2xl p-5 mb-6 text-center outline-none focus:border-red-600 transition-all"
+          className="w-full bg-black border border-white/8 rounded-2xl p-5 mb-6 text-center outline-none focus:border-violet-500 transition-all"
         />
         <button
           onClick={startDuetImport}
           disabled={loading}
-          className="w-full bg-red-600 py-5 rounded-2xl font-black text-xl active:scale-95 transition"
+          className="w-full bg-violet-600 hover:bg-violet-500 py-5 rounded-2xl font-black text-xl active:scale-95 transition"
         >
           {loading ? "PROVERA..." : "ZAPOČNI"}
         </button>

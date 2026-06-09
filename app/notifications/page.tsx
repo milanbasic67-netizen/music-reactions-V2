@@ -34,7 +34,7 @@ export default async function NotificationsPage() {
       );
 
   return (
-    <main className="min-h-screen pb-24 bg-black text-white p-5">
+    <main className="min-h-screen pb-24 bg-[#0D0D14] text-white p-5">
 
       <div className="max-w-3xl mx-auto">
 
@@ -55,7 +55,7 @@ export default async function NotificationsPage() {
                 key={
                   notification.id
                 }
-                className="bg-zinc-950 border border-white/10 rounded-3xl p-5"
+                className="bg-white/4 border border-white/8 rounded-3xl p-5"
               >
 
                 <div className="text-white text-lg font-bold">
@@ -81,7 +81,7 @@ export default async function NotificationsPage() {
 
                 </div>
 
-                <div className="text-zinc-500 mt-2 text-sm">
+                <div className="text-slate-500 mt-2 text-sm">
 
                   {
                     new Date(

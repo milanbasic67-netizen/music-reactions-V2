@@ -47,15 +47,15 @@ export default function CommentSection({ reactionId, onClose }: Props) {
   }
 
   return (
-    <div className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col animate-in slide-in-from-bottom duration-300">
-      <div className="mt-auto bg-zinc-950 rounded-t-[2.5rem] h-[70%] flex flex-col border-t border-zinc-800 shadow-2xl">
+    <div className="absolute inset-0 z-[100] bg-black/70 backdrop-blur-sm flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="mt-auto bg-[#0F0F1A] rounded-t-[2.5rem] h-[70%] flex flex-col border-t border-white/8 shadow-2xl">
         
         {/* HEADER */}
-        <div className="p-6 flex justify-between items-center border-b border-zinc-900">
-          <span className="font-black text-xs uppercase tracking-widest text-zinc-400">
+        <div className="p-6 flex justify-between items-center border-b border-white/5">
+          <span className="font-black text-xs uppercase tracking-widest text-slate-400">
             {comments.length} Comments
           </span>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-900 rounded-full transition">
+          <button onClick={onClose} className="p-2 hover:bg-white/8 rounded-full transition">
             <X className="w-6 h-6 text-white" />
           </button>
         </div>
@@ -63,19 +63,19 @@ export default function CommentSection({ reactionId, onClose }: Props) {
         {/* COMMENTS LIST */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {comments.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-700">
+            <div className="h-full flex flex-col items-center justify-center text-slate-700">
               <MessageSquare className="w-12 h-12 mb-2 opacity-20" />
               <p className="font-bold text-xs uppercase tracking-tighter">Be the first to comment</p>
             </div>
           ) : (
             comments.map((c) => (
               <div key={c.id} className="flex gap-3 items-start">
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 flex items-center justify-center font-black text-[10px]">
+                <div className="w-8 h-8 rounded-full bg-slate-800 flex-shrink-0 flex items-center justify-center font-black text-[10px]">
                   {c.username?.[0].toUpperCase()}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">@{c.username}</span>
-                  <p className="text-sm text-zinc-200 mt-1 leading-relaxed">{c.content}</p>
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">@{c.username}</span>
+                  <p className="text-sm text-slate-200 mt-1 leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))
@@ -83,19 +83,19 @@ export default function CommentSection({ reactionId, onClose }: Props) {
         </div>
 
         {/* INPUT AREA */}
-        <form onSubmit={handleSubmit} className="p-6 border-t border-zinc-900 bg-zinc-950 pb-10">
+        <form onSubmit={handleSubmit} className="p-6 border-t border-white/5 bg-[#0F0F1A] pb-10">
           <div className="relative flex items-center">
-            <input 
+            <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Add a comment..."
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-red-600 transition"
+              className="w-full bg-white/5 border border-white/8 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-violet-500 transition"
             />
-            <button 
+            <button
               type="submit"
               disabled={loading}
-              className="absolute right-3 p-2 bg-red-600 rounded-xl text-white hover:bg-red-500 disabled:opacity-50 transition"
+              className="absolute right-3 p-2 bg-violet-600 rounded-xl text-white hover:bg-violet-500 disabled:opacity-50 transition"
             >
               <Send className="w-5 h-5" />
             </button>

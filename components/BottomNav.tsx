@@ -58,7 +58,7 @@ export default function BottomNav() {
 
   }, []);
 
-  return (    <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-2xl border-t border-white/10">
+  return (    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D14]/95 backdrop-blur-2xl border-t border-white/8">
 
       <div className="grid grid-cols-7 h-20">
 
@@ -142,7 +142,7 @@ export default function BottomNav() {
             size={24}
             className={
               pathname === "/trending"
-                ? "text-orange-500"
+                ? "text-violet-400"
                 : "text-zinc-500"
             }
           />
@@ -150,7 +150,7 @@ export default function BottomNav() {
           <span
             className={
               pathname === "/trending"
-                ? "text-orange-500 text-[10px] font-bold"
+                ? "text-violet-400 text-[10px] font-bold"
                 : "text-zinc-500 text-[10px]"
             }
           >
@@ -171,7 +171,7 @@ export default function BottomNav() {
           className="flex items-center justify-center"
         >
 
-          <div className="w-15 h-15 rounded-2xl bg-red-600 flex items-center justify-center shadow-[0_0_30px_rgba(255,0,0,0.5)]">
+          <div className="w-15 h-15 rounded-2xl bg-violet-600 flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.5)]">
 
             <PlusSquare
               size={30}
@@ -267,7 +267,7 @@ export default function BottomNav() {
   className="flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition"
 >
 
-  <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+  <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
 
   {profile?.avatar_url ? (
 

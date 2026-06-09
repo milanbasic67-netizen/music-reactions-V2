@@ -79,7 +79,7 @@ export default function SearchPage() {
   }, [query]);
 
   return (
-    <main className="min-h-screen pb-24 bg-black text-white p-5">
+    <main className="min-h-screen pb-24 bg-[#0D0D14] text-white p-5">
 
       {/* HEADER */}
       <div className="max-w-4xl mx-auto">
@@ -90,7 +90,7 @@ export default function SearchPage() {
 
         </h1>
 
-        <p className="text-zinc-400 mt-3 text-lg">
+        <p className="text-slate-400 mt-3 text-lg">
 
           Find songs, artists and creators
 
@@ -109,7 +109,7 @@ export default function SearchPage() {
             )
           }
           placeholder="Search..."
-          className="w-full bg-zinc-900 border border-white/10 rounded-3xl px-6 py-5 text-white text-xl outline-none"
+          className="w-full bg-white/5 border border-white/8 rounded-3xl px-6 py-5 text-white text-xl outline-none focus:border-violet-500 transition"
         />
 
       </div>
@@ -117,7 +117,7 @@ export default function SearchPage() {
       {/* LOADING */}
       {loading && (
 
-        <div className="text-center text-zinc-400 mt-10">
+        <div className="text-center text-slate-400 mt-10">
 
           Searching...
 
@@ -140,7 +140,7 @@ export default function SearchPage() {
               href="/"
             >
 
-              <div className="bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden hover:border-red-500/40 transition cursor-pointer">
+              <div className="bg-white/4 border border-white/8 rounded-3xl overflow-hidden hover:border-violet-500/30 transition cursor-pointer">
 
                 {/* VIDEO */}
                 <video
@@ -163,7 +163,7 @@ export default function SearchPage() {
 
                   </div>
 
-                  <div className="text-zinc-400 mt-2">
+                  <div className="text-slate-400 mt-2">
 
                     {
                       reaction.artist
@@ -171,7 +171,7 @@ export default function SearchPage() {
 
                   </div>
 
-                  <div className="text-red-400 mt-4 font-bold">
+                  <div className="text-violet-400 mt-4 font-bold">
 
                     @
                     {

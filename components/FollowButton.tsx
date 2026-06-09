@@ -174,7 +174,7 @@ export default function FollowButton({
 
       className={`mt-5 px-6 py-3 rounded-2xl font-black ${
         following
-          ? "bg-zinc-800 text-white"
+          ? "bg-white/10 text-white border border-white/10"
           : "bg-white text-black"
       }`}
 

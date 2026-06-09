@@ -111,8 +111,8 @@ export default function VideoCard({ reaction }: Props) {
   if (!reaction) return null;
 
   return (
-    <div className="relative h-[100dvh] w-full bg-zinc-950 snap-start flex justify-center overflow-hidden">
-      <div className="relative h-full aspect-[9/16] w-full max-w-[480px] bg-black shadow-2xl border-x border-zinc-900">
+    <div className="relative h-[100dvh] w-full bg-[#0D0D14] snap-start flex justify-center overflow-hidden">
+      <div className="relative h-full aspect-[9/16] w-full max-w-[480px] bg-[#0A0A10] shadow-2xl border-x border-white/5">
         
         {/* VIDEO ELEMENT */}
         <video
@@ -127,7 +127,7 @@ export default function VideoCard({ reaction }: Props) {
 
         {/* PROGRESS BAR */}
         <div 
-          className="absolute bottom-0 left-0 h-1 bg-red-600 z-50 transition-all duration-100" 
+          className="absolute bottom-0 left-0 h-1 bg-violet-500 z-50 transition-all duration-100"
           style={{ width: `${progress}%` }} 
         />
 
@@ -137,20 +137,20 @@ export default function VideoCard({ reaction }: Props) {
         {/* INFO SEKCIJA */}
         <div className="absolute bottom-10 left-5 z-20 w-[75%] pointer-events-none">
           <Link href={`/u/${reaction.username}`} className="pointer-events-auto">
-            <span className="font-black text-white text-xl drop-shadow-md hover:text-red-500 transition-colors">
+            <span className="font-black text-white text-xl drop-shadow-md hover:text-violet-400 transition-colors">
               @{reaction.username || "user"}
             </span>
           </Link>
           <h2 className="text-white text-sm mt-2 font-medium drop-shadow-md line-clamp-2">
             {reaction.song}
           </h2>
-          <p className="text-zinc-400 text-xs mt-1 uppercase tracking-widest">{reaction.artist}</p>
+          <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest">{reaction.artist}</p>
         </div>
 
         {/* AKCIJE (DESNO) */}
         <div className="absolute right-4 bottom-24 z-30 flex flex-col items-center gap-6">
           <button onClick={handleLike} className="flex flex-col items-center group">
-            <div className={`p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform group-active:scale-125 ${liked ? "text-red-500" : "text-white"}`}>
+            <div className={`p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform group-active:scale-125 ${liked ? "text-rose-500" : "text-white"}`}>
               <Heart className={`w-7 h-7 ${liked ? "fill-current" : ""}`} />
             </div>
             <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{likesCount}</span>
@@ -171,7 +171,7 @@ export default function VideoCard({ reaction }: Props) {
 
           <button onClick={toggleMute}>
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white active:scale-90 transition-transform">
-              {isMuted ? <VolumeX className="w-7 h-7 text-red-500" /> : <Volume2 className="w-7 h-7" />}
+              {isMuted ? <VolumeX className="w-7 h-7 text-slate-300" /> : <Volume2 className="w-7 h-7" />}
             </div>
           </button>
 

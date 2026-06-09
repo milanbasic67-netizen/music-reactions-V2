@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className={`${geistSans.variable} ${geistMono.variable} h-full bg-black text-white`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} h-full bg-[#0D0D14] text-white`}>
         
         {/* GLAVNI FLEX KONTEJNER */}
         <div className="flex min-h-screen">
