@@ -22,16 +22,24 @@ export default function VideoCard({ reaction }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [profile, setProfile] = useState<any>(null);
   const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
-  const [muted, setMuted] = useState(true);
+  const [likesCount, setLikesCount] = useState(reaction.likes_count || 0);
+  const [isMuted, setIsMuted] = useState(true); // Globalni state zvuka
   const [showComments, setShowComments] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // 1. SINHRONIZACIJA ZVUKA KROZ CEO FEED
   useEffect(() => {
-    if (!reaction) return;
-    setLikesCount(reaction.likes_count || 0);
-    
-    async function loadData() {
+    const syncMute = (e: any) => {
+      setIsMuted(e.detail.muted);
+      if (videoRef.current) videoRef.current.muted = e.detail.muted;
+    };
+    window.addEventListener("videoVolumeToggle", syncMute);
+    return () => window.removeEventListener("videoVolumeToggle", syncMute);
+  }, []);
+
+  // 2. LOAD PROFILE & LIKE STATUS
+  useEffect(() => {
+    async function init() {
       const p = await getProfile();
       setProfile(p);
       if (p && reaction.id) {
@@ -44,9 +52,10 @@ export default function VideoCard({ reaction }: Props) {
         if (data) setLiked(true);
       }
     }
-    loadData();
-  }, [reaction]);
+    init();
+  }, [reaction.id]);
 
+  // 3. AUTOPLAY & PROGRESS LOGIKA
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -62,6 +71,7 @@ export default function VideoCard({ reaction }: Props) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
+          video.muted = isMuted; // Primenjuje globalno stanje pri ulasku u kadar
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -71,54 +81,60 @@ export default function VideoCard({ reaction }: Props) {
     );
 
     observer.observe(video);
-
     return () => {
       observer.disconnect();
       video.removeEventListener("timeupdate", updateProgress);
     };
-  }, []);
+  }, [isMuted]);
 
-  async function handleLike() {
+  // HANDLERI
+  const toggleMute = () => {
+    const newMutedState = !isMuted;
+    window.dispatchEvent(new CustomEvent("videoVolumeToggle", { detail: { muted: newMutedState } }));
+  };
+
+  const handleLike = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert("Login required");
+    if (!user) return alert("Moraš se prijaviti!");
 
     if (liked) {
       await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
       setLiked(false);
-      setLikesCount((prev) => Math.max(0, prev - 1));
+      setLikesCount((prev: number) => Math.max(0, prev - 1));
     } else {
       await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
       setLiked(true);
-      setLikesCount((prev) => prev + 1);
+      setLikesCount((prev: number) => prev + 1);
     }
-  }
+  };
 
   if (!reaction) return null;
 
   return (
     <div className="relative h-[100dvh] w-full bg-zinc-950 snap-start flex justify-center overflow-hidden">
-      <div className="relative h-full aspect-[9/16] w-full max-w-[480px] bg-black shadow-2xl overflow-hidden border-x border-zinc-900">
+      <div className="relative h-full aspect-[9/16] w-full max-w-[480px] bg-black shadow-2xl border-x border-zinc-900">
         
+        {/* VIDEO ELEMENT */}
         <video
           ref={videoRef}
           src={reaction.video_url}
           loop
           playsInline
-          muted={muted}
+          muted={isMuted}
           className="absolute inset-0 w-full h-full object-cover z-0 cursor-pointer"
-          onClick={() => setMuted(!muted)}
+          onClick={toggleMute}
         />
 
-        {/* Progress bar */}
+        {/* PROGRESS BAR */}
         <div 
           className="absolute bottom-0 left-0 h-1 bg-red-600 z-50 transition-all duration-100" 
           style={{ width: `${progress}%` }} 
         />
 
-        {/* Overlay gradient */}
+        {/* OVERLAY GRADIENT */}
         <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-black/90 to-transparent pointer-events-none z-10" />
 
-        {/* Info box */}
+        {/* INFO SEKCIJA */}
         <div className="absolute bottom-10 left-5 z-20 w-[75%] pointer-events-none">
           <Link href={`/u/${reaction.username}`} className="pointer-events-auto">
             <span className="font-black text-white text-xl drop-shadow-md hover:text-red-500 transition-colors">
@@ -131,14 +147,13 @@ export default function VideoCard({ reaction }: Props) {
           <p className="text-zinc-400 text-xs mt-1 uppercase tracking-widest">{reaction.artist}</p>
         </div>
 
-        {/* Action icons */}
+        {/* AKCIJE (DESNO) */}
         <div className="absolute right-4 bottom-24 z-30 flex flex-col items-center gap-6">
-          
           <button onClick={handleLike} className="flex flex-col items-center group">
             <div className={`p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform group-active:scale-125 ${liked ? "text-red-500" : "text-white"}`}>
               <Heart className={`w-7 h-7 ${liked ? "fill-current" : ""}`} />
             </div>
-            <span className="text-white text-[11px] font-bold mt-1 shadow-black drop-shadow-lg">{likesCount}</span>
+            <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{likesCount}</span>
           </button>
 
           <button onClick={() => setShowComments(true)} className="flex flex-col items-center group">
@@ -148,60 +163,31 @@ export default function VideoCard({ reaction }: Props) {
             <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">0</span>
           </button>
 
-          <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Copirano!"); }}>
-            <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white">
+          <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link kopiran!"); }}>
+            <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white active:scale-90 transition-transform">
               <Share className="w-7 h-7" />
             </div>
           </button>
 
-          <button onClick={() => setMuted(!muted)}>
-            <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white">
-              {muted ? <VolumeX className="w-7 h-7" /> : <Volume2 className="w-7 h-7" />}
+          <button onClick={toggleMute}>
+            <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white active:scale-90 transition-transform">
+              {isMuted ? <VolumeX className="w-7 h-7 text-red-500" /> : <Volume2 className="w-7 h-7" />}
             </div>
           </button>
 
           {profile?.role === "admin" && (
-  <button 
-    onClick={async () => {
-      if(confirm("Delete this video and file permanently?")) {
-        try {
-          // 1. Extract the file path from the public URL
-          // URL looks like: .../storage/v1/object/public/videos/duets/tiktok-123.mp4
-          // We need: duets/tiktok-123.mp4
-          const pathParts = reaction.video_url.split('/public/videos/');
-          const filePath = pathParts[1];
-
-          if (filePath) {
-            // 2. Delete from Supabase Storage
-            const { error: storageError } = await supabase
-              .storage
-              .from("videos")
-              .remove([filePath]);
-            
-            if (storageError) console.error("Storage error:", storageError.message);
-          }
-
-          // 3. Delete from Database Table
-          const { error: dbError } = await supabase
-            .from("reactions")
-            .delete()
-            .eq("id", reaction.id);
-
-          if (dbError) throw dbError;
-
-          alert("Deleted successfully!");
-          window.location.reload();
-          
-        } catch (err: any) {
-          alert("Error deleting: " + err.message);
-        }
-      }
-    }} 
-    className="p-3 rounded-full bg-red-600/40 text-white hover:bg-red-600 transition-colors"
-  >
-    <Trash2 className="w-7 h-7" />
-  </button>
-)}
+            <button 
+              onClick={async () => {
+                if(confirm("Obrisati video trajno?")) {
+                  const { error } = await supabase.from("reactions").delete().eq("id", reaction.id);
+                  if (!error) window.location.reload();
+                }
+              }} 
+              className="p-3 rounded-full bg-red-600/40 text-white hover:bg-red-600 transition-colors"
+            >
+              <Trash2 className="w-7 h-7" />
+            </button>
+          )}
         </div>
 
         {showComments && (
