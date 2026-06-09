@@ -17,14 +17,21 @@ export default function Home() {
       let query = supabase.from("reactions").select("*").order("created_at", { ascending: false });
 
       if (view === "following" && user) {
-        // Get list of people the user follows
-        const { data: following } = await supabase
-          .from("follows")
-          .select("following_username")
-          .eq("follower_username", user.user_metadata.username);
-        
-        const usernames = following?.map(f => f.following_username) || [];
-        query = query.in("username", usernames);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.username) {
+          const { data: following } = await supabase
+            .from("follows")
+            .select("following_username")
+            .eq("follower_username", profile.username);
+
+          const usernames = following?.map(f => f.following_username) || [];
+          query = query.in("username", usernames);
+        }
       }
 
       const { data } = await query;

@@ -98,7 +98,7 @@ export default function Sidebar() {
             </Link>
 
             <button 
-              onClick={() => { supabase.auth.signOut(); window.location.reload(); }}
+              onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}
               className="flex items-center gap-4 px-4 py-4 w-full rounded-2xl font-black text-lg text-slate-600 hover:bg-red-500/10 hover:text-red-400 transition-all duration-300"
             >
               <LogOut className="w-7 h-7" />

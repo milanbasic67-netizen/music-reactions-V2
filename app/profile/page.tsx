@@ -28,8 +28,7 @@ export default function ProfileRedirect() {
         router.push(`/u/${profile.username}`);
       } else {
         // If no username exists in the DB, send them home or to a setup page
-        console.error("No username found in database for this ID");
-        router.push("/"); 
+        router.push("/");
       }
     }
 

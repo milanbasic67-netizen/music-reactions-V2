@@ -29,7 +29,7 @@ export default async function SongsPage() {
           </div>
 
           <Link
-            href="/admin/upload-song"
+            href="/upload-song"
             className="inline-flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/8 px-6 py-4 rounded-2xl font-black text-sm transition group"
           >
             Don't see your song? <span className="text-violet-400 ml-2 group-hover:underline">Import here</span>
