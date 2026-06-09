@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
-import { Grid, Lock, Music2, LogOut, AlertCircle, Trash2 } from "lucide-react";
+import { Grid, Heart, Music2, LogOut, AlertCircle, Trash2, X, Check } from "lucide-react";
 import FollowButton from "@/components/FollowButton";
+import Link from "next/link";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -14,20 +15,24 @@ export default function UserProfilePage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [reactions, setReactions] = useState<any[]>([]);
+  const [likedReactions, setLikedReactions] = useState<any[]>([]);
   const [followsCount, setFollowsCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isMe, setIsMe] = useState(false);
-  const [myRole, setMyRole] = useState<string | null>(null);
+  const [myProfile, setMyProfile] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<"videos" | "liked">("videos");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editAvatar, setEditAvatar] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       if (!username) return;
       setLoading(true);
-      
 
       try {
-        // 1. Fetch user by username (Case-Insensitive)
         const { data: userProfile, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -35,33 +40,23 @@ export default function UserProfilePage() {
           .maybeSingle();
 
         if (profileError) throw profileError;
-
-        if (!userProfile) {
-          setLoading(false);
-          return;
-        }
+        if (!userProfile) { setLoading(false); return; }
 
         setProfile(userProfile);
 
-        // 2. Check if this is my profile
         const me = await getProfile();
         if (me) {
-          setMyRole(me.role);
-          if (me.id === userProfile.id) {
-            setIsMe(true);
-          }
+          setMyProfile(me);
+          if (me.id === userProfile.id) setIsMe(true);
         }
 
-        // 3. Fetch user's videos (Reactions)
         const { data: vids } = await supabase
           .from("reactions")
           .select("*")
           .eq("user_id", userProfile.id)
           .order("created_at", { ascending: false });
-        
         setReactions(vids || []);
 
-        // 4. Fetch stats (Followers/Following)
         const { count: followers } = await supabase
           .from("follows")
           .select("*", { count: "exact", head: true })
@@ -75,15 +70,55 @@ export default function UserProfilePage() {
         setFollowsCount(followers || 0);
         setFollowingCount(following || 0);
 
-      } catch (err: any) {
+      } catch {
         // profile load failed
       } finally {
         setLoading(false);
       }
     }
-
     loadData();
   }, [username]);
+
+  async function loadLikedReactions() {
+    if (!profile) return;
+    const { data: likes } = await supabase
+      .from("likes")
+      .select("reaction_id")
+      .eq("user_id", profile.id);
+
+    if (!likes?.length) { setLikedReactions([]); return; }
+
+    const ids = likes.map(l => l.reaction_id);
+    const { data: vids } = await supabase
+      .from("reactions")
+      .select("*")
+      .in("id", ids)
+      .order("created_at", { ascending: false });
+
+    setLikedReactions(vids || []);
+  }
+
+  function openEditModal() {
+    setEditAvatar(profile.avatar_url || "");
+    setEditBio(profile.bio || "");
+    setShowEditModal(true);
+  }
+
+  async function saveProfile() {
+    setEditSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_url: editAvatar || null, bio: editBio || null })
+      .eq("id", profile.id);
+
+    if (!error) {
+      setProfile((prev: any) => ({ ...prev, avatar_url: editAvatar || null, bio: editBio || null }));
+      setShowEditModal(false);
+    } else {
+      alert("Failed to save. Please try again.");
+    }
+    setEditSaving(false);
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -92,22 +127,14 @@ export default function UserProfilePage() {
 
   async function deleteVideo(vidId: string, videoUrl: string) {
     if (!confirm("Delete this video permanently?")) return;
-
     try {
-      // 1. Storage cleanup
       const parts = videoUrl.split('/public/videos/');
       if (parts.length > 1) {
-        const filePath = decodeURIComponent(parts[1]);
-        await supabase.storage.from("videos").remove([filePath]);
+        await supabase.storage.from("videos").remove([decodeURIComponent(parts[1])]);
       }
-
-      // 2. Database cleanup
       await supabase.from("reactions").delete().eq("id", vidId);
-      
-      // Update UI
       setReactions(prev => prev.filter(v => v.id !== vidId));
-      alert("Deleted.");
-    } catch (err) {
+    } catch {
       alert("Error deleting video.");
     }
   }
@@ -132,13 +159,15 @@ export default function UserProfilePage() {
     );
   }
 
+  const gridItems = activeTab === "videos" ? reactions : likedReactions;
+
   return (
     <main className="min-h-screen bg-[#0D0D14] text-white pb-24">
       <div className="max-w-[1000px] mx-auto p-6 lg:p-12">
-        
+
         {/* HEADER */}
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-full overflow-hidden bg-slate-900 border-2 border-white/10 shadow-2xl relative">
+          <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-full overflow-hidden bg-slate-900 border-2 border-white/10 shadow-2xl">
             {profile.avatar_url ? (
               <img src={profile.avatar_url} className="w-full h-full object-cover" alt="" />
             ) : (
@@ -148,9 +177,12 @@ export default function UserProfilePage() {
             )}
           </div>
 
-          <div className="flex flex-col items-center md:items-start">
+          <div className="flex flex-col items-center md:items-start flex-1">
             <h1 className="text-3xl font-black tracking-tighter">@{profile.username}</h1>
-            
+            {profile.bio && (
+              <p className="text-slate-400 text-sm mt-2 max-w-sm text-center md:text-left">{profile.bio}</p>
+            )}
+
             <div className="flex gap-8 mt-6">
               <div className="flex flex-col items-center md:items-start">
                 <span className="text-lg font-black">{reactions.length}</span>
@@ -169,7 +201,7 @@ export default function UserProfilePage() {
             <div className="mt-8 flex gap-2 w-full md:w-auto">
               {isMe ? (
                 <>
-                  <button onClick={() => router.push("/profile")} className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest">
+                  <button onClick={openEditModal} className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition">
                     Edit Profile
                   </button>
                   <button onClick={handleLogout} className="px-4 py-3 bg-white/5 border border-white/8 rounded-xl hover:text-red-400 transition">
@@ -185,46 +217,105 @@ export default function UserProfilePage() {
 
         {/* TABS */}
         <div className="mt-16 border-b border-white/8 flex justify-center md:justify-start gap-12">
-          <button className="pb-4 border-b-2 border-white flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
+          <button
+            onClick={() => setActiveTab("videos")}
+            className={`pb-4 flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em] border-b-2 transition-colors ${activeTab === "videos" ? "border-white text-white" : "border-transparent text-slate-600 hover:text-slate-400"}`}
+          >
             <Grid className="w-4 h-4" /> Videos
           </button>
-          <button className="pb-4 text-slate-600 flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em]">
-            <Lock className="w-4 h-4" /> Liked
+          <button
+            onClick={() => { setActiveTab("liked"); loadLikedReactions(); }}
+            className={`pb-4 flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.2em] border-b-2 transition-colors ${activeTab === "liked" ? "border-white text-white" : "border-transparent text-slate-600 hover:text-slate-400"}`}
+          >
+            <Heart className="w-4 h-4" /> Liked
           </button>
         </div>
 
         {/* VIDEO GRID */}
-        {reactions.length === 0 ? (
+        {gridItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-700">
             <Music2 className="w-12 h-12 mb-4 opacity-10" />
-            <p className="font-black uppercase tracking-tighter text-xs">No videos shared</p>
+            <p className="font-black uppercase tracking-tighter text-xs">
+              {activeTab === "videos" ? "No videos shared" : "No liked videos"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 lg:gap-4 mt-8">
-            {reactions.map((vid) => (
+            {gridItems.map((vid) => (
               <div key={vid.id} className="relative aspect-[9/16] bg-slate-900 rounded-sm lg:rounded-2xl overflow-hidden group border border-white/5">
+                <Link href={`/v/${vid.id}`} className="absolute inset-0 z-10" />
                 <video src={vid.video_url} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                
-                {/* ADMIN DELETE BUTTON */}
-                {(isMe || myRole === "admin") && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); deleteVideo(vid.id, vid.video_url); }}
-                    className="absolute top-2 right-2 p-2 bg-red-600/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+
+                {(isMe || myProfile?.role === "admin") && activeTab === "videos" && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteVideo(vid.id, vid.video_url); }}
+                    className="absolute top-2 right-2 p-2 bg-red-600/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-20"
                   >
                     <Trash2 className="w-4 h-4 text-white" />
                   </button>
                 )}
 
-                <div className="absolute bottom-3 left-3 flex items-center gap-1 opacity-60">
-                   <Music2 className="w-3 h-3" />
-                   <span className="text-[10px] font-bold uppercase tracking-tighter">View</span>
+                <div className="absolute bottom-3 left-3 flex items-center gap-1 opacity-60 z-10 pointer-events-none">
+                  <Music2 className="w-3 h-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-tighter">{vid.song}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* EDIT PROFILE MODAL */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-md bg-[#0F0F1A] border border-white/8 rounded-3xl p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black uppercase tracking-tighter">Edit Profile</h2>
+              <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-white/8 rounded-full transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Avatar URL</label>
+                <input
+                  type="text"
+                  value={editAvatar}
+                  onChange={(e) => setEditAvatar(e.target.value)}
+                  placeholder="https://..."
+                  className="mt-1 w-full bg-white/5 border border-white/8 rounded-2xl px-5 py-3 text-white text-sm outline-none focus:border-violet-500 transition"
+                />
+                {editAvatar && (
+                  <img src={editAvatar} alt="" className="mt-2 w-16 h-16 rounded-full object-cover border border-white/10" onError={(e) => (e.currentTarget.style.display = "none")} />
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Bio</label>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="Tell the world about yourself..."
+                  maxLength={150}
+                  rows={3}
+                  className="mt-1 w-full bg-white/5 border border-white/8 rounded-2xl px-5 py-3 text-white text-sm outline-none focus:border-violet-500 transition resize-none"
+                />
+                <p className="text-right text-[10px] text-slate-600 mt-1">{editBio.length}/150</p>
+              </div>
+            </div>
+
+            <button
+              onClick={saveProfile}
+              disabled={editSaving}
+              className="mt-6 w-full bg-violet-600 hover:bg-violet-500 disabled:bg-slate-800 text-white font-black py-4 rounded-2xl transition flex items-center justify-center gap-2"
+            >
+              {editSaving ? "Saving..." : <><Check className="w-4 h-4" /> Save Changes</>}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

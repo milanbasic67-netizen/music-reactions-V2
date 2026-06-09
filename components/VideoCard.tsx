@@ -53,11 +53,17 @@ export default function VideoCard({ reaction }: Props) {
         if (data) setLiked(true);
       }
       if (reaction.id) {
-        const { count } = await supabase
+        const { count: cCount } = await supabase
           .from("comments")
           .select("*", { count: "exact", head: true })
           .eq("reaction_id", reaction.id);
-        setCommentsCount(count || 0);
+        setCommentsCount(cCount || 0);
+
+        const { count: lCount } = await supabase
+          .from("likes")
+          .select("*", { count: "exact", head: true })
+          .eq("reaction_id", reaction.id);
+        setLikesCount(lCount || 0);
       }
     }
     init();
@@ -169,7 +175,7 @@ export default function VideoCard({ reaction }: Props) {
             <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{commentsCount}</span>
           </button>
 
-          <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }}>
+          <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/v/${reaction.id}`); alert("Link copied!"); }}>
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white active:scale-90 transition-transform">
               <Share className="w-7 h-7" />
             </div>
