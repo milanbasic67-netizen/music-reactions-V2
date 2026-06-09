@@ -4,11 +4,12 @@
 -- ============================================================
 
 -- Helper: check if the current user is admin
+-- Uses ::text cast to handle both uuid and text id columns
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM profiles
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id::text = auth.uid()::text AND role = 'admin'
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
@@ -21,10 +22,10 @@ CREATE POLICY "profiles_select_public" ON profiles
   FOR SELECT USING (true);
 
 CREATE POLICY "profiles_insert_own" ON profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+  FOR INSERT WITH CHECK (id::text = auth.uid()::text);
 
 CREATE POLICY "profiles_update_own" ON profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE USING (id::text = auth.uid()::text);
 
 -- ============================================================
 -- REACTIONS
@@ -35,10 +36,10 @@ CREATE POLICY "reactions_select_public" ON reactions
   FOR SELECT USING (true);
 
 CREATE POLICY "reactions_insert_own" ON reactions
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (user_id::text = auth.uid()::text);
 
 CREATE POLICY "reactions_delete_own_or_admin" ON reactions
-  FOR DELETE USING (auth.uid() = user_id OR is_admin());
+  FOR DELETE USING (user_id::text = auth.uid()::text OR is_admin());
 
 -- ============================================================
 -- LIKES
@@ -49,10 +50,10 @@ CREATE POLICY "likes_select_public" ON likes
   FOR SELECT USING (true);
 
 CREATE POLICY "likes_insert_own" ON likes
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (user_id::text = auth.uid()::text);
 
 CREATE POLICY "likes_delete_own" ON likes
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE USING (user_id::text = auth.uid()::text);
 
 -- ============================================================
 -- COMMENTS
@@ -63,14 +64,13 @@ CREATE POLICY "comments_select_public" ON comments
   FOR SELECT USING (true);
 
 CREATE POLICY "comments_insert_authenticated" ON comments
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (user_id::text = auth.uid()::text);
 
 CREATE POLICY "comments_delete_own_or_admin" ON comments
-  FOR DELETE USING (auth.uid() = user_id OR is_admin());
+  FOR DELETE USING (user_id::text = auth.uid()::text OR is_admin());
 
 -- ============================================================
 -- FOLLOWS
--- (uses usernames, so we join with profiles to verify ownership)
 -- ============================================================
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 
@@ -81,7 +81,7 @@ CREATE POLICY "follows_insert_own" ON follows
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND username = follower_username
+      WHERE id::text = auth.uid()::text AND username = follower_username
     )
   );
 
@@ -89,7 +89,7 @@ CREATE POLICY "follows_delete_own" ON follows
   FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND username = follower_username
+      WHERE id::text = auth.uid()::text AND username = follower_username
     )
   );
 
@@ -102,12 +102,10 @@ CREATE POLICY "notifications_select_own" ON notifications
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND username = notifications.username
+      WHERE id::text = auth.uid()::text AND username = notifications.username
     )
   );
 
--- Allow authenticated users to create notifications for others
--- (e.g. "user X liked your video" — actor inserts, recipient reads)
 CREATE POLICY "notifications_insert_authenticated" ON notifications
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
@@ -115,7 +113,7 @@ CREATE POLICY "notifications_update_own" ON notifications
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND username = notifications.username
+      WHERE id::text = auth.uid()::text AND username = notifications.username
     )
   );
 
