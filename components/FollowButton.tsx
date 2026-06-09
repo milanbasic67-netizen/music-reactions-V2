@@ -45,7 +45,15 @@ export default function FollowButton({ profileUsername }: Props) {
       const { error } = await supabase
         .from("follows")
         .insert({ follower_username: me.username, following_username: profileUsername });
-      if (!error) setFollowing(true);
+      if (!error) {
+        setFollowing(true);
+        await supabase.from("notifications").insert({
+          username: profileUsername,
+          actor: me.username,
+          type: "follow",
+          read: false,
+        });
+      }
     }
   }
 

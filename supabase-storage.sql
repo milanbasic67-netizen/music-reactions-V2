@@ -30,6 +30,25 @@ USING (
 );
 
 -- ============================================================
+-- AVATARS BUCKET (profile photos)
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "avatars_public_read"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+CREATE POLICY "avatars_upload_authenticated"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'avatars' AND auth.uid() IS NOT NULL);
+
+CREATE POLICY "avatars_update_authenticated"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'avatars' AND auth.uid() IS NOT NULL);
+
+-- ============================================================
 -- VERIFY
 -- ============================================================
 SELECT schemaname, tablename, policyname

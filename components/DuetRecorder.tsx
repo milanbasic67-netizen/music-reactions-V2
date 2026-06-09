@@ -78,8 +78,10 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       formData.append("duration", duration.toString());
 
       // Send to Render backend
+      const { data: { session } } = await supabase.auth.getSession();
       const renderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
         body: formData,
       });
 

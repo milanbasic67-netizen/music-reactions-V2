@@ -13,6 +13,20 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+async function verifyAuth(req, res, next) {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(401).json({ error: "Authentication required" });
+  try {
+    const { data } = await axios.get(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY }
+    });
+    if (!data?.id) return res.status(401).json({ error: "Invalid session" });
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid session" });
+  }
+}
+
 const uploadsDir = path.join(__dirname, "uploads");
 [uploadsDir].forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
@@ -25,7 +39,7 @@ function getYTID(url) {
 }
 
 // --- RUTA: IMPORT YOUTUBE (VERZIJA 58 - FIXED) ---
-app.post("/import-youtube", async (req, res) => {
+app.post("/import-youtube", verifyAuth, async (req, res) => {
     const { url } = req.body;
     const RAPID_KEY = '01f396de62msh53c99a3cb08ea27p1908ecjsnc9856c6b2fea';
     const videoId = getYTID(url);
@@ -116,7 +130,7 @@ app.post("/import-youtube", async (req, res) => {
 });
 
 // --- RENDER DUET (Bez izmena, dodat cleanup) ---
-app.post("/render-duet", upload.single("reaction"), async (req, res) => {
+app.post("/render-duet", verifyAuth, upload.single("reaction"), async (req, res) => {
     const { originalUrl, duration } = req.body;
     const reactionFile = req.file;
     const localOriginal = path.join(uploadsDir, `orig-${Date.now()}.mp4`);

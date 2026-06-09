@@ -32,9 +32,10 @@ export default function UploadSongPage() {
     if (!youtubeUrl) return;
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/import-youtube`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ url: youtubeUrl.trim() }),
       });
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
-import { Grid, Heart, Music2, LogOut, AlertCircle, Trash2, X, Check } from "lucide-react";
+import { Grid, Heart, Music2, LogOut, AlertCircle, Trash2, X, Check, Upload } from "lucide-react";
 import FollowButton from "@/components/FollowButton";
 import Link from "next/link";
 
@@ -27,6 +27,8 @@ export default function UserProfilePage() {
   const [editAvatar, setEditAvatar] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -99,6 +101,22 @@ export default function UserProfilePage() {
 
     setLikedReactions(vids || []);
     setLikedLoading(false);
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    const ext = file.name.split(".").pop();
+    const fileName = `${profile.id}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(fileName, file, { upsert: true });
+    if (error) {
+      alert("Upload failed. Try a smaller image.");
+    } else {
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      setEditAvatar(publicUrl);
+    }
+    setUploadingAvatar(false);
   }
 
   function openEditModal() {
@@ -292,17 +310,33 @@ export default function UserProfilePage() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Avatar URL</label>
-                <input
-                  type="text"
-                  value={editAvatar}
-                  onChange={(e) => setEditAvatar(e.target.value)}
-                  placeholder="https://..."
-                  className="mt-1 w-full bg-white/5 border border-white/8 rounded-2xl px-5 py-3 text-white text-sm outline-none focus:border-violet-500 transition"
-                />
-                {editAvatar && (
-                  <img src={editAvatar} alt="" className="mt-2 w-16 h-16 rounded-full object-cover border border-white/10" onError={(e) => (e.currentTarget.style.display = "none")} />
-                )}
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Avatar</label>
+                <div className="mt-2 flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex-shrink-0 flex items-center justify-center font-black text-xl uppercase">
+                    {editAvatar ? (
+                      <img src={editAvatar} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    ) : profile.username?.[0]}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/8 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-white/8 transition disabled:opacity-50"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {uploadingAvatar ? "Uploading..." : "Upload Photo"}
+                    </button>
+                    <input
+                      type="text"
+                      value={editAvatar}
+                      onChange={(e) => setEditAvatar(e.target.value)}
+                      placeholder="or paste image URL..."
+                      className="w-full bg-white/5 border border-white/8 rounded-2xl px-4 py-2 text-white text-xs outline-none focus:border-violet-500 transition"
+                    />
+                  </div>
+                </div>
+                <input ref={avatarFileRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
               </div>
 
               <div>

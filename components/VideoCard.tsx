@@ -116,7 +116,19 @@ export default function VideoCard({ reaction }: Props) {
       if (!error) { setLiked(false); setLikesCount((prev: number) => Math.max(0, prev - 1)); }
     } else {
       const { error } = await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
-      if (!error) { setLiked(true); setLikesCount((prev: number) => prev + 1); }
+      if (!error) {
+        setLiked(true);
+        setLikesCount((prev: number) => prev + 1);
+        if (profile?.username && reaction.username && profile.username !== reaction.username) {
+          await supabase.from("notifications").insert({
+            username: reaction.username,
+            actor: profile.username,
+            type: "like",
+            reaction_id: reaction.id,
+            read: false,
+          });
+        }
+      }
     }
   };
 

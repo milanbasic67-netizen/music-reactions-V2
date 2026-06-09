@@ -48,6 +48,16 @@ export default function CommentSection({ reactionId, onClose, onCommentAdded }: 
       setText("");
       fetchComments();
       onCommentAdded?.();
+      const { data: owner } = await supabase.from("reactions").select("username").eq("id", reactionId).single();
+      if (owner?.username && owner.username !== profile.username) {
+        await supabase.from("notifications").insert({
+          username: owner.username,
+          actor: profile.username,
+          type: "comment",
+          reaction_id: Number(reactionId),
+          read: false,
+        });
+      }
     }
     setLoading(false);
   }
