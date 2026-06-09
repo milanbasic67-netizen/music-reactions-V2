@@ -21,6 +21,7 @@ async function verifyAuth(req, res, next) {
       headers: { Authorization: `Bearer ${token}`, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY }
     });
     if (!data?.id) return res.status(401).json({ error: "Invalid session" });
+    req.userId = data.id;
     next();
   } catch {
     return res.status(401).json({ error: "Invalid session" });
@@ -165,6 +166,58 @@ app.post("/render-duet", verifyAuth, upload.single("reaction"), async (req, res)
             })
             .save(outputPath);
     } catch (err) { res.status(500).json({ error: "Server error" }); }
+});
+
+// --- DELETE VIDEO (storage + DB, uses service role) ---
+app.post("/delete-video", verifyAuth, async (req, res) => {
+  const { reactionId, storagePath } = req.body;
+  const headers = {
+    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    "Content-Type": "application/json",
+  };
+
+  try {
+    // Check ownership or admin
+    const { data: rows } = await axios.get(
+      `${process.env.SUPABASE_URL}/rest/v1/reactions?id=eq.${reactionId}&select=user_id`,
+      { headers }
+    );
+    const reaction = rows?.[0];
+    if (!reaction) return res.status(404).json({ error: "Not found" });
+
+    const { data: profiles } = await axios.get(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${req.userId}&select=role`,
+      { headers }
+    );
+    const isAdmin = profiles?.[0]?.role === "admin";
+
+    if (reaction.user_id !== req.userId && !isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Delete file from storage
+    if (storagePath) {
+      try {
+        await axios({
+          method: "delete",
+          url: `${process.env.SUPABASE_URL}/storage/v1/object/videos`,
+          headers,
+          data: { prefixes: [storagePath] },
+        });
+      } catch (_) {}
+    }
+
+    // Delete row from reactions
+    await axios.delete(
+      `${process.env.SUPABASE_URL}/rest/v1/reactions?id=eq.${reactionId}`,
+      { headers: { ...headers, Prefer: "return=minimal" } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
 });
 
 app.listen(PORT, () => console.log(`Backend V58 - Fixed Cleanup Ready`));

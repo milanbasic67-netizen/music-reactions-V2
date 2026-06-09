@@ -149,17 +149,20 @@ export default function UserProfilePage() {
   async function deleteVideo(vidId: string, videoUrl: string) {
     if (!confirm("Delete this video permanently?")) return;
     try {
-      const parts = videoUrl.split('/public/videos/');
-      if (parts.length > 1) {
-        const storagePath = decodeURIComponent(parts[1]);
-        const { error: storageError } = await supabase.storage.from("videos").remove([storagePath]);
-        if (storageError) {
-          const proceed = confirm("Could not delete the video file from storage. Remove from feed anyway?");
-          if (!proceed) return;
-        }
-      }
-      const { error: dbError } = await supabase.from("reactions").delete().eq("id", vidId);
-      if (dbError) { alert("Failed to delete video."); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      const parts = videoUrl.split("/public/videos/");
+      const storagePath = parts.length > 1 ? decodeURIComponent(parts[1]) : null;
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delete-video`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ reactionId: vidId, storagePath }),
+      });
+
+      if (!res.ok) { alert("Failed to delete video."); return; }
       setReactions(prev => prev.filter(v => v.id !== vidId));
     } catch {
       alert("Error deleting video.");
