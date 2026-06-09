@@ -60,7 +60,7 @@ export default function BottomNav() {
 
   return (    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D14]/95 backdrop-blur-2xl border-t border-white/8">
 
-      <div className="grid grid-cols-7 h-20">
+      <div className="grid grid-cols-6 h-20">
 
         {/* HOME */}
         <button
@@ -259,43 +259,6 @@ export default function BottomNav() {
 
         </button>
 
-{/* ACCOUNT */}
-<button
-  onClick={() =>
-    router.push("/profile")
-  }
-  className="flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-white transition"
->
-
-  <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
-
-  {profile?.avatar_url ? (
-
-    <img
-      src={profile.avatar_url}
-      alt="Avatar"
-      className="w-full h-full object-cover"
-    />
-
-  ) : (
-
-    <span className="text-white font-black text-sm">
-
-      {profile?.username?.[0]?.toUpperCase() || "?"}
-
-    </span>
-
-  )}
-
-</div>
-
-  <span className="text-[10px]">
-
-    Account
-
-  </span>
-
-</button>
 
 
       </div>

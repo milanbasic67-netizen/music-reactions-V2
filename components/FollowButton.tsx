@@ -1,191 +1,66 @@
 "use client";
 
-import {
-
-  useEffect,
-
-  useState,
-
-} from "react";
-
-import { supabase }
-from "@/lib/supabase";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { getProfile } from "@/lib/getProfile";
 
 type Props = {
-
-  profileId: string;
-
+  profileUsername: string;
 };
 
-export default function FollowButton({
-  profileId,
-}: Props) {
+export default function FollowButton({ profileUsername }: Props) {
+  const [following, setFollowing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [following,
-    setFollowing] =
-    useState(false);
-
-  const [loading,
-    setLoading] =
-    useState(true);
-
-  // CHECK
   useEffect(() => {
-
     async function check() {
+      const me = await getProfile();
+      if (!me) { setLoading(false); return; }
 
-      const {
-        data: {
-          user,
-        },
-      } =
-        await supabase
-          .auth
-          .getUser();
+      const { data } = await supabase
+        .from("follows")
+        .select("*")
+        .eq("follower_username", me.username)
+        .eq("following_username", profileUsername)
+        .single();
 
-      if (!user) {
-
-        setLoading(
-          false
-        );
-
-        return;
-
-      }
-
-      const {
-        data,
-      } =
-        await supabase
-
-          .from(
-            "followers"
-          )
-
-          .select("*")
-
-          .eq(
-            "follower_id",
-            user.id
-          )
-
-          .eq(
-            "following_id",
-            profileId
-          )
-
-          .single();
-
-      setFollowing(
-        !!data
-      );
-
-      setLoading(
-        false
-      );
-
+      setFollowing(!!data);
+      setLoading(false);
     }
-
     check();
+  }, [profileUsername]);
 
-  }, [profileId]);
-
-  // TOGGLE
   async function toggleFollow() {
+    const me = await getProfile();
+    if (!me) { alert("Login required"); return; }
 
-    const {
-      data: {
-        user,
-      },
-    } =
-      await supabase
-        .auth
-        .getUser();
-
-    if (!user) {
-
-      alert(
-        "Login required"
-      );
-
-      return;
-
-    }
-
-    // UNFOLLOW
     if (following) {
-
-      await supabase
-        .from(
-          "followers"
-        )
+      const { error } = await supabase
+        .from("follows")
         .delete()
-        .eq(
-          "follower_id",
-          user.id
-        )
-        .eq(
-          "following_id",
-          profileId
-        );
-
-      setFollowing(
-        false
-      );
-
+        .eq("follower_username", me.username)
+        .eq("following_username", profileUsername);
+      if (!error) setFollowing(false);
     } else {
-
-      // FOLLOW
-      await supabase
-        .from(
-          "followers"
-        )
-        .insert({
-
-          follower_id:
-            user.id,
-
-          following_id:
-            profileId,
-
-        });
-
-      setFollowing(
-        true
-      );
-
+      const { error } = await supabase
+        .from("follows")
+        .insert({ follower_username: me.username, following_username: profileUsername });
+      if (!error) setFollowing(true);
     }
-
   }
 
-  if (loading) {
-
-    return null;
-
-  }
+  if (loading) return null;
 
   return (
-
     <button
-
-      onClick={
-        toggleFollow
-      }
-
+      onClick={toggleFollow}
       className={`px-10 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition shadow-xl ${
         following
           ? "bg-white/10 text-white border border-white/10 hover:bg-white/15"
           : "bg-violet-600 hover:bg-violet-500 text-white shadow-violet-900/20"
       }`}
-
     >
-
-      {following
-        ? "Following"
-        : "Follow"}
-
+      {following ? "Following" : "Follow"}
     </button>
-
   );
-
 }

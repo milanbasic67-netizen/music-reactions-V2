@@ -106,13 +106,11 @@ export default function VideoCard({ reaction }: Props) {
     if (!user) return alert("You must be logged in!");
 
     if (liked) {
-      await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
-      setLiked(false);
-      setLikesCount((prev: number) => Math.max(0, prev - 1));
+      const { error } = await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
+      if (!error) { setLiked(false); setLikesCount((prev: number) => Math.max(0, prev - 1)); }
     } else {
-      await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
-      setLiked(true);
-      setLikesCount((prev: number) => prev + 1);
+      const { error } = await supabase.from("likes").insert({ reaction_id: reaction.id, user_id: user.id });
+      if (!error) { setLiked(true); setLikesCount((prev: number) => prev + 1); }
     }
   };
 

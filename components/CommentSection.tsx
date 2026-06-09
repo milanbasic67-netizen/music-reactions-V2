@@ -39,7 +39,9 @@ export default function CommentSection({ reactionId, onClose, onCommentAdded }: 
       content: text.trim()
     });
 
-    if (!error) {
+    if (error) {
+      alert("Failed to post comment. Please try again.");
+    } else {
       setText("");
       fetchComments();
       onCommentAdded?.();

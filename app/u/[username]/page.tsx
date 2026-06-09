@@ -25,7 +25,6 @@ export default function UserProfilePage() {
       if (!username) return;
       setLoading(true);
       
-      console.log("🔍 Looking for profile:", username);
 
       try {
         // 1. Fetch user by username (Case-Insensitive)
@@ -38,7 +37,6 @@ export default function UserProfilePage() {
         if (profileError) throw profileError;
 
         if (!userProfile) {
-          console.warn("⚠️ No user found with username:", username);
           setLoading(false);
           return;
         }
@@ -78,7 +76,7 @@ export default function UserProfilePage() {
         setFollowingCount(following || 0);
 
       } catch (err: any) {
-        console.error("❌ Profile Error:", err.message);
+        // profile load failed
       } finally {
         setLoading(false);
       }
@@ -171,7 +169,7 @@ export default function UserProfilePage() {
             <div className="mt-8 flex gap-2 w-full md:w-auto">
               {isMe ? (
                 <>
-                  <button className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest">
+                  <button onClick={() => router.push("/profile")} className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest">
                     Edit Profile
                   </button>
                   <button onClick={handleLogout} className="px-4 py-3 bg-white/5 border border-white/8 rounded-xl hover:text-red-400 transition">
@@ -179,7 +177,7 @@ export default function UserProfilePage() {
                   </button>
                 </>
               ) : (
-                <FollowButton profileId={profile.id} />
+                <FollowButton profileUsername={profile.username} />
               )}
             </div>
           </div>
