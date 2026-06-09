@@ -71,7 +71,7 @@ export default function UploadSongPage() {
     setLoading(false);
   };
 
-  if (profile && profile.role !== "admin") return <div className="p-20 text-center">Unauthorized</div>;
+  
 
   return (
     <main className="min-h-screen bg-black text-white">
