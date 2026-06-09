@@ -38,9 +38,8 @@ export default function CommentSection({ reactionId, onClose, onCommentAdded }: 
     setLoading(true);
     const { error } = await supabase.from("comments").insert({
       reaction_id: reactionId,
-      user_id: user.id,
       username: profile.username,
-      content: text.trim()
+      text: text.trim()
     });
 
     if (error) {
@@ -82,7 +81,7 @@ export default function CommentSection({ reactionId, onClose, onCommentAdded }: 
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">@{c.username}</span>
-                  <p className="text-sm text-slate-200 mt-1 leading-relaxed">{c.content}</p>
+                  <p className="text-sm text-slate-200 mt-1 leading-relaxed">{c.text}</p>
                 </div>
               </div>
             ))
