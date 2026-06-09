@@ -52,7 +52,10 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         await songVideo.play(); 
     }
 
-    const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8,opus" });
+    const mimeType = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find(
+      (t) => MediaRecorder.isTypeSupported(t)
+    ) || "";
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     mediaRecorderRef.current = recorder;
     
     recorder.ondataavailable = (e) => { 
