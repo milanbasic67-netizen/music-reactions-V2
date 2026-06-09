@@ -1,0 +1,252 @@
+[
+  {
+    "table_name": "comments",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "comments",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "comments",
+    "column_name": "reaction_id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "comments",
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "comments",
+    "column_name": "text",
+    "data_type": "text"
+  },
+  {
+    "table_name": "followers",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "followers",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "followers",
+    "column_name": "follower_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "followers",
+    "column_name": "following_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "follower_username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "follows",
+    "column_name": "following_username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "likes",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "likes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "likes",
+    "column_name": "reaction_id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "likes",
+    "column_name": "user_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "actor",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "reaction_id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "read",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "avatar_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "table_name": "profiles",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "video_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "song",
+    "data_type": "text"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "artist",
+    "data_type": "text"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "likes_count",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "comments_count",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "reactions",
+    "column_name": "youtube_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "id",
+    "data_type": "bigint"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "artist",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "video_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "thumbnail_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "youtube_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "uploaded_by",
+    "data_type": "text"
+  },
+  {
+    "table_name": "songs",
+    "column_name": "video_id",
+    "data_type": "text"
+  }
+]
