@@ -133,9 +133,15 @@ export default function UserProfilePage() {
     try {
       const parts = videoUrl.split('/public/videos/');
       if (parts.length > 1) {
-        await supabase.storage.from("videos").remove([decodeURIComponent(parts[1])]);
+        const storagePath = decodeURIComponent(parts[1]);
+        const { error: storageError } = await supabase.storage.from("videos").remove([storagePath]);
+        if (storageError) {
+          const proceed = confirm("Could not delete the video file from storage. Remove from feed anyway?");
+          if (!proceed) return;
+        }
       }
-      await supabase.from("reactions").delete().eq("id", vidId);
+      const { error: dbError } = await supabase.from("reactions").delete().eq("id", vidId);
+      if (dbError) { alert("Failed to delete video."); return; }
       setReactions(prev => prev.filter(v => v.id !== vidId));
     } catch {
       alert("Error deleting video.");
