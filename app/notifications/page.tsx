@@ -35,6 +35,15 @@ export default async function NotificationsPage() {
         }
       );
 
+  // Oznaci sve kao procitane
+  if (username) {
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("username", username)
+      .eq("read", false);
+  }
+
   return (
     <main className="min-h-screen pb-24 bg-[#0D0D14] text-white p-5">
 

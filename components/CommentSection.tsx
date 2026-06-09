@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { X, Send, MessageSquare } from "lucide-react";
 
-type Props = { reactionId: string; onClose: () => void; };
+type Props = { reactionId: string; onClose: () => void; onCommentAdded?: () => void; };
 
-export default function CommentSection({ reactionId, onClose }: Props) {
+export default function CommentSection({ reactionId, onClose, onCommentAdded }: Props) {
   const [comments, setComments] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,6 +42,7 @@ export default function CommentSection({ reactionId, onClose }: Props) {
     if (!error) {
       setText("");
       fetchComments();
+      onCommentAdded?.();
     }
     setLoading(false);
   }

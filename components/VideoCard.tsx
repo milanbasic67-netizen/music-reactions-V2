@@ -26,6 +26,7 @@ export default function VideoCard({ reaction }: Props) {
   const [isMuted, setIsMuted] = useState(true); // Globalni state zvuka
   const [showComments, setShowComments] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [commentsCount, setCommentsCount] = useState(0);
 
   // 1. SINHRONIZACIJA ZVUKA KROZ CEO FEED
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function VideoCard({ reaction }: Props) {
     return () => window.removeEventListener("videoVolumeToggle", syncMute);
   }, []);
 
-  // 2. LOAD PROFILE & LIKE STATUS
+  // 2. LOAD PROFILE, LIKE STATUS & COMMENT COUNT
   useEffect(() => {
     async function init() {
       const p = await getProfile();
@@ -50,6 +51,13 @@ export default function VideoCard({ reaction }: Props) {
           .eq("user_id", p.id)
           .single();
         if (data) setLiked(true);
+      }
+      if (reaction.id) {
+        const { count } = await supabase
+          .from("comments")
+          .select("*", { count: "exact", head: true })
+          .eq("reaction_id", reaction.id);
+        setCommentsCount(count || 0);
       }
     }
     init();
@@ -160,7 +168,7 @@ export default function VideoCard({ reaction }: Props) {
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white group-active:scale-110 transition-transform">
               <MessageCircle className="w-7 h-7" />
             </div>
-            <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">0</span>
+            <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{commentsCount}</span>
           </button>
 
           <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link kopiran!"); }}>
@@ -191,9 +199,10 @@ export default function VideoCard({ reaction }: Props) {
         </div>
 
         {showComments && (
-          <CommentSection 
-            reactionId={reaction.id} 
-            onClose={() => setShowComments(false)} 
+          <CommentSection
+            reactionId={reaction.id}
+            onClose={() => setShowComments(false)}
+            onCommentAdded={() => setCommentsCount((prev) => prev + 1)}
           />
         )}
       </div>

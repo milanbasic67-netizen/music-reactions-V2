@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
 import { Grid, Lock, Music2, LogOut, AlertCircle, Trash2 } from "lucide-react";
+import FollowButton from "@/components/FollowButton";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -178,9 +179,7 @@ export default function UserProfilePage() {
                   </button>
                 </>
               ) : (
-                <button className="flex-1 md:px-16 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-violet-900/20 transition">
-                  Follow
-                </button>
+                <FollowButton profileId={profile.id} />
               )}
             </div>
           </div>

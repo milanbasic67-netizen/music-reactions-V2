@@ -172,10 +172,10 @@ export default function FollowButton({
         toggleFollow
       }
 
-      className={`mt-5 px-6 py-3 rounded-2xl font-black ${
+      className={`px-10 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition shadow-xl ${
         following
-          ? "bg-white/10 text-white border border-white/10"
-          : "bg-white text-black"
+          ? "bg-white/10 text-white border border-white/10 hover:bg-white/15"
+          : "bg-violet-600 hover:bg-violet-500 text-white shadow-violet-900/20"
       }`}
 
     >

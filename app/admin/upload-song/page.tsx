@@ -17,6 +17,10 @@ export default function UploadSongPage() {
   useEffect(() => {
     async function loadData() {
       const p = await getProfile();
+      if (!p || p.role !== "admin") {
+        window.location.href = "/";
+        return;
+      }
       setProfile(p);
       const { data } = await supabase.from("songs").select("*").order("created_at", { ascending: false });
       if (data) setSongs(data);
