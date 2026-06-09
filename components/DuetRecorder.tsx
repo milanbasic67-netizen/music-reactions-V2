@@ -34,7 +34,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         setStream(media);
         if (cameraRef.current) cameraRef.current.srcObject = media;
       } catch (err) { 
-        alert("Kamera nije dostupna. Proverite dozvole."); 
+        alert("Camera not available. Check permissions."); 
       }
     }
     setup();
@@ -101,7 +101,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       if (!insertError) {
         // --- LOGIKA ČIŠĆENJA (SAMO AKO JE TEMP) ---
         if (isTemporary) {
-          console.log("Korisnički duet završen - počinjem brisanje originala...");
+          console.log("User duet complete - starting to delete the original...");
           
           // Izvlačenje imena fajla iz punog URL-a
           const fileName = originalVideo.split('/').pop();
@@ -122,16 +122,16 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
             
             if (dbErr) console.error("Database delete error:", dbErr.message);
             
-            console.log("Originalni video je uspešno uklonjen.");
+            console.log("The original video was successfully removed.");
           }
         }
 
-        alert("Objavljeno! Vaš duet je spreman.");
+        alert("Published! Your duet is ready.");
         window.location.href = "/";
       }
 
     } catch (err: any) {
-      alert("Greška pri obradi: " + err.message);
+      alert("Processing error: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -179,7 +179,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
         {loading && (
           <div className="text-center py-6">
             <p className="text-zinc-500 font-black text-lg animate-pulse tracking-tighter uppercase">
-              Obrada videa...
+              Video processing...
             </p>
             <p className="text-zinc-700 text-xs mt-1">Spajamo tvoj glas sa pesmom</p>
           </div>

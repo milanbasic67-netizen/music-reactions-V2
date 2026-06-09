@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DuetApp - Pevaj sa svima",
-  description: "Platforma za muzičke duete i reakcije",
+  title: "DuetApp",
+  description: "A platform for musical duets and reactions",
 };
 
 export default function RootLayout({

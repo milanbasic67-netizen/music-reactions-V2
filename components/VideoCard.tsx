@@ -178,7 +178,7 @@ export default function VideoCard({ reaction }: Props) {
           {profile?.role === "admin" && (
             <button 
               onClick={async () => {
-                if(confirm("Obrisati video trajno?")) {
+                if(confirm("Delete video permanently?")) {
                   const { error } = await supabase.from("reactions").delete().eq("id", reaction.id);
                   if (!error) window.location.reload();
                 }
