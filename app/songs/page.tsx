@@ -36,8 +36,16 @@ export default async function SongsPage() {
           </Link>
         </div>
 
+        {/* ERROR STATE */}
+        {error && (
+          <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-red-500/20 rounded-3xl">
+            <Music size={48} className="text-red-700 mb-4 opacity-40" />
+            <p className="text-red-400 font-bold">Failed to load songs. Please refresh.</p>
+          </div>
+        )}
+
         {/* EMPTY STATE */}
-        {!songs?.length && (
+        {!error && !songs?.length && (
           <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-white/8 rounded-3xl">
             <Music size={48} className="text-slate-700 mb-4" />
             <p className="text-slate-500 font-bold">No songs available in the library yet.</p>
@@ -45,7 +53,7 @@ export default async function SongsPage() {
         )}
 
         {/* RESPONSIVE GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+        {!error && <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
           {songs?.map((song) => {
             const createUrl = `/create?video=${encodeURIComponent(song.video_url || "")}&title=${encodeURIComponent(song.title || "")}&artist=${encodeURIComponent(song.artist || "")}`;
 
@@ -89,7 +97,7 @@ export default async function SongsPage() {
               </Link>
             );
           })}
-        </div>
+        </div>}
       </div>
     </main>
   );

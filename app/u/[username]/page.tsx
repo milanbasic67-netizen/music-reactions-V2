@@ -22,6 +22,7 @@ export default function UserProfilePage() {
   const [isMe, setIsMe] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"videos" | "liked">("videos");
+  const [likedLoading, setLikedLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAvatar, setEditAvatar] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -81,12 +82,13 @@ export default function UserProfilePage() {
 
   async function loadLikedReactions() {
     if (!profile) return;
+    setLikedLoading(true);
     const { data: likes } = await supabase
       .from("likes")
       .select("reaction_id")
       .eq("user_id", profile.id);
 
-    if (!likes?.length) { setLikedReactions([]); return; }
+    if (!likes?.length) { setLikedReactions([]); setLikedLoading(false); return; }
 
     const ids = likes.map(l => l.reaction_id);
     const { data: vids } = await supabase
@@ -96,6 +98,7 @@ export default function UserProfilePage() {
       .order("created_at", { ascending: false });
 
     setLikedReactions(vids || []);
+    setLikedLoading(false);
   }
 
   function openEditModal() {
@@ -232,7 +235,11 @@ export default function UserProfilePage() {
         </div>
 
         {/* VIDEO GRID */}
-        {gridItems.length === 0 ? (
+        {likedLoading ? (
+          <div className="flex justify-center py-24">
+            <div className="w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : gridItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-700">
             <Music2 className="w-12 h-12 mb-4 opacity-10" />
             <p className="font-black uppercase tracking-tighter text-xs">

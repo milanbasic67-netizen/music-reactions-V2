@@ -49,7 +49,11 @@ export default function FollowButton({ profileUsername }: Props) {
     }
   }
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="px-10 py-3 rounded-xl bg-white/5 border border-white/8 animate-pulse w-28 h-10" />
+    );
+  }
 
   return (
     <button

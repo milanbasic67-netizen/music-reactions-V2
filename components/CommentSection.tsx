@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { X, Send, MessageSquare } from "lucide-react";
+import { getProfile } from "@/lib/getProfile";
 
 type Props = { reactionId: string; onClose: () => void; onCommentAdded?: () => void; };
 
@@ -31,11 +32,14 @@ export default function CommentSection({ reactionId, onClose, onCommentAdded }: 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return alert("Please log in to comment");
 
+    const profile = await getProfile();
+    if (!profile?.username) return alert("Please complete your profile setup first.");
+
     setLoading(true);
     const { error } = await supabase.from("comments").insert({
       reaction_id: reactionId,
       user_id: user.id,
-      username: user.user_metadata.username || "user",
+      username: profile.username,
       content: text.trim()
     });
 

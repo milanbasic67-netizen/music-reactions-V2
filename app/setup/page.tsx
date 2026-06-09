@@ -20,7 +20,7 @@ export default function SetupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-    if (!trimmed || trimmed.length < 3) return alert("Username must be at least 3 characters (letters, numbers, underscores only).");
+    if (!trimmed || trimmed.length < 3) return alert("Username must be at least 3 characters. Only letters, numbers and underscores allowed.");
     if (!userId) return;
 
     setLoading(true);
@@ -69,7 +69,7 @@ export default function SetupPage() {
           </div>
           <button
             type="submit"
-            disabled={loading || username.trim().length < 3}
+            disabled={loading || username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "").length < 3}
             className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black text-lg py-4 rounded-2xl transition"
           >
             {loading ? "Saving..." : "Continue"}

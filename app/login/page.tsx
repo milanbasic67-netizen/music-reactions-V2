@@ -24,7 +24,6 @@ export default function LoginPage() {
 
       if (error) throw error;
     } catch (err: any) {
-      console.log(err);
       alert("Google login failed: " + err.message);
     } finally {
       setLoading(false);
@@ -38,7 +37,7 @@ export default function LoginPage() {
       if (error) throw error;
       alert("Account created! Check your email.");
     } catch (err: any) {
-      alert("Signup failed");
+      alert("Signup failed: " + err.message);
     }
     setLoading(false);
   }
@@ -49,8 +48,8 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = "/";
-    } catch (err) {
-      alert("Login failed");
+    } catch (err: any) {
+      alert("Login failed: " + err.message);
     }
     setLoading(false);
   }

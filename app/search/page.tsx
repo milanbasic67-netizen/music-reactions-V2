@@ -137,7 +137,7 @@ export default function SearchPage() {
               key={
                 reaction.id
               }
-              href={`/u/${reaction.username}`}
+              href={`/v/${reaction.id}`}
             >
 
               <div className="bg-white/4 border border-white/8 rounded-3xl overflow-hidden hover:border-violet-500/30 transition cursor-pointer">

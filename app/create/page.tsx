@@ -34,11 +34,8 @@ function CreateContent() {
   }
 
   if (!videoUrl) {
-    return (
-      <main className="min-h-screen bg-[#0D0D14] text-white flex items-center justify-center text-2xl font-black">
-        Missing video
-      </main>
-    );
+    router.replace("/songs");
+    return null;
   }
 
   return (

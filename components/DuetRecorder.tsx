@@ -101,28 +101,15 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       if (!insertError) {
         // --- CLEANUP LOGIC (ONLY IF TEMP) ---
         if (isTemporary) {
-          console.log("User duet complete - starting to delete the original...");
-          
           // Extract filename from full URL
           const fileName = originalVideo.split('/').pop();
 
           if (fileName) {
             // A) Delete from Storage (songs bucket)
-            const { error: storageErr } = await supabase.storage
-                .from("songs")
-                .remove([fileName]);
-            
-            if (storageErr) console.error("Storage delete error:", storageErr.message);
+            await supabase.storage.from("songs").remove([fileName]);
 
             // B) Delete from 'songs' table
-            const { error: dbErr } = await supabase
-                .from("songs")
-                .delete()
-                .eq("video_url", originalVideo);
-            
-            if (dbErr) console.error("Database delete error:", dbErr.message);
-            
-            console.log("The original video was successfully removed.");
+            await supabase.from("songs").delete().eq("video_url", originalVideo);
           }
         }
 
