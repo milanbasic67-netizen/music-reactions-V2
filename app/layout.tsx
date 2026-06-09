@@ -16,7 +16,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "DuetApp",
-  description: "A platform for musical duets and reactions",
+  description: "Record and share musical duets",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DuetApp",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport = {
+  themeColor: "#7C3AED",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -26,6 +43,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} h-full bg-[#0D0D14] text-white`}>
         
         {/* MAIN FLEX CONTAINER */}
