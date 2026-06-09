@@ -84,7 +84,7 @@ export default function UploadSongPage() {
       <div className="max-w-6xl mx-auto px-6 pt-32 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           
-          {/* LEVA STRANA - IMPORT */}
+          {/* LEFT SIDE - IMPORT */}
           <div className="space-y-8">
             <div>
               <h1 className="text-5xl font-black tracking-tighter uppercase italic">
@@ -148,7 +148,7 @@ export default function UploadSongPage() {
             </div>
           </div>
 
-          {/* DESNA STRANA - BIBLIOTEKA */}
+          {/* RIGHT SIDE - LIBRARY */}
           <div className="bg-white/3 p-8 rounded-[2.5rem] border border-white/5 flex flex-col h-[650px] shadow-inner">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black flex items-center gap-3 uppercase tracking-tighter">

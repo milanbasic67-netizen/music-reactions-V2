@@ -23,12 +23,12 @@ export default function VideoCard({ reaction }: Props) {
   const [profile, setProfile] = useState<any>(null);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(reaction.likes_count || 0);
-  const [isMuted, setIsMuted] = useState(true); // Globalni state zvuka
+  const [isMuted, setIsMuted] = useState(true); // Global audio state
   const [showComments, setShowComments] = useState(false);
   const [progress, setProgress] = useState(0);
   const [commentsCount, setCommentsCount] = useState(0);
 
-  // 1. SINHRONIZACIJA ZVUKA KROZ CEO FEED
+  // 1. AUDIO SYNC ACROSS ENTIRE FEED
   useEffect(() => {
     const syncMute = (e: any) => {
       setIsMuted(e.detail.muted);
@@ -63,7 +63,7 @@ export default function VideoCard({ reaction }: Props) {
     init();
   }, [reaction.id]);
 
-  // 3. AUTOPLAY & PROGRESS LOGIKA
+  // 3. AUTOPLAY & PROGRESS LOGIC
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -79,7 +79,7 @@ export default function VideoCard({ reaction }: Props) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          video.muted = isMuted; // Primenjuje globalno stanje pri ulasku u kadar
+          video.muted = isMuted; // Apply global state when entering viewport
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -95,7 +95,7 @@ export default function VideoCard({ reaction }: Props) {
     };
   }, [isMuted]);
 
-  // HANDLERI
+  // HANDLERS
   const toggleMute = () => {
     const newMutedState = !isMuted;
     window.dispatchEvent(new CustomEvent("videoVolumeToggle", { detail: { muted: newMutedState } }));
@@ -103,7 +103,7 @@ export default function VideoCard({ reaction }: Props) {
 
   const handleLike = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert("Moraš se prijaviti!");
+    if (!user) return alert("You must be logged in!");
 
     if (liked) {
       await supabase.from("likes").delete().eq("reaction_id", reaction.id).eq("user_id", user.id);
@@ -142,7 +142,7 @@ export default function VideoCard({ reaction }: Props) {
         {/* OVERLAY GRADIENT */}
         <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-black/90 to-transparent pointer-events-none z-10" />
 
-        {/* INFO SEKCIJA */}
+        {/* INFO SECTION */}
         <div className="absolute bottom-10 left-5 z-20 w-[75%] pointer-events-none">
           <Link href={`/u/${reaction.username}`} className="pointer-events-auto">
             <span className="font-black text-white text-xl drop-shadow-md hover:text-violet-400 transition-colors">
@@ -155,7 +155,7 @@ export default function VideoCard({ reaction }: Props) {
           <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest">{reaction.artist}</p>
         </div>
 
-        {/* AKCIJE (DESNO) */}
+        {/* ACTIONS (RIGHT) */}
         <div className="absolute right-4 bottom-24 z-30 flex flex-col items-center gap-6">
           <button onClick={handleLike} className="flex flex-col items-center group">
             <div className={`p-3 rounded-full bg-black/40 backdrop-blur-md transition-transform group-active:scale-125 ${liked ? "text-rose-500" : "text-white"}`}>
@@ -171,7 +171,7 @@ export default function VideoCard({ reaction }: Props) {
             <span className="text-white text-[11px] font-bold mt-1 drop-shadow-lg">{commentsCount}</span>
           </button>
 
-          <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link kopiran!"); }}>
+          <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }}>
             <div className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white active:scale-90 transition-transform">
               <Share className="w-7 h-7" />
             </div>

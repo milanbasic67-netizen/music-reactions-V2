@@ -28,17 +28,17 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className={`${geistSans.variable} ${geistMono.variable} h-full bg-[#0D0D14] text-white`}>
         
-        {/* GLAVNI FLEX KONTEJNER */}
+        {/* MAIN FLEX CONTAINER */}
         <div className="flex min-h-screen">
           
-          {/* SIDEBAR - Vidljiv samo na lg ekranima */}
+          {/* SIDEBAR - Visible only on lg screens */}
           <Sidebar />
 
-          {/* SADRŽAJ STRANICE */}
+          {/* PAGE CONTENT */}
           <main className="flex-1 relative flex flex-col min-w-0">
             {children}
             
-            {/* MOBILNA NAVIGACIJA - Sakrivena na desktopu */}
+            {/* MOBILE NAVIGATION - Hidden on desktop */}
             <div className="lg:hidden">
                 <BottomNav />
             </div>

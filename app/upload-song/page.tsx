@@ -8,32 +8,32 @@ export default function UserUploadPage() {
   const [youtubeUrl, setYoutubeUrl] = useState("");
 
   async function startDuetImport() {
-    if (!youtubeUrl) return alert("Unesite YouTube link");
+    if (!youtubeUrl) return alert("Please enter a YouTube link");
     setLoading(true);
 
     try {
-      // 1. Uzimamo aktivnu sesiju (token)
+      // 1. Get active session (token)
       const { data: { session } } = await supabase.auth.getSession();
 
-      // 2. Šaljemo zahtev sa SVIM zaglavljima koja bi admin poslao
+      // 2. Send request with all headers an admin would send
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/import-youtube`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          // Šaljemo token ako ga backend traži za proveru
+          // Send token if backend requires it for verification
           "Authorization": `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ url: youtubeUrl }),
       });
 
       if (res.status === 403) {
-        throw new Error("Server i dalje ne dozvoljava pristup običnim korisnicima (403).");
+        throw new Error("Server still does not allow access for regular users (403).");
       }
 
       const data = await res.json();
       if (!data.success) throw new Error(data.details || "Import failed");
 
-      // 3. Ako prođe, ide na snimanje uz brisanje (temp=true)
+      // 3. If successful, go to recording with cleanup (temp=true)
       const duetUrl = `/create?video=${encodeURIComponent(data.videoUrl)}&title=${encodeURIComponent(data.title)}&artist=${encodeURIComponent(data.artist)}&temp=true`;
       window.location.href = duetUrl;
 
@@ -48,7 +48,7 @@ export default function UserUploadPage() {
   return (
     <main className="min-h-screen bg-[#0D0D14] text-white p-5 flex flex-col items-center justify-center">
       <div className="w-full max-w-md bg-white/5 p-8 rounded-[2.5rem] border border-white/8 text-center">
-        <h1 className="text-3xl font-black mb-6">NOVI DUET</h1>
+        <h1 className="text-3xl font-black mb-6">NEW DUET</h1>
         <input
           value={youtubeUrl}
           onChange={(e) => setYoutubeUrl(e.target.value)}
@@ -60,7 +60,7 @@ export default function UserUploadPage() {
           disabled={loading}
           className="w-full bg-violet-600 hover:bg-violet-500 py-5 rounded-2xl font-black text-xl active:scale-95 transition"
         >
-          {loading ? "PROVERA..." : "ZAPOČNI"}
+          {loading ? "CHECKING..." : "START"}
         </button>
       </div>
     </main>

@@ -28,7 +28,7 @@ export default function TopBar() {
     <div className="fixed top-0 left-0 right-0 z-[100] bg-[#0D0D14]/90 backdrop-blur-xl border-b border-white/8 h-16">
       <div className="max-w-full mx-auto h-full flex items-center justify-between px-4">
         
-        {/* LEVO: Logo i Link za Feed */}
+        {/* LEFT: Logo and Feed Link */}
         <div 
           className="flex items-center gap-2 cursor-pointer" 
           onClick={() => window.location.href = "/"}
@@ -39,10 +39,10 @@ export default function TopBar() {
           <h1 className="text-white text-xl font-black tracking-tighter">DUET</h1>
         </div>
 
-        {/* DESNO: Glavna navigacija (Uvek vidljiva) */}
+        {/* RIGHT: Main navigation (Always visible) */}
         <div className="flex items-center gap-2 sm:gap-4">
           
-          {/* DUGME: BIBLIOTEKA (Ono što ti je falilo na desktopu) */}
+          {/* BUTTON: LIBRARY */}
           <button
             onClick={() => window.location.href = "/songs"}
             className="flex items-center gap-2 bg-white/8 hover:bg-white/12 text-white px-3 py-2 rounded-xl text-sm font-black transition border border-white/5"

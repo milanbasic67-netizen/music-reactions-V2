@@ -28,7 +28,7 @@ function CreateContent() {
   if (!authChecked) {
     return (
       <main className="min-h-screen bg-[#0D0D14] flex items-center justify-center text-white font-black">
-        UČITAVANJE...
+        LOADING...
       </main>
     );
   }
@@ -49,16 +49,16 @@ function CreateContent() {
         <div className="max-w-[1200px] mx-auto flex justify-between items-center px-8 py-5">
           <h1 className="font-black text-2xl tracking-tighter uppercase italic text-violet-400">Studio</h1>
           <div className="hidden lg:flex gap-8 text-sm font-bold uppercase tracking-widest">
-            <button className="text-white">Snimanje</button>
-            <button className="text-slate-500 hover:text-white transition">Pomoć</button>
+            <button className="text-white">Record</button>
+            <button className="text-slate-500 hover:text-white transition">Help</button>
           </div>
         </div>
       </div>
 
-      {/* STUDIO AREA - Side by Side na desktopu */}
+      {/* STUDIO AREA - Side by Side on desktop */}
       <div className="flex-1 w-full max-w-[1300px] flex flex-col lg:flex-row items-center justify-center gap-10 p-6 lg:p-16">
         
-        {/* LEVO: ORIGINAL PLAYER */}
+        {/* LEFT: ORIGINAL PLAYER */}
         <div className="w-full max-w-[420px] aspect-[9/16] bg-black rounded-[3rem] overflow-hidden border-8 border-white/8 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative">
           <video
             id="song-video"
@@ -77,12 +77,12 @@ function CreateContent() {
           </div>
         </div>
 
-        {/* DESNO: TVOJ RECORDER */}
+        {/* RIGHT: YOUR RECORDER */}
         <div className="w-full max-w-[420px] flex flex-col">
           <div className="hidden lg:block mb-10">
-            <h2 className="text-5xl font-black tracking-tighter leading-none">SPREMAN ZA DUET?</h2>
+            <h2 className="text-5xl font-black tracking-tighter leading-none">READY FOR A DUET?</h2>
             <p className="text-slate-500 mt-4 text-lg font-medium leading-relaxed">
-                Kamera je spremna. Pesma se pušta automatski kada pritisneš dugme.
+                Camera is ready. The song plays automatically when you press the button.
             </p>
           </div>
           
@@ -102,7 +102,7 @@ function CreateContent() {
 
 export default function CreatePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0D0D14] flex items-center justify-center text-white font-black">UČITAVANJE STUDIJA...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0D0D14] flex items-center justify-center text-white font-black">LOADING STUDIO...</div>}>
       <CreateContent />
     </Suspense>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-// Ako imaš Lucide ikonice instalirane:
+// If you have Lucide icons installed:
 // import { Chrome } from "lucide-react"; 
 
 export default function LoginPage() {
@@ -17,7 +17,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          // Ovo šalje korisnika nazad na tvoj sajt nakon prijave
+          // Redirects the user back to your site after login
           redirectTo: `${window.location.origin}`, 
         },
       });
@@ -69,7 +69,7 @@ export default function LoginPage() {
           disabled={loading}
           className="mt-10 w-full bg-white hover:bg-slate-100 transition text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-3 border-b-4 border-slate-300 active:border-b-0 active:translate-y-1"
         >
-          {/* Ako nemaš Lucide, možeš staviti običan tekst ili sliku */}
+          {/* If you don't have Lucide, use plain text or an image */}
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
           SIGN IN WITH GOOGLE
         </button>

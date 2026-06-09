@@ -13,7 +13,7 @@ type Props = {
 
 export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const searchParams = useSearchParams();
-  const isTemporary = searchParams.get("temp") === "true"; // Provera da li brišemo original
+  const isTemporary = searchParams.get("temp") === "true"; // Whether to delete the original after duet
 
   const cameraRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -23,7 +23,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 1. Postavljanje kamere
+  // 1. Camera setup
   useEffect(() => {
     async function setup() {
       try {
@@ -41,7 +41,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
     return () => stream?.getTracks().forEach(track => track.stop());
   }, []);
 
-  // 2. Start snimanja
+  // 2. Start recording
   async function startRecording() {
     if (!stream) return;
     chunksRef.current = [];
@@ -65,7 +65,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
     setRecording(true);
   }
 
-  // 3. Renderovanje i Čišćenje
+  // 3. Rendering and Cleanup
   async function handleUpload(duration: number) {
     setLoading(true);
     try {
@@ -77,7 +77,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       formData.append("originalUrl", originalVideo);
       formData.append("duration", duration.toString());
 
-      // Slanje na tvoj Render backend
+      // Send to Render backend
       const renderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/render-duet`, {
         method: "POST",
         body: formData,
@@ -89,7 +89,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       const profile = await getProfile();
 
-      // UPIS REAKCIJE U TABELU
+      // INSERT REACTION INTO TABLE
       const { error: insertError } = await supabase.from("reactions").insert({
         song: title,
         artist: artist,
@@ -99,22 +99,22 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
       });
 
       if (!insertError) {
-        // --- LOGIKA ČIŠĆENJA (SAMO AKO JE TEMP) ---
+        // --- CLEANUP LOGIC (ONLY IF TEMP) ---
         if (isTemporary) {
           console.log("User duet complete - starting to delete the original...");
           
-          // Izvlačenje imena fajla iz punog URL-a
+          // Extract filename from full URL
           const fileName = originalVideo.split('/').pop();
 
           if (fileName) {
-            // A) Brisanje iz Storage-a (songs bucket)
+            // A) Delete from Storage (songs bucket)
             const { error: storageErr } = await supabase.storage
                 .from("songs")
                 .remove([fileName]);
             
             if (storageErr) console.error("Storage delete error:", storageErr.message);
 
-            // B) Brisanje iz tabele 'songs'
+            // B) Delete from 'songs' table
             const { error: dbErr } = await supabase
                 .from("songs")
                 .delete()
@@ -181,7 +181,7 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
             <p className="text-slate-500 font-black text-lg animate-pulse tracking-tighter uppercase">
               Video processing...
             </p>
-            <p className="text-slate-600 text-xs mt-1">Spajamo tvoj glas sa pesmom</p>
+            <p className="text-slate-600 text-xs mt-1">Merging your voice with the song</p>
           </div>
         )}
       </div>

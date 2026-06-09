@@ -35,7 +35,7 @@ export default async function NotificationsPage() {
         }
       );
 
-  // Oznaci sve kao procitane
+  // Mark all as read
   if (username) {
     await supabase
       .from("notifications")
