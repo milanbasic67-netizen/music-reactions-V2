@@ -1,268 +1,70 @@
 "use client";
 
-import {
-  Home,
-  Music2,
-  PlusSquare,
-  User,
-  Search,
-  Flame,
-  Bell,
-} from "lucide-react";
-
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
-
-import NotificationsBadge
-from "./NotificationsBadge";
-
+import { Home, PlusSquare, User, Search, Bell } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import NotificationsBadge from "./NotificationsBadge";
 
 export default function BottomNav() {
-
-  const pathname =
-    usePathname();
-
-  const router =
-    useRouter();
-
-  const [profile, setProfile] =
-    useState<any>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-
-    async function loadProfile() {
-
-      const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
-
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-
-      const { data } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-      setProfile(data);
-
-    }
-
-    loadProfile();
-
+      supabase.from("profiles").select("*").eq("id", user.id).single()
+        .then(({ data }) => setProfile(data));
+    });
   }, []);
 
-  return (    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D14]/95 backdrop-blur-2xl border-t border-white/8">
+  const nav = (path: string) => router.push(path);
+  const active = (path: string) => pathname === path;
 
-      <div className="grid grid-cols-6 h-20">
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D14]/95 backdrop-blur-2xl border-t border-white/8">
+      <div className="grid grid-cols-5 h-20">
 
         {/* HOME */}
-        <button
-          onClick={() =>
-            router.push("/")
-          }
-          className="flex flex-col items-center justify-center gap-1"
-        >
-
-          <Home
-            size={24}
-            className={
-              pathname === "/"
-                ? "text-white"
-                : "text-zinc-500"
-            }
-          />
-
-          <span
-            className={
-              pathname === "/"
-                ? "text-white text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Home
-
-          </span>
-
+        <button onClick={() => nav("/")} className="flex flex-col items-center justify-center gap-1">
+          <Home size={24} className={active("/") ? "text-white" : "text-zinc-500"} />
+          <span className={`text-[10px] font-bold ${active("/") ? "text-white" : "text-zinc-500"}`}>Home</span>
         </button>
-
-        
 
         {/* SEARCH */}
-        <button
-          onClick={() =>
-            router.push(
-              "/search"
-            )
-          }
-          className="flex flex-col items-center justify-center gap-1"
-        >
-
-          <Search
-            size={24}
-            className={
-              pathname === "/search"
-                ? "text-white"
-                : "text-zinc-500"
-            }
-          />
-
-          <span
-            className={
-              pathname === "/search"
-                ? "text-white text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Search
-
-          </span>
-
-        </button>
- 
-        {/* TRENDING */}
-        <button
-          onClick={() =>
-            router.push(
-              "/trending"
-            )
-          }
-          className="flex flex-col items-center justify-center gap-1"
-        >
-
-          <Flame
-            size={24}
-            className={
-              pathname === "/trending"
-                ? "text-violet-400"
-                : "text-zinc-500"
-            }
-          />
-
-          <span
-            className={
-              pathname === "/trending"
-                ? "text-violet-400 text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Trending
-
-          </span>
-
+        <button onClick={() => nav("/search")} className="flex flex-col items-center justify-center gap-1">
+          <Search size={24} className={active("/search") ? "text-white" : "text-zinc-500"} />
+          <span className={`text-[10px] font-bold ${active("/search") ? "text-white" : "text-zinc-500"}`}>Search</span>
         </button>
 
-{/* CREATE */}
-        <button
-          onClick={() =>
-            router.push(
-              "/songs"
-            )
-          }
-          className="flex items-center justify-center"
-        >
-
-          <div className="w-15 h-15 rounded-2xl bg-violet-600 flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.5)]">
-
-            <PlusSquare
-              size={30}
-              className="text-white"
-            />
-
+        {/* CREATE — centered */}
+        <button onClick={() => nav("/songs")} className="flex items-center justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-violet-600 flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.5)] active:scale-95 transition-transform">
+            <PlusSquare size={28} className="text-white" />
           </div>
-
         </button>
-
 
         {/* NOTIFICATIONS */}
-        <button
-          onClick={() =>
-            router.push(
-              "/notifications"
-            )
-          }
-          className="relative flex flex-col items-center justify-center gap-1"
-        >
-
+        <button onClick={() => nav("/notifications")} className="flex flex-col items-center justify-center gap-1">
           <div className="relative">
-
-            <Bell
-              size={24}
-              className={
-                pathname ===
-                "/notifications"
-                  ? "text-white"
-                  : "text-zinc-500"
-              }
-            />
-
+            <Bell size={24} className={active("/notifications") ? "text-white" : "text-zinc-500"} />
             <NotificationsBadge />
-
           </div>
-
-          <span
-            className={
-              pathname ===
-              "/notifications"
-                ? "text-white text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Alerts
-
-          </span>
-
+          <span className={`text-[10px] font-bold ${active("/notifications") ? "text-white" : "text-zinc-500"}`}>Alerts</span>
         </button>
-
-       
 
         {/* PROFILE */}
-        <button
-          onClick={() =>
-            router.push(
-              "/profile"
-            )
-          }
-          className="flex flex-col items-center justify-center gap-1"
-        >
-
-          <User
-            size={24}
-            className={
-              pathname === "/profile"
-                ? "text-white"
-                : "text-zinc-500"
-            }
-          />
-
-          <span
-            className={
-              pathname === "/profile"
-                ? "text-white text-[10px] font-bold"
-                : "text-zinc-500 text-[10px]"
-            }
-          >
-
-            Profile
-
-          </span>
-
+        <button onClick={() => nav("/profile")} className="flex flex-col items-center justify-center gap-1">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} className={`w-7 h-7 rounded-full object-cover border-2 ${active("/profile") ? "border-white" : "border-zinc-600"}`} alt="" />
+          ) : (
+            <User size={24} className={active("/profile") ? "text-white" : "text-zinc-500"} />
+          )}
+          <span className={`text-[10px] font-bold ${active("/profile") ? "text-white" : "text-zinc-500"}`}>Profile</span>
         </button>
 
-
-
       </div>
-
     </div>
   );
 }
