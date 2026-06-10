@@ -22,24 +22,26 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   // 1. Camera setup
   useEffect(() => {
     async function setup() {
+      stream?.getTracks().forEach(track => track.stop());
       try {
         const media = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, aspectRatio: 1.77 },
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: { echoCancellation: true, noiseSuppression: true },
         });
         setStream(media);
         if (cameraRef.current) cameraRef.current.srcObject = media;
-      } catch (err) { 
-        alert("Camera not available. Check permissions."); 
+      } catch (err) {
+        alert("Camera not available. Check permissions.");
       }
     }
     setup();
     return () => stream?.getTracks().forEach(track => track.stop());
-  }, []);
+  }, [facingMode]);
 
   // 2. Start recording
   async function startRecording() {
@@ -133,18 +135,26 @@ export default function DuetRecorder({ originalVideo, title, artist }: Props) {
     <div className="flex flex-col items-center p-4">
       {/* PREVIEW KAMERE */}
       <div className="w-full max-w-[400px] aspect-video bg-black rounded-[2.5rem] overflow-hidden border-4 border-white/10 relative shadow-2xl">
-        <video 
-            ref={cameraRef} 
-            autoPlay 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover" 
+        <video
+          ref={cameraRef}
+          autoPlay
+          muted
+          playsInline
+          className="w-full h-full object-cover"
         />
         {recording && (
-            <div className="absolute top-6 right-6 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full">
-                <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
-                <span className="text-white text-[10px] font-black tracking-widest uppercase">Recording</span>
-            </div>
+          <div className="absolute top-6 right-6 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full">
+            <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse" />
+            <span className="text-white text-[10px] font-black tracking-widest uppercase">Recording</span>
+          </div>
+        )}
+        {!recording && (
+          <button
+            onClick={() => setFacingMode(f => f === "user" ? "environment" : "user")}
+            className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-full text-white text-xl"
+          >
+            🔄
+          </button>
         )}
       </div>
 
