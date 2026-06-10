@@ -46,6 +46,15 @@ function getYTID(url) {
     return (match && match[7].length == 11) ? match[7] : null;
 }
 
+async function isMusicVideo(videoId) {
+    const res = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
+        params: { part: 'snippet', id: videoId, key: process.env.YOUTUBE_API_KEY }
+    });
+    const item = res.data.items?.[0];
+    if (!item) return false;
+    return item.snippet.categoryId === '10';
+}
+
 // --- RUTA: IMPORT YOUTUBE (VERZIJA 58 - FIXED) ---
 app.post("/import-youtube", verifyAuth, async (req, res) => {
     const { url } = req.body;
@@ -66,6 +75,11 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
     };
 
     try {
+        if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL." });
+
+        const isMusic = await isMusicVideo(videoId);
+        if (!isMusic) return res.status(400).json({ error: "Only music videos can be imported." });
+
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
             params: { videoId, urlAccess: 'proxied' },
             headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }

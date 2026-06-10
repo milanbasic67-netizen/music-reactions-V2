@@ -12,65 +12,33 @@ export default function ImportPage() {
   const [loading, setLoading] =
     useState(false);
 
+  const [error, setError] =
+    useState("");
+
   async function importVideo() {
+    setError("");
+    setLoading(true);
 
     try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/import-youtube`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
 
-      setLoading(
-        true
-      );
+      const data = await response.json();
 
-      const response =
-        await fetch(
+      if (!response.ok) {
+        setError(data.error || "Import failed");
+        return;
+      }
 
-          "http://localhost:5000/import-youtube",
-
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                url,
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      console.log(
-        data
-      );
-
-      alert(
-        "Imported!"
-      );
-
-      window.location.href =
-        "/songs";
-
+      window.location.href = "/songs";
     } catch (err) {
-
-      console.log(
-        err
-      );
-
-      alert(
-        "Import failed"
-      );
-
+      setError("Import failed");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(
-      false
-    );
-
   }
 
   return (
@@ -102,20 +70,18 @@ export default function ImportPage() {
         />
 
         <button
-          onClick={
-            importVideo
-          }
-          disabled={
-            loading
-          }
+          onClick={importVideo}
+          disabled={loading}
           className="w-full mt-6 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 transition rounded-3xl py-5 text-white text-xl font-black"
         >
-
-          {loading
-            ? "Importing..."
-            : "Import Video"}
-
+          {loading ? "Importing..." : "Import Video"}
         </button>
+
+        {error && (
+          <p className="mt-4 text-red-400 text-center">
+            {error}
+          </p>
+        )}
 
       </div>
 
