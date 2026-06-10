@@ -6,40 +6,37 @@ import { supabase } from "@/lib/supabase";
 export default function UserUploadPage() {
   const [loading, setLoading] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [error, setError] = useState("");
 
   async function startDuetImport() {
-    if (!youtubeUrl) return alert("Please enter a YouTube link");
+    if (!youtubeUrl) return;
+    setError("");
     setLoading(true);
 
     try {
-      // 1. Get active session (token)
       const { data: { session } } = await supabase.auth.getSession();
 
-      // 2. Send request with all headers an admin would send
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/import-youtube`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          // Send token if backend requires it for verification
           "Authorization": `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({ url: youtubeUrl }),
       });
 
-      if (res.status === 403) {
-        throw new Error("Server still does not allow access for regular users (403).");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Import failed");
+        return;
       }
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.details || "Import failed");
-
-      // 3. If successful, go to recording with cleanup (temp=true)
       const duetUrl = `/create?video=${encodeURIComponent(data.videoUrl)}&title=${encodeURIComponent(data.title)}&artist=${encodeURIComponent(data.artist)}&temp=true`;
       window.location.href = duetUrl;
 
     } catch (err: any) {
-      console.error(err);
-      alert(err.message);
+      setError("Import failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -62,6 +59,10 @@ export default function UserUploadPage() {
         >
           {loading ? "CHECKING..." : "START"}
         </button>
+
+        {error && (
+          <p className="mt-4 text-red-400 text-sm text-center">{error}</p>
+        )}
       </div>
     </main>
   );
