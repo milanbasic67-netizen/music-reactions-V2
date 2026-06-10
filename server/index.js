@@ -83,6 +83,7 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
         const isVerifiedArtist = meta?.author?.is_verified_artist === true;
         const keywords = (meta?.additionalData?.keywords || []).map(k => k.toLowerCase());
         const title = (meta?.title || '').toLowerCase();
+        console.log("MUSIC_CHECK title:", title, "| isVerifiedArtist:", isVerifiedArtist, "| keywords:", keywords.slice(0, 10));
 
         const NON_MUSIC_KEYWORDS = ['gaming', 'gameplay', "let's play", 'tutorial', 'how to', 'howto', 'news', 'sports', 'vlog', 'podcast', 'documentary', 'review', 'unboxing', 'cooking', 'recipe', 'lecture', 'lesson', 'course'];
 
