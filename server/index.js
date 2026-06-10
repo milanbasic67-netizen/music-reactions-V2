@@ -66,6 +66,8 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
     };
 
     try {
+        if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL." });
+
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
             params: { videoId, urlAccess: 'proxied' },
             headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }
