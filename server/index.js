@@ -75,9 +75,17 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
         if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL." });
 
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
-            params: { videoId, urlAccess: 'proxied' },
+            params: { videoId, urlAccess: 'proxied', fields: 'contents,metadata' },
             headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': 'social-media-video-downloader.p.rapidapi.com' }
         });
+
+        console.log("Metadata:", JSON.stringify(apiRes.data?.metadata));
+
+        const NON_MUSIC_CATEGORIES = ['gaming', 'sports', 'news', 'education', 'science', 'technology', 'autos', 'travel', 'comedy', 'film'];
+        const category = (apiRes.data?.metadata?.category || '').toLowerCase();
+        if (category && NON_MUSIC_CATEGORIES.some(c => category.includes(c))) {
+            return res.status(400).json({ error: "Only music videos can be imported." });
+        }
 
         const contents = apiRes.data?.contents?.[0];
         const vList = contents?.videos || [];
