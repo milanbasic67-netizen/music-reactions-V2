@@ -133,7 +133,9 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
 
     } catch (err) {
         cleanup();
-        if (!res.headersSent) res.status(500).json({ error: "Import failed", details: err.message });
+        const details = err.response?.data || err.message;
+        console.error("Import error:", JSON.stringify(details));
+        if (!res.headersSent) res.status(500).json({ error: "Import failed", details });
     }
 });
 
