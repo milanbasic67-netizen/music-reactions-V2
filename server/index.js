@@ -84,13 +84,11 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
         const keywords = (meta?.additionalData?.keywords || []).map(k => k.toLowerCase());
         const title = (meta?.title || '').toLowerCase();
 
-        const MUSIC_KEYWORDS = ['music', 'song', 'audio', 'lyrics', 'official', 'cover', 'remix', 'feat', 'rock', 'pop', 'rap', 'hip hop', 'r&b', 'jazz', 'piano', 'guitar', 'band', 'album', 'single', 'mv', 'video clip'];
-        const NON_MUSIC_KEYWORDS = ['gaming', 'gameplay', "let's play", 'tutorial', 'how to', 'news', 'sports', 'vlog', 'podcast', 'documentary', 'review', 'unboxing', 'cooking', 'recipe'];
+        const NON_MUSIC_KEYWORDS = ['gaming', 'gameplay', "let's play", 'tutorial', 'how to', 'howto', 'news', 'sports', 'vlog', 'podcast', 'documentary', 'review', 'unboxing', 'cooking', 'recipe', 'lecture', 'lesson', 'course'];
 
-        const hasNonMusic = NON_MUSIC_KEYWORDS.some(k => keywords.includes(k) || title.includes(k));
-        const hasMusic = isVerifiedArtist || MUSIC_KEYWORDS.some(k => keywords.some(kw => kw.includes(k)) || title.includes(k));
+        const hasNonMusic = NON_MUSIC_KEYWORDS.some(k => keywords.some(kw => kw.includes(k)) || title.includes(k));
 
-        if (hasNonMusic && !hasMusic) {
+        if (!isVerifiedArtist && hasNonMusic) {
             return res.status(400).json({ error: "Only music videos can be imported." });
         }
 
