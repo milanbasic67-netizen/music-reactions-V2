@@ -41,9 +41,15 @@ const uploadsDir = path.join(__dirname, "uploads");
 const upload = multer({ dest: uploadsDir });
 
 function getYTID(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[7].length == 11) ? match[7] : null;
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1).split('?')[0];
+        if (parsed.searchParams.get('v')) return parsed.searchParams.get('v');
+        const segments = parsed.pathname.split('/');
+        const idx = segments.findIndex(s => ['shorts', 'embed', 'v', 'live'].includes(s));
+        if (idx !== -1) return segments[idx + 1]?.split('?')[0] || null;
+    } catch {}
+    return null;
 }
 
 // --- RUTA: IMPORT YOUTUBE (VERZIJA 58 - FIXED) ---
