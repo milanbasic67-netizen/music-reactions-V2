@@ -52,20 +52,6 @@ function getYTID(url) {
     return null;
 }
 
-async function isMusicVideo(videoId) {
-    try {
-        const res = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-            params: { part: 'snippet', id: videoId, key: process.env.YOUTUBE_API_KEY }
-        });
-        const item = res.data.items?.[0];
-        if (!item) return true; // video not found, allow and let RapidAPI handle it
-        const NON_MUSIC = ['1', '2', '17', '19', '20', '22', '23', '24', '25', '26', '27', '28', '29'];
-        return !NON_MUSIC.includes(item.snippet.categoryId);
-    } catch {
-        return true; // if YouTube API fails, don't block the import
-    }
-}
-
 // --- RUTA: IMPORT YOUTUBE (VERZIJA 58 - FIXED) ---
 app.post("/import-youtube", verifyAuth, async (req, res) => {
     const { url } = req.body;
@@ -87,9 +73,6 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
 
     try {
         if (!videoId) return res.status(400).json({ error: "Invalid YouTube URL." });
-
-        const isMusic = await isMusicVideo(videoId);
-        if (!isMusic) return res.status(400).json({ error: "Only music videos can be imported." });
 
         const apiRes = await axios.get('https://social-media-video-downloader.p.rapidapi.com/youtube/v3/video/details', {
             params: { videoId, urlAccess: 'proxied' },
