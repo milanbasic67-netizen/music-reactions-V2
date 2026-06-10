@@ -21,6 +21,7 @@ type Props = {
 export default function VideoCard({ reaction }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [authorNickname, setAuthorNickname] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(reaction.likes_count || 0);
   const [isMuted, setIsMuted] = useState(true); // Global audio state
@@ -43,6 +44,15 @@ export default function VideoCard({ reaction }: Props) {
     async function init() {
       const p = await getProfile();
       setProfile(p);
+
+      if (reaction.username) {
+        const { data: author } = await supabase
+          .from("profiles")
+          .select("nickname")
+          .eq("username", reaction.username)
+          .single();
+        if (author?.nickname) setAuthorNickname(author.nickname);
+      }
       if (p && reaction.id) {
         const { data } = await supabase
           .from("likes")
@@ -164,6 +174,9 @@ export default function VideoCard({ reaction }: Props) {
             <span className="font-black text-white text-xl drop-shadow-md hover:text-violet-400 transition-colors">
               @{reaction.username || "user"}
             </span>
+            {authorNickname && (
+              <p className="text-white/70 text-sm font-semibold mt-0.5 drop-shadow-md">{authorNickname}</p>
+            )}
           </Link>
           <h2 className="text-white text-sm mt-2 font-medium drop-shadow-md line-clamp-2">
             {reaction.song}
