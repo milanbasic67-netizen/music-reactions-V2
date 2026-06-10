@@ -51,7 +51,7 @@ export default function UploadSongPage() {
         setYoutubeUrl("");
         window.location.reload();
       } else {
-        alert("Server returned an error. Try restarting Render or use Manual mode.");
+        alert(result.error || "Import failed.");
       }
     } catch (err) {
       alert("Connection error. Server might be down.");
