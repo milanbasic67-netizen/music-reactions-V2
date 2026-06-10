@@ -53,12 +53,17 @@ function getYTID(url) {
 }
 
 async function isMusicVideo(videoId) {
-    const res = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-        params: { part: 'snippet', id: videoId, key: process.env.YOUTUBE_API_KEY }
-    });
-    const item = res.data.items?.[0];
-    if (!item) return false;
-    return item.snippet.categoryId === '10';
+    try {
+        const res = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
+            params: { part: 'snippet', id: videoId, key: process.env.YOUTUBE_API_KEY }
+        });
+        const item = res.data.items?.[0];
+        if (!item) return true; // video not found, allow and let RapidAPI handle it
+        const NON_MUSIC = ['1', '2', '17', '19', '20', '22', '23', '24', '25', '26', '27', '28', '29'];
+        return !NON_MUSIC.includes(item.snippet.categoryId);
+    } catch {
+        return true; // if YouTube API fails, don't block the import
+    }
 }
 
 // --- RUTA: IMPORT YOUTUBE (VERZIJA 58 - FIXED) ---
