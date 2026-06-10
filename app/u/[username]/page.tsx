@@ -26,6 +26,7 @@ export default function UserProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editAvatar, setEditAvatar] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editNickname, setEditNickname] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
@@ -122,6 +123,7 @@ export default function UserProfilePage() {
   function openEditModal() {
     setEditAvatar(profile.avatar_url || "");
     setEditBio(profile.bio || "");
+    setEditNickname(profile.nickname || "");
     setShowEditModal(true);
   }
 
@@ -129,11 +131,11 @@ export default function UserProfilePage() {
     setEditSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ avatar_url: editAvatar || null, bio: editBio || null })
+      .update({ avatar_url: editAvatar || null, bio: editBio || null, nickname: editNickname || null })
       .eq("id", profile.id);
 
     if (!error) {
-      setProfile((prev: any) => ({ ...prev, avatar_url: editAvatar || null, bio: editBio || null }));
+      setProfile((prev: any) => ({ ...prev, avatar_url: editAvatar || null, bio: editBio || null, nickname: editNickname || null }));
       setShowEditModal(false);
     } else {
       alert("Failed to save. Please try again.");
@@ -216,6 +218,9 @@ export default function UserProfilePage() {
 
           <div className="flex flex-col items-center md:items-start flex-1">
             <h1 className="text-3xl font-black tracking-tighter">@{profile.username}</h1>
+            {profile.nickname && (
+              <p className="text-white/70 text-base font-semibold mt-1">{profile.nickname}</p>
+            )}
             {profile.bio && (
               <p className="text-slate-400 text-sm mt-2 max-w-sm text-center md:text-left">{profile.bio}</p>
             )}
@@ -347,6 +352,18 @@ export default function UserProfilePage() {
                   </div>
                 </div>
                 <input ref={avatarFileRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nickname</label>
+                <input
+                  type="text"
+                  value={editNickname}
+                  onChange={(e) => setEditNickname(e.target.value)}
+                  placeholder="Your display name..."
+                  maxLength={50}
+                  className="mt-1 w-full bg-white/5 border border-white/8 rounded-2xl px-5 py-3 text-white text-sm outline-none focus:border-violet-500 transition"
+                />
               </div>
 
               <div>
