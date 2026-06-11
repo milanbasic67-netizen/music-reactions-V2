@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, PlusSquare, User, Search, Bell, CreditCard } from "lucide-react";
+import { Home, PlusSquare, User, Search, Bell } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -24,7 +24,7 @@ export default function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D14]/95 backdrop-blur-2xl border-t border-white/8">
-      <div className="grid grid-cols-6 h-20">
+      <div className="grid grid-cols-5 h-20">
 
         {/* HOME */}
         <button onClick={() => nav("/")} className="flex flex-col items-center justify-center gap-1">
@@ -52,12 +52,6 @@ export default function BottomNav() {
             <NotificationsBadge />
           </div>
           <span className={`text-[10px] font-bold ${active("/notifications") ? "text-white" : "text-zinc-500"}`}>Alerts</span>
-        </button>
-
-        {/* CREDITS */}
-        <button onClick={() => nav("/credits")} className="flex flex-col items-center justify-center gap-1">
-          <CreditCard size={24} className={active("/credits") ? "text-violet-400" : "text-zinc-500"} />
-          <span className={`text-[10px] font-bold ${active("/credits") ? "text-violet-400" : "text-zinc-500"}`}>Credits</span>
         </button>
 
         {/* PROFILE */}
