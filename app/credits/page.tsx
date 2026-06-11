@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Script from "next/script";
 
 const PADDLE_CLIENT_TOKEN = "test_b25e55650f4d0b9e4def38d1614";
 const PRICE_ID = "pri_01kttvp8fkajnnvmmvvs6ksgjj";
@@ -11,6 +12,7 @@ export default function CreditsPage() {
   const [credits, setCredits] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [paddleReady, setPaddleReady] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -23,13 +25,20 @@ export default function CreditsPage() {
     load();
   }, []);
 
+  function initPaddle() {
+    const Paddle = (window as any).Paddle;
+    if (!Paddle) return;
+    Paddle.Environment.set("sandbox");
+    Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+    setPaddleReady(true);
+  }
+
   async function buyCredits() {
     if (!userId) return;
     setLoading(true);
     try {
       const Paddle = (window as any).Paddle;
-      if (!Paddle) throw new Error("Paddle nije učitan");
-      Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+      if (!Paddle) throw new Error("Paddle nije učitan, osvježi stranicu");
       Paddle.Checkout.open({
         items: [{ priceId: PRICE_ID, quantity: 1 }],
         customData: { user_id: userId },
@@ -46,7 +55,10 @@ export default function CreditsPage() {
 
   return (
     <>
-      <script src="https://cdn.paddle.com/paddle/v2/paddle.js" async />
+      <Script
+        src="https://cdn.paddle.com/paddle/v2/paddle.js"
+        onLoad={initPaddle}
+      />
       <main className="min-h-screen bg-[#0D0D14] text-white flex flex-col items-center justify-center p-5">
         <div className="w-full max-w-md bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-center">
           <h1 className="text-3xl font-black mb-2">KREDITI</h1>
