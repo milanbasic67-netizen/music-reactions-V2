@@ -263,6 +263,24 @@ app.post("/delete-video", verifyAuth, async (req, res) => {
   }
 });
 
+// --- ADD CREDITS (PayPal — called after client-side capture) ---
+app.post("/add-credits", verifyAuth, async (req, res) => {
+  const { amount } = req.body;
+  if (!amount || amount <= 0) return res.status(400).json({ error: "Invalid amount" });
+
+  const { error } = await supabaseAdmin.rpc("add_credits", {
+    user_id: req.userId,
+    amount: parseInt(amount),
+  });
+
+  if (error) {
+    console.error("add_credits error:", error);
+    return res.status(500).json({ error: "Failed to add credits" });
+  }
+
+  res.json({ success: true });
+});
+
 // --- PADDLE WEBHOOK ---
 app.post("/paddle-webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const signature = req.headers["paddle-signature"];
