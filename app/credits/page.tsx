@@ -42,7 +42,9 @@ export default function CreditsPage() {
       Paddle.Checkout.open({
         items: [{ priceId: PRICE_ID, quantity: 1 }],
         customData: { user_id: userId },
-        successUrl: `${window.location.origin}/credits?success=1`,
+        settings: {
+          successUrl: `${window.location.origin}/credits?success=1`,
+        },
       });
     } catch (err: any) {
       alert(err.message);
