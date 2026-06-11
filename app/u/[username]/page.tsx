@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getProfile } from "@/lib/getProfile";
-import { Grid, Heart, Music2, LogOut, AlertCircle, Trash2, X, Check, Upload } from "lucide-react";
+import { Grid, Heart, Music2, LogOut, AlertCircle, Trash2, X, Check, Upload, CreditCard } from "lucide-react";
 import FollowButton from "@/components/FollowButton";
 import Link from "next/link";
 
@@ -21,6 +21,7 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isMe, setIsMe] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
+  const [credits, setCredits] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"videos" | "liked">("videos");
   const [likedLoading, setLikedLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -51,7 +52,10 @@ export default function UserProfilePage() {
         const me = await getProfile();
         if (me) {
           setMyProfile(me);
-          if (me.id === userProfile.id) setIsMe(true);
+          if (me.id === userProfile.id) {
+            setIsMe(true);
+            setCredits(userProfile.credits ?? 0);
+          }
         }
 
         const { data: vids } = await supabase
@@ -246,6 +250,10 @@ export default function UserProfilePage() {
                   <button onClick={openEditModal} className="flex-1 md:px-12 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition">
                     Edit Profile
                   </button>
+                  <Link href="/credits" className="px-4 py-3 bg-violet-600/20 border border-violet-500/30 rounded-xl flex items-center gap-1.5 text-violet-400 font-black text-xs hover:bg-violet-600/30 transition">
+                    <CreditCard className="w-4 h-4" />
+                    {credits ?? "..."}
+                  </Link>
                   <button onClick={handleLogout} className="px-4 py-3 bg-white/5 border border-white/8 rounded-xl hover:text-red-400 transition">
                     <LogOut className="w-5 h-5" />
                   </button>
