@@ -4,15 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  Home, 
-  Users, 
-  PlusSquare, 
-  User, 
-  LogIn, 
+import {
+  Home,
+  Users,
+  PlusSquare,
+  User,
+  LogIn,
   LogOut,
   Music2,
-  TrendingUp
+  TrendingUp,
+  CreditCard
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -37,6 +38,7 @@ export default function Sidebar() {
     { label: "For You", icon: Home, href: "/" },
     { label: "Trending", icon: TrendingUp, href: "/trending" },
     { label: "Create Duet", icon: PlusSquare, href: "/songs" },
+    { label: "Credits", icon: CreditCard, href: "/credits" },
   ];
 
   return (
