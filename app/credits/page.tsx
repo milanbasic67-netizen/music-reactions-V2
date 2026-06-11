@@ -41,7 +41,6 @@ export default function CreditsPage() {
       if (!Paddle) throw new Error("Paddle nije učitan, osvježi stranicu");
       Paddle.Checkout.open({
         items: [{ priceId: PRICE_ID, quantity: 1 }],
-        customData: { user_id: userId },
         settings: {
           successUrl: `${window.location.origin}/credits?success=1`,
         },
