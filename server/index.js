@@ -135,8 +135,15 @@ app.post("/import-youtube", verifyAuth, async (req, res) => {
                         }
                     });
 
-                    res.json({ 
-                        success: true, 
+                    const credited = await deductCredit(req.userId);
+                    if (!credited) {
+                        cleanup();
+                        if (!res.headersSent) return res.status(402).json({ error: "Insufficient credits" });
+                        return;
+                    }
+
+                    res.json({
+                        success: true,
                         videoUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/songs/${videoName}`,
                         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
                         title: apiRes.data.metadata?.title || "YouTube Song"
@@ -255,5 +262,58 @@ app.post("/delete-video", verifyAuth, async (req, res) => {
     res.status(500).json({ error: "Delete failed", details: err.message });
   }
 });
+
+// --- PADDLE WEBHOOK ---
+app.post("/paddle-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const signature = req.headers["paddle-signature"];
+  const secret = process.env.PADDLE_WEBHOOK_SECRET;
+
+  if (!signature || !secret) return res.status(400).json({ error: "Missing signature or secret" });
+
+  try {
+    const { default: crypto } = await import("crypto");
+    const parts = Object.fromEntries(signature.split(";").map(p => p.split("=")));
+    const ts = parts.ts;
+    const h1 = parts.h1;
+    const signed = `${ts}:${req.body.toString()}`;
+    const expected = crypto.createHmac("sha256", secret).update(signed).digest("hex");
+    if (expected !== h1) return res.status(401).json({ error: "Invalid signature" });
+
+    const event = JSON.parse(req.body.toString());
+
+    if (event.event_type === "transaction.completed") {
+      const userId = event.data?.custom_data?.user_id;
+      if (!userId) return res.status(400).json({ error: "Missing user_id in custom_data" });
+
+      const { error } = await supabaseAdmin.rpc("add_credits", { user_id: userId, amount: 10 });
+      if (error) {
+        console.error("Credits add failed:", error);
+        return res.status(500).json({ error: "Failed to add credits" });
+      }
+      console.log(`Added 10 credits to user ${userId}`);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    res.status(500).json({ error: "Webhook processing failed" });
+  }
+});
+
+// --- CREDIT DEDUCTION on import ---
+async function deductCredit(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("credits")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return false;
+  if (data.credits <= 0) return false;
+  const { error: updateError } = await supabaseAdmin
+    .from("profiles")
+    .update({ credits: data.credits - 1 })
+    .eq("id", userId);
+  return !updateError;
+}
 
 app.listen(PORT, () => console.log(`Backend V58 - Fixed Cleanup Ready`));
