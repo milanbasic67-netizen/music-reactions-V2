@@ -32,7 +32,8 @@ export default function CreditsPage() {
 
   function renderPayPal() {
     const paypal = (window as any).paypal;
-    if (!paypal || !buttonRef.current || rendered.current) return;
+    if (!paypal) { console.error("PayPal SDK not found"); return; }
+    if (!buttonRef.current || rendered.current) return;
     rendered.current = true;
 
     paypal.Buttons({
@@ -73,8 +74,9 @@ export default function CreditsPage() {
   return (
     <>
       <Script
-        src={`https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`}
+        src={`https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`}
         onLoad={renderPayPal}
+        onError={() => alert("PayPal SDK nije učitan. Provjeri konzolu.")}
       />
       <main className="min-h-screen bg-[#0D0D14] text-white flex flex-col items-center justify-center p-5">
         <div className="w-full max-w-md bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-center">
