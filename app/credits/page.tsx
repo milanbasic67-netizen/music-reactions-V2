@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Script from "next/script";
 
-const PAYPAL_CLIENT_ID = "EMeL5YZtNj69x3PXi29zDlx27mNzDwOZg0B5oF-LHH4Kqu6CPNaKyN7rysffAeKAaIKsz4QRlq0ME9mB";
+const PAYPAL_CLIENT_ID = "AY6gT52rjGSyd8_Wy3TLx1_XuRWyc7VsDLVCNvyqSuHbfJ6cjRkzZUxznBwAKmXBPjNb1AZg2kvuOvtv";
 
 export default function CreditsPage() {
   const [credits, setCredits] = useState<number | null>(null);
