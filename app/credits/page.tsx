@@ -6,7 +6,7 @@ import Link from "next/link";
 import Script from "next/script";
 
 const PADDLE_CLIENT_TOKEN = "test_b25e55650f4d0b9e4def38d1614";
-const PRICE_ID = "pri_01kttvp8fkajnnvmmvvs6ksgjj";
+const PRICE_ID = "pri_01ktv091z28q54qnvbm4p6s0xh";
 
 export default function CreditsPage() {
   const [credits, setCredits] = useState<number | null>(null);
