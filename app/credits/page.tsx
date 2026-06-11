@@ -43,6 +43,9 @@ export default function CreditsPage() {
             amount: { value: "2.00", currency_code: "USD" },
             description: "10 Credits",
           }],
+          application_context: {
+            shipping_preference: "NO_SHIPPING",
+          },
         });
       },
       onApprove: async (_: any, actions: any) => {
